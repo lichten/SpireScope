@@ -1,0 +1,13 @@
+# Auto-detect text files and normalize line endings
+* text=auto
+
+# C# source files
+*.cs text eol=crlf
+*.csproj text eol=crlf
+*.slnx text eol=crlf
+*.resx text eol=crlf
+*.txt text eol=crlf
+*.md text eol=crlf
+*.json text eol=crlf
+*.gitignore text eol=crlf
+*.gitattributes text eol=crlf

@@ -1,0 +1,63 @@
+using System.Text.Json.Serialization;
+
+namespace StS2Toys.Models;
+
+class RunSaveData
+{
+    [JsonPropertyName("ascension")]
+    public int Ascension { get; init; }
+
+    [JsonPropertyName("current_act_index")]
+    public int CurrentActIndex { get; init; }
+
+    [JsonPropertyName("schema_version")]
+    public int SchemaVersion { get; init; }
+
+    [JsonPropertyName("players")]
+    public List<PlayerData> Players { get; init; } = [];
+}
+
+class PlayerData
+{
+    [JsonPropertyName("character_id")]
+    public string CharacterId { get; init; } = "";
+
+    [JsonPropertyName("current_hp")]
+    public int CurrentHp { get; init; }
+
+    [JsonPropertyName("max_hp")]
+    public int MaxHp { get; init; }
+
+    [JsonPropertyName("gold")]
+    public int Gold { get; init; }
+
+    [JsonPropertyName("max_energy")]
+    public int MaxEnergy { get; init; }
+
+    [JsonPropertyName("deck")]
+    public List<CardData> Deck { get; init; } = [];
+
+    [JsonPropertyName("relics")]
+    public List<RelicData> Relics { get; init; } = [];
+}
+
+class CardData
+{
+    [JsonPropertyName("id")]
+    public string Id { get; init; } = "";
+
+    [JsonPropertyName("floor_added_to_deck")]
+    public int FloorAddedToDeck { get; init; }
+
+    [JsonPropertyName("upgrade_count")]
+    public int? UpgradeCount { get; init; }
+}
+
+class RelicData
+{
+    [JsonPropertyName("id")]
+    public string Id { get; init; } = "";
+
+    [JsonPropertyName("floor_added_to_deck")]
+    public int FloorAddedToDeck { get; init; }
+}
