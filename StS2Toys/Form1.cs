@@ -10,8 +10,11 @@ namespace StS2Toys
         private readonly System.Windows.Forms.Timer _flashTimer = new() { Interval = 2000 };
         private CardImageViewerForm? _imageViewer;
         private CardDetailForm? _detailViewer;
+        private DeckOverviewForm? _deckOverview;
         private SubWindowSettings? _imageViewerSettings;
         private SubWindowSettings? _cardDetailSettings;
+        private SubWindowSettings? _deckOverviewSettings;
+        private IReadOnlyList<DeckCard>? _lastDeckCards;
 
         // デッキリストのソート状態
         private int _sortColumn = -1;
@@ -45,6 +48,7 @@ namespace StS2Toys
             _flashTimer.Dispose();
             _imageViewer?.Close();
             _detailViewer?.Close();
+            _deckOverview?.Close();
         }
 
         void RestoreWindowSettings()
@@ -52,6 +56,7 @@ namespace StS2Toys
             var app = WindowSettingsService.Load();
             _imageViewerSettings = app.ImageViewer;
             _cardDetailSettings = app.CardDetail;
+            _deckOverviewSettings = app.DeckOverview;
 
             var main = app.Main;
             if (main is null) return;
@@ -72,11 +77,13 @@ namespace StS2Toys
                 _imageViewerSettings = BoundsToSub(_imageViewer.Bounds);
             if (_detailViewer is { IsDisposed: false })
                 _cardDetailSettings = BoundsToSub(_detailViewer.Bounds);
+            if (_deckOverview is { IsDisposed: false })
+                _deckOverviewSettings = BoundsToSub(_deckOverview.Bounds);
 
             var state = WindowState == FormWindowState.Minimized ? FormWindowState.Normal : WindowState;
             var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
             var main = new WindowSettings(bounds.X, bounds.Y, bounds.Width, bounds.Height, state.ToString());
-            WindowSettingsService.Save(new AppSettings(main, _imageViewerSettings, _cardDetailSettings));
+            WindowSettingsService.Save(new AppSettings(main, _imageViewerSettings, _cardDetailSettings, _deckOverviewSettings));
         }
 
         static SubWindowSettings BoundsToSub(Rectangle r) => new(r.X, r.Y, r.Width, r.Height);
@@ -232,6 +239,12 @@ namespace StS2Toys
                 listViewDeck.Items.Add(item);
             }
             listViewDeck.EndUpdate();
+
+            _lastDeckCards = grouped
+                .Select(g => new DeckCard(g.Id, g.En, g.Ja, g.Cost, g.Type, g.Count))
+                .ToList();
+            if (_deckOverview is { IsDisposed: false } ov && ov.Visible)
+                ov.UpdateDeck(_lastDeckCards);
         }
 
         void DisplayRelics(PlayerData player)
@@ -345,6 +358,38 @@ namespace StS2Toys
         {
             btnCardDetail.Text = visible ? "● カード詳細" : "○ カード詳細";
             btnCardDetail.ForeColor = visible ? Color.DarkGreen : SystemColors.ControlText;
+        }
+
+        void BtnDeckOverview_Click(object? sender, EventArgs e)
+        {
+            if (_deckOverview is null || _deckOverview.IsDisposed || !_deckOverview.Visible)
+            {
+                if (_deckOverview is null || _deckOverview.IsDisposed)
+                {
+                    _deckOverview = new DeckOverviewForm();
+                    ApplySubWindowSettings(_deckOverview, _deckOverviewSettings, new Point(Right + 4, Top));
+                    _deckOverview.FormClosed += (_, _) =>
+                    {
+                        _deckOverviewSettings = BoundsToSub(_deckOverview.Bounds);
+                        UpdateDeckOverviewButton(false);
+                    };
+                }
+                _deckOverview.Show(this);
+                UpdateDeckOverviewButton(true);
+                if (_lastDeckCards != null)
+                    _deckOverview.UpdateDeck(_lastDeckCards);
+            }
+            else
+            {
+                _deckOverview.Hide();
+                UpdateDeckOverviewButton(false);
+            }
+        }
+
+        void UpdateDeckOverviewButton(bool visible)
+        {
+            btnDeckOverview.Text = visible ? "● デッキ概観" : "○ デッキ概観";
+            btnDeckOverview.ForeColor = visible ? Color.DarkRed : SystemColors.ControlText;
         }
 
         void ListViewDeck_SelectedIndexChanged(object? sender, EventArgs e)

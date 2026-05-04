@@ -16,6 +16,7 @@ namespace StS2Toys
             panelTop = new Panel();
             lblUpdateFlash = new Label();
             lblLastUpdated = new Label();
+            btnDeckOverview = new Button();
             btnCardDetail = new Button();
             btnImageViewer = new Button();
             btnToggleAuto = new Button();
@@ -49,6 +50,7 @@ namespace StS2Toys
             // 
             panelTop.Controls.Add(lblUpdateFlash);
             panelTop.Controls.Add(lblLastUpdated);
+            panelTop.Controls.Add(btnDeckOverview);
             panelTop.Controls.Add(btnCardDetail);
             panelTop.Controls.Add(btnImageViewer);
             panelTop.Controls.Add(btnToggleAuto);
@@ -80,9 +82,18 @@ namespace StS2Toys
             lblLastUpdated.TabIndex = 1;
             lblLastUpdated.Text = "最終更新: --:--:--";
             lblLastUpdated.TextAlign = ContentAlignment.MiddleLeft;
-            // 
+            //
+            // btnDeckOverview
+            //
+            btnDeckOverview.Dock = DockStyle.Left;
+            btnDeckOverview.Name = "btnDeckOverview";
+            btnDeckOverview.Size = new Size(100, 32);
+            btnDeckOverview.TabIndex = 5;
+            btnDeckOverview.Text = "○ デッキ概観";
+            btnDeckOverview.Click += BtnDeckOverview_Click;
+            //
             // btnCardDetail
-            // 
+            //
             btnCardDetail.Dock = DockStyle.Left;
             btnCardDetail.Location = new Point(208, 8);
             btnCardDetail.Name = "btnCardDetail";
@@ -292,6 +303,7 @@ namespace StS2Toys
 
         private Panel panelTop;
         private Panel panelFileControls;
+        private Button btnDeckOverview;
         private Button btnCardDetail;
         private Button btnImageViewer;
         private Button btnToggleAuto;

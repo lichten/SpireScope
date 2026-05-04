@@ -7,7 +7,8 @@ record SubWindowSettings(int X, int Y, int Width, int Height);
 record AppSettings(
     WindowSettings? Main = null,
     SubWindowSettings? ImageViewer = null,
-    SubWindowSettings? CardDetail = null);
+    SubWindowSettings? CardDetail = null,
+    SubWindowSettings? DeckOverview = null);
 
 static class WindowSettingsService
 {

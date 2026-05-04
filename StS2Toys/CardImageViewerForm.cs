@@ -28,7 +28,7 @@ public partial class CardImageViewerForm : Form
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
     }
 
-    static string? FindCardImage(string cardId)
+    internal static string? FindCardImage(string cardId)
     {
         var dir = GetPortraitsDir();
         if (dir is null) return null;
