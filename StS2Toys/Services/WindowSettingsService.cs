@@ -8,7 +8,8 @@ record AppSettings(
     WindowSettings? Main = null,
     SubWindowSettings? ImageViewer = null,
     SubWindowSettings? CardDetail = null,
-    SubWindowSettings? DeckOverview = null);
+    SubWindowSettings? DeckOverview = null,
+    SubWindowSettings? BlockOverview = null);
 
 static class WindowSettingsService
 {

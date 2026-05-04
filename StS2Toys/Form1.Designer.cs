@@ -32,7 +32,9 @@ namespace StS2Toys
             colCardCost = new ColumnHeader();
             colCardType = new ColumnHeader();
             colCardCount = new ColumnHeader();
+            panelBlockActions = new Panel();
             btnFilterBlock = new Button();
+            btnBlockOverview = new Button();
             lblDeckTitle = new Label();
             listViewRelics = new ListView();
             colRelicName = new ColumnHeader();
@@ -45,6 +47,7 @@ namespace StS2Toys
             splitContainer.Panel1.SuspendLayout();
             splitContainer.Panel2.SuspendLayout();
             splitContainer.SuspendLayout();
+            panelBlockActions.SuspendLayout();
             SuspendLayout();
             // 
             // panelTop
@@ -184,7 +187,7 @@ namespace StS2Toys
             // splitContainer.Panel1
             // 
             splitContainer.Panel1.Controls.Add(listViewDeck);
-            splitContainer.Panel1.Controls.Add(btnFilterBlock);
+            splitContainer.Panel1.Controls.Add(panelBlockActions);
             splitContainer.Panel1.Controls.Add(lblDeckTitle);
             // 
             // splitContainer.Panel2
@@ -237,15 +240,35 @@ namespace StS2Toys
             colCardCount.TextAlign = HorizontalAlignment.Right;
             colCardCount.Width = 55;
             // 
+            // panelBlockActions
+            // 
+            panelBlockActions.Controls.Add(btnFilterBlock);
+            panelBlockActions.Controls.Add(btnBlockOverview);
+            panelBlockActions.Dock = DockStyle.Top;
+            panelBlockActions.Location = new Point(0, 26);
+            panelBlockActions.Name = "panelBlockActions";
+            panelBlockActions.Size = new Size(645, 28);
+            panelBlockActions.TabIndex = 2;
+            // 
             // btnFilterBlock
             // 
-            btnFilterBlock.Dock = DockStyle.Top;
-            btnFilterBlock.Location = new Point(0, 26);
+            btnFilterBlock.Dock = DockStyle.Fill;
+            btnFilterBlock.Location = new Point(0, 0);
             btnFilterBlock.Name = "btnFilterBlock";
-            btnFilterBlock.Size = new Size(645, 28);
-            btnFilterBlock.TabIndex = 2;
+            btnFilterBlock.Size = new Size(555, 28);
+            btnFilterBlock.TabIndex = 0;
             btnFilterBlock.Text = "○ ブロック絞り込み";
             btnFilterBlock.Click += BtnFilterBlock_Click;
+            // 
+            // btnBlockOverview
+            // 
+            btnBlockOverview.Dock = DockStyle.Right;
+            btnBlockOverview.Location = new Point(555, 0);
+            btnBlockOverview.Name = "btnBlockOverview";
+            btnBlockOverview.Size = new Size(90, 28);
+            btnBlockOverview.TabIndex = 1;
+            btnBlockOverview.Text = "○ ブロック概観";
+            btnBlockOverview.Click += BtnBlockOverview_Click;
             // 
             // lblDeckTitle
             // 
@@ -311,6 +334,7 @@ namespace StS2Toys
             splitContainer.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)splitContainer).EndInit();
             splitContainer.ResumeLayout(false);
+            panelBlockActions.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -328,7 +352,9 @@ namespace StS2Toys
         private Label lblInfo;
         private SplitContainer splitContainer;
         private Label lblDeckTitle;
+        private Panel panelBlockActions;
         private Button btnFilterBlock;
+        private Button btnBlockOverview;
         private ListView listViewDeck;
         private ColumnHeader colCardName;
         private ColumnHeader colCardNameJa;

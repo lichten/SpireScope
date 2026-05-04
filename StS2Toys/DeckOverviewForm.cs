@@ -35,6 +35,14 @@ public partial class DeckOverviewForm : Form
         if (Visible) RecomposeIfNeeded();
     }
 
+    public void SetBlockStats(int blockCount, int totalCount)
+    {
+        double pct = totalCount > 0 ? 100.0 * blockCount / totalCount : 0;
+        _statsLabel.Text = $"ブロック: {blockCount}枚  /  デッキ全体: {totalCount}枚  ({pct:F0}%)";
+        _statsPanel.Visible = true;
+        Text = "ブロックカード概観";
+    }
+
     void RecomposeIfNeeded()
     {
         if (_cards is null) return;

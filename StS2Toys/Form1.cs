@@ -11,9 +11,11 @@ namespace StS2Toys
         private CardImageViewerForm? _imageViewer;
         private CardDetailForm? _detailViewer;
         private DeckOverviewForm? _deckOverview;
+        private DeckOverviewForm? _blockOverview;
         private SubWindowSettings? _imageViewerSettings;
         private SubWindowSettings? _cardDetailSettings;
         private SubWindowSettings? _deckOverviewSettings;
+        private SubWindowSettings? _blockOverviewSettings;
         private IReadOnlyList<DeckCard>? _lastDeckCards;
 
         // デッキリストのソート状態
@@ -52,6 +54,7 @@ namespace StS2Toys
             _imageViewer?.Close();
             _detailViewer?.Close();
             _deckOverview?.Close();
+            _blockOverview?.Close();
         }
 
         void RestoreWindowSettings()
@@ -60,6 +63,7 @@ namespace StS2Toys
             _imageViewerSettings = app.ImageViewer;
             _cardDetailSettings = app.CardDetail;
             _deckOverviewSettings = app.DeckOverview;
+            _blockOverviewSettings = app.BlockOverview;
 
             var main = app.Main;
             if (main is null) return;
@@ -82,11 +86,13 @@ namespace StS2Toys
                 _cardDetailSettings = BoundsToSub(_detailViewer.Bounds);
             if (_deckOverview is { IsDisposed: false })
                 _deckOverviewSettings = BoundsToSub(_deckOverview.Bounds);
+            if (_blockOverview is { IsDisposed: false })
+                _blockOverviewSettings = BoundsToSub(_blockOverview.Bounds);
 
             var state = WindowState == FormWindowState.Minimized ? FormWindowState.Normal : WindowState;
             var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
             var main = new WindowSettings(bounds.X, bounds.Y, bounds.Width, bounds.Height, state.ToString());
-            WindowSettingsService.Save(new AppSettings(main, _imageViewerSettings, _cardDetailSettings, _deckOverviewSettings));
+            WindowSettingsService.Save(new AppSettings(main, _imageViewerSettings, _cardDetailSettings, _deckOverviewSettings, _blockOverviewSettings));
         }
 
         static SubWindowSettings BoundsToSub(Rectangle r) => new(r.X, r.Y, r.Width, r.Height);
@@ -237,13 +243,14 @@ namespace StS2Toys
         {
             if (_lastDeckCards is null) return;
 
-            var cards = _blockFilter
-                ? _lastDeckCards.Where(c => CardDatabaseService.IsBlockGiver(c.Id)).ToList()
-                : (IReadOnlyList<DeckCard>)_lastDeckCards;
-
+            var blockCards = _lastDeckCards.Where(c => CardDatabaseService.IsBlockGiver(c.Id)).ToList();
             int total = _lastDeckCards.Sum(c => c.Count);
+            int blockCount = blockCards.Sum(c => c.Count);
+
+            var cards = _blockFilter ? (IReadOnlyList<DeckCard>)blockCards : _lastDeckCards;
+
             lblDeckTitle.Text = _blockFilter
-                ? $"デッキ（ブロック {cards.Sum(c => c.Count)}/{total}枚）"
+                ? $"デッキ（ブロック {blockCount}/{total}枚）"
                 : $"デッキ ({total}枚)";
 
             listViewDeck.BeginUpdate();
@@ -262,6 +269,12 @@ namespace StS2Toys
 
             if (_sortColumn >= 0)
                 listViewDeck.ListViewItemSorter = new DeckItemComparer(_sortColumn, _sortAscending);
+
+            if (_blockOverview is { IsDisposed: false } bov && bov.Visible)
+            {
+                bov.UpdateDeck(blockCards);
+                bov.SetBlockStats(blockCount, total);
+            }
         }
 
         void DisplayRelics(PlayerData player)
@@ -420,6 +433,43 @@ namespace StS2Toys
         {
             btnDeckOverview.Text = visible ? "● デッキ概観" : "○ デッキ概観";
             btnDeckOverview.ForeColor = visible ? Color.DarkRed : SystemColors.ControlText;
+        }
+
+        void BtnBlockOverview_Click(object? sender, EventArgs e)
+        {
+            if (_blockOverview is null || _blockOverview.IsDisposed || !_blockOverview.Visible)
+            {
+                if (_blockOverview is null || _blockOverview.IsDisposed)
+                {
+                    _blockOverview = new DeckOverviewForm();
+                    ApplySubWindowSettings(_blockOverview, _blockOverviewSettings, new Point(Right + 4, Top));
+                    _blockOverview.FormClosed += (_, _) =>
+                    {
+                        _blockOverviewSettings = BoundsToSub(_blockOverview.Bounds);
+                        UpdateBlockOverviewButton(false);
+                    };
+                }
+                _blockOverview.Show(this);
+                UpdateBlockOverviewButton(true);
+                if (_lastDeckCards != null)
+                {
+                    var blockCards = _lastDeckCards.Where(c => CardDatabaseService.IsBlockGiver(c.Id)).ToList();
+                    int total = _lastDeckCards.Sum(c => c.Count);
+                    _blockOverview.UpdateDeck(blockCards);
+                    _blockOverview.SetBlockStats(blockCards.Sum(c => c.Count), total);
+                }
+            }
+            else
+            {
+                _blockOverview.Hide();
+                UpdateBlockOverviewButton(false);
+            }
+        }
+
+        void UpdateBlockOverviewButton(bool visible)
+        {
+            btnBlockOverview.Text = visible ? "● ブロック概観" : "○ ブロック概観";
+            btnBlockOverview.ForeColor = visible ? Color.DarkBlue : SystemColors.ControlText;
         }
 
         void ListViewDeck_SelectedIndexChanged(object? sender, EventArgs e)
