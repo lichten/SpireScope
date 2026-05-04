@@ -97,6 +97,25 @@ static class CardDatabaseService
         IReadOnlyDictionary<string, string> JpnRelics);
 
     static readonly LocData _loc = LoadLoc();
+    static readonly HashSet<string> _blockGivers = ComputeBlockGivers();
+
+    static HashSet<string> ComputeBlockGivers()
+    {
+        const string blockTag  = "[gold]Block[/gold]";
+        const string descSuffix = ".description";
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, desc) in _loc.EngCards)
+        {
+            if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
+            if (!desc.Contains(blockTag, StringComparison.Ordinal)) continue;
+            if (desc.Contains("gain",   StringComparison.OrdinalIgnoreCase) ||
+                desc.Contains("Double", StringComparison.OrdinalIgnoreCase))
+                result.Add(key[..^descSuffix.Length]);
+        }
+        return result;
+    }
+
+    public static bool IsBlockGiver(string id) => _blockGivers.Contains(ToRawId(id));
 
     static LocData LoadLoc() => new(
         LoadLocJson("eng.cards"),

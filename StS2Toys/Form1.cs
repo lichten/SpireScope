@@ -20,6 +20,9 @@ namespace StS2Toys
         private int _sortColumn = -1;
         private bool _sortAscending = true;
 
+        // ブロックカード絞り込み
+        private bool _blockFilter = false;
+
         // カラムヘッダーのベーステキスト（種別カラムは index 2、枚数は index 3）
         private static readonly string[] DeckColumnTexts = ["カード名 (EN)", "カード名 (JP)", "コスト", "種別", "枚数"];
 
@@ -212,39 +215,53 @@ namespace StS2Toys
 
         void DisplayDeck(PlayerData player)
         {
-            var grouped = player.Deck
+            _lastDeckCards = player.Deck
                 .GroupBy(c => c.Id)
                 .OrderBy(g => CardDatabaseService.GetName(g.Key, japanese: true))
-                .Select(g => (
-                    Id:    g.Key,
-                    En:    CardDatabaseService.GetName(g.Key, japanese: false),
-                    Ja:    CardDatabaseService.GetName(g.Key, japanese: true),
-                    Cost:  CardDatabaseService.GetCardCost(g.Key),
-                    Type:  CardDatabaseService.GetCardType(g.Key),
-                    Count: g.Count()))
+                .Select(g => new DeckCard(
+                    g.Key,
+                    CardDatabaseService.GetName(g.Key, japanese: false),
+                    CardDatabaseService.GetName(g.Key, japanese: true),
+                    CardDatabaseService.GetCardCost(g.Key),
+                    CardDatabaseService.GetCardType(g.Key),
+                    g.Count()))
                 .ToList();
 
-            lblDeckTitle.Text = $"デッキ ({player.Deck.Count}枚)";
+            RefreshDeckList();
+
+            if (_deckOverview is { IsDisposed: false } ov && ov.Visible)
+                ov.UpdateDeck(_lastDeckCards);
+        }
+
+        void RefreshDeckList()
+        {
+            if (_lastDeckCards is null) return;
+
+            var cards = _blockFilter
+                ? _lastDeckCards.Where(c => CardDatabaseService.IsBlockGiver(c.Id)).ToList()
+                : (IReadOnlyList<DeckCard>)_lastDeckCards;
+
+            int total = _lastDeckCards.Sum(c => c.Count);
+            lblDeckTitle.Text = _blockFilter
+                ? $"デッキ（ブロック {cards.Sum(c => c.Count)}/{total}枚）"
+                : $"デッキ ({total}枚)";
 
             listViewDeck.BeginUpdate();
             listViewDeck.Items.Clear();
-            foreach (var (id, en, ja, cost, type, count) in grouped)
+            foreach (var c in cards)
             {
-                var item = new ListViewItem(en);
-                item.SubItems.Add(ja);
-                item.SubItems.Add(cost);
-                item.SubItems.Add(LocalizeType(type));
-                item.SubItems.Add(count.ToString());
-                item.Tag = id;
+                var item = new ListViewItem(c.NameEn);
+                item.SubItems.Add(c.NameJa);
+                item.SubItems.Add(c.Cost);
+                item.SubItems.Add(LocalizeType(c.Type));
+                item.SubItems.Add(c.Count.ToString());
+                item.Tag = c.Id;
                 listViewDeck.Items.Add(item);
             }
             listViewDeck.EndUpdate();
 
-            _lastDeckCards = grouped
-                .Select(g => new DeckCard(g.Id, g.En, g.Ja, g.Cost, g.Type, g.Count))
-                .ToList();
-            if (_deckOverview is { IsDisposed: false } ov && ov.Visible)
-                ov.UpdateDeck(_lastDeckCards);
+            if (_sortColumn >= 0)
+                listViewDeck.ListViewItemSorter = new DeckItemComparer(_sortColumn, _sortAscending);
         }
 
         void DisplayRelics(PlayerData player)
@@ -358,6 +375,19 @@ namespace StS2Toys
         {
             btnCardDetail.Text = visible ? "● カード詳細" : "○ カード詳細";
             btnCardDetail.ForeColor = visible ? Color.DarkGreen : SystemColors.ControlText;
+        }
+
+        void BtnFilterBlock_Click(object? sender, EventArgs e)
+        {
+            _blockFilter = !_blockFilter;
+            UpdateBlockFilterButton(_blockFilter);
+            RefreshDeckList();
+        }
+
+        void UpdateBlockFilterButton(bool active)
+        {
+            btnFilterBlock.Text = active ? "● ブロックのみ" : "○ ブロック絞り込み";
+            btnFilterBlock.ForeColor = active ? Color.DarkBlue : SystemColors.ControlText;
         }
 
         void BtnDeckOverview_Click(object? sender, EventArgs e)
