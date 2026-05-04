@@ -69,8 +69,9 @@ foreach (var typeHandle in mr.TypeDefinitions)
     }
 }
 
-// 各カードクラスの .ctor IL から CardType (2番目の ldc.i4) を取得
+// 各カードクラスの .ctor IL から CardType (2番目の ldc.i4) とコスト (1番目) を取得
 var results = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+var costs   = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
 foreach (var typeHandle in mr.TypeDefinitions)
 {
@@ -97,23 +98,32 @@ foreach (var typeHandle in mr.TypeDefinitions)
             i += size;
         }
 
-        // 2番目の整数引数が CardType
-        if (intArgs.Count >= 2 && cardTypeByInt.TryGetValue(intArgs[1], out var typeName))
+        if (intArgs.Count >= 2)
         {
             var cardId = "CARD." + CamelToUpperSnake(className);
-            results.TryAdd(cardId, typeName);
+            // 1番目の整数引数がコスト、2番目が CardType
+            costs.TryAdd(cardId, intArgs[0]);
+            if (cardTypeByInt.TryGetValue(intArgs[1], out var typeName))
+                results.TryAdd(cardId, typeName);
         }
         break; // .ctor は一つだけ
     }
 }
 
-// JSON 出力
+// card_types.json 出力
 Console.Error.WriteLine($"Extracted {results.Count} card type mappings.");
-// outPath は上部で決定済み
 var jsonLines = results.OrderBy(kv => kv.Key)
     .Select(kv => $"  \"{kv.Key}\": \"{kv.Value}\"");
 File.WriteAllText(outPath, "{\n" + string.Join(",\n", jsonLines) + "\n}\n");
 Console.WriteLine(outPath);
+
+// card_costs.json 出力
+var costsOutPath = Path.Combine(Path.GetDirectoryName(outPath)!, "card_costs.json");
+Console.Error.WriteLine($"Extracted {costs.Count} card cost mappings.");
+var costLines = costs.OrderBy(kv => kv.Key)
+    .Select(kv => $"  \"{kv.Key}\": {kv.Value}");
+File.WriteAllText(costsOutPath, "{\n" + string.Join(",\n", costLines) + "\n}\n");
+Console.WriteLine(costsOutPath);
 
 // ---- helpers ----
 

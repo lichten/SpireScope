@@ -9,6 +9,7 @@ static class CardDatabaseService
 
     static readonly Dictionary<string, Entry> _db = Load();
     static readonly Dictionary<string, string> _types = LoadTypes();
+    static readonly Dictionary<string, int> _costs = LoadCosts();
 
     static Dictionary<string, Entry> Load()
     {
@@ -44,10 +45,33 @@ static class CardDatabaseService
         return result;
     }
 
+    static Dictionary<string, int> LoadCosts()
+    {
+        var asm = Assembly.GetExecutingAssembly();
+        var name = asm.GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith("card_costs.json"));
+        if (name is null) return new Dictionary<string, int>();
+
+        using var stream = asm.GetManifestResourceStream(name)!;
+        var doc = JsonDocument.Parse(stream);
+        var result = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var prop in doc.RootElement.EnumerateObject())
+            result[prop.Name] = prop.Value.GetInt32();
+        return result;
+    }
+
     public static string GetCardType(string id)
     {
         _types.TryGetValue(id, out var type);
         return type ?? "";
+    }
+
+    public static string GetCardCost(string id)
+    {
+        if (!_costs.TryGetValue(id, out var cost)) return "";
+        if (cost != -1) return cost.ToString();
+        var type = GetCardType(id);
+        return type is "Attack" or "Skill" or "Power" ? "X" : "-";
     }
 
     public static string GetName(string id, bool japanese = false)

@@ -28,6 +28,7 @@ namespace StS2Toys
             listViewDeck = new ListView();
             colCardName = new ColumnHeader();
             colCardNameJa = new ColumnHeader();
+            colCardCost = new ColumnHeader();
             colCardType = new ColumnHeader();
             colCardCount = new ColumnHeader();
             lblDeckTitle = new Label();
@@ -182,7 +183,7 @@ namespace StS2Toys
             // 
             // listViewDeck
             // 
-            listViewDeck.Columns.AddRange(new ColumnHeader[] { colCardName, colCardNameJa, colCardType, colCardCount });
+            listViewDeck.Columns.AddRange(new ColumnHeader[] { colCardName, colCardNameJa, colCardCost, colCardType, colCardCount });
             listViewDeck.Dock = DockStyle.Fill;
             listViewDeck.FullRowSelect = true;
             listViewDeck.GridLines = true;
@@ -204,6 +205,12 @@ namespace StS2Toys
             // 
             colCardNameJa.Text = "カード名 (JP)";
             colCardNameJa.Width = 160;
+            // 
+            // colCardCost
+            // 
+            colCardCost.Text = "コスト";
+            colCardCost.TextAlign = HorizontalAlignment.Center;
+            colCardCost.Width = 52;
             // 
             // colCardType
             // 
@@ -299,6 +306,7 @@ namespace StS2Toys
         private ListView listViewDeck;
         private ColumnHeader colCardName;
         private ColumnHeader colCardNameJa;
+        private ColumnHeader colCardCost;
         private ColumnHeader colCardType;
         private ColumnHeader colCardCount;
         private Label lblRelicsTitle;

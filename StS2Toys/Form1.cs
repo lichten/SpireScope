@@ -18,7 +18,7 @@ namespace StS2Toys
         private bool _sortAscending = true;
 
         // カラムヘッダーのベーステキスト（種別カラムは index 2、枚数は index 3）
-        private static readonly string[] DeckColumnTexts = ["カード名 (EN)", "カード名 (JP)", "種別", "枚数"];
+        private static readonly string[] DeckColumnTexts = ["カード名 (EN)", "カード名 (JP)", "コスト", "種別", "枚数"];
 
         public Form1()
         {
@@ -212,6 +212,7 @@ namespace StS2Toys
                     Id:    g.Key,
                     En:    CardDatabaseService.GetName(g.Key, japanese: false),
                     Ja:    CardDatabaseService.GetName(g.Key, japanese: true),
+                    Cost:  CardDatabaseService.GetCardCost(g.Key),
                     Type:  CardDatabaseService.GetCardType(g.Key),
                     Count: g.Count()))
                 .ToList();
@@ -220,10 +221,11 @@ namespace StS2Toys
 
             listViewDeck.BeginUpdate();
             listViewDeck.Items.Clear();
-            foreach (var (id, en, ja, type, count) in grouped)
+            foreach (var (id, en, ja, cost, type, count) in grouped)
             {
                 var item = new ListViewItem(en);
                 item.SubItems.Add(ja);
+                item.SubItems.Add(cost);
                 item.SubItems.Add(LocalizeType(type));
                 item.SubItems.Add(count.ToString());
                 item.Tag = id;
@@ -375,7 +377,8 @@ namespace StS2Toys
             string sa = column < a.SubItems.Count ? a.SubItems[column].Text : "";
             string sb = column < b.SubItems.Count ? b.SubItems[column].Text : "";
 
-            int result = column == 3 && int.TryParse(sa, out int ia) && int.TryParse(sb, out int ib)
+            // コスト (index 2) と枚数 (index 4) は数値比較
+            int result = column is 2 or 4 && int.TryParse(sa, out int ia) && int.TryParse(sb, out int ib)
                 ? ia.CompareTo(ib)
                 : string.Compare(sa, sb, StringComparison.CurrentCulture);
 
