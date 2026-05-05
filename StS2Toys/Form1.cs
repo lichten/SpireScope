@@ -17,6 +17,7 @@ namespace StS2Toys
         private SubWindowSettings? _deckOverviewSettings;
         private SubWindowSettings? _blockOverviewSettings;
         private IReadOnlyList<DeckCard>? _lastDeckCards;
+        private IReadOnlyList<RelicEntry>? _lastRelics;
 
         // デッキリストのソート状態
         private int _sortColumn = -1;
@@ -234,9 +235,6 @@ namespace StS2Toys
                 .ToList();
 
             RefreshDeckList();
-
-            if (_deckOverview is { IsDisposed: false } ov && ov.Visible)
-                ov.UpdateDeck(_lastDeckCards);
         }
 
         void RefreshDeckList()
@@ -270,27 +268,55 @@ namespace StS2Toys
             if (_sortColumn >= 0)
                 listViewDeck.ListViewItemSorter = new DeckItemComparer(_sortColumn, _sortAscending);
 
-            if (_blockOverview is { IsDisposed: false } bov && bov.Visible)
-            {
-                bov.UpdateDeck(blockCards);
-                bov.SetBlockStats(blockCount, total);
-            }
+            RefreshBlockOverview();
         }
 
         void DisplayRelics(PlayerData player)
         {
+            _lastRelics = player.Relics
+                .Select(r => new RelicEntry(
+                    r.Id,
+                    CardDatabaseService.GetName(r.Id, japanese: false),
+                    CardDatabaseService.GetName(r.Id, japanese: true)))
+                .ToList();
+
             lblRelicsTitle.Text = $"レリック ({player.Relics.Count}個)";
 
             listViewRelics.BeginUpdate();
             listViewRelics.Items.Clear();
-            foreach (var relic in player.Relics)
+            foreach (var relic in _lastRelics)
             {
-                var item = new ListViewItem(CardDatabaseService.GetName(relic.Id, japanese: false));
-                item.SubItems.Add(CardDatabaseService.GetName(relic.Id, japanese: true));
+                var item = new ListViewItem(relic.NameEn);
+                item.SubItems.Add(relic.NameJa);
                 item.Tag = relic.Id;
                 listViewRelics.Items.Add(item);
             }
             listViewRelics.EndUpdate();
+
+            RefreshDeckOverview();
+            RefreshBlockOverview();
+        }
+
+        void RefreshDeckOverview()
+        {
+            if (_deckOverview is null || _deckOverview.IsDisposed || !_deckOverview.Visible) return;
+            if (_lastDeckCards != null)
+                _deckOverview.UpdateDeck(_lastDeckCards);
+            _deckOverview.UpdateRelics(_lastRelics ?? []);
+        }
+
+        void RefreshBlockOverview()
+        {
+            if (_blockOverview is null || _blockOverview.IsDisposed || !_blockOverview.Visible) return;
+            if (_lastDeckCards is null) return;
+
+            var blockCards  = _lastDeckCards.Where(c => CardDatabaseService.IsBlockGiver(c.Id)).ToList();
+            var blockRelics = (_lastRelics ?? []).Where(r => CardDatabaseService.IsRelicBlockGiver(r.Id)).ToList();
+            int total = _lastDeckCards.Sum(c => c.Count);
+
+            _blockOverview.UpdateDeck(blockCards);
+            _blockOverview.UpdateRelics(blockRelics);
+            _blockOverview.SetBlockStats(blockCards.Sum(c => c.Count), total, blockRelics.Count);
         }
 
         void ListViewDeck_ColumnClick(object? sender, ColumnClickEventArgs e)
@@ -419,8 +445,7 @@ namespace StS2Toys
                 }
                 _deckOverview.Show(this);
                 UpdateDeckOverviewButton(true);
-                if (_lastDeckCards != null)
-                    _deckOverview.UpdateDeck(_lastDeckCards);
+                RefreshDeckOverview();
             }
             else
             {
@@ -451,13 +476,7 @@ namespace StS2Toys
                 }
                 _blockOverview.Show(this);
                 UpdateBlockOverviewButton(true);
-                if (_lastDeckCards != null)
-                {
-                    var blockCards = _lastDeckCards.Where(c => CardDatabaseService.IsBlockGiver(c.Id)).ToList();
-                    int total = _lastDeckCards.Sum(c => c.Count);
-                    _blockOverview.UpdateDeck(blockCards);
-                    _blockOverview.SetBlockStats(blockCards.Sum(c => c.Count), total);
-                }
+                RefreshBlockOverview();
             }
             else
             {

@@ -98,6 +98,7 @@ static class CardDatabaseService
 
     static readonly LocData _loc = LoadLoc();
     static readonly HashSet<string> _blockGivers = ComputeBlockGivers();
+    static readonly HashSet<string> _blockRelicGivers = ComputeBlockRelicGivers();
 
     static HashSet<string> ComputeBlockGivers()
     {
@@ -115,7 +116,28 @@ static class CardDatabaseService
         return result;
     }
 
+    static HashSet<string> ComputeBlockRelicGivers()
+    {
+        const string blockTag   = "[gold]Block[/gold]";
+        const string descSuffix = ".description";
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, desc) in _loc.EngRelics)
+        {
+            if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
+            if (!desc.Contains(blockTag, StringComparison.Ordinal)) continue;
+            // Rule 1: "gain [blue]{VALUE}[/blue] [gold]Block[/gold]" — 直接ブロック付与
+            // Rule 2: "each combat" — 戦闘開始時付与（ANCHOR 等）＋ VAMBRACE
+            // Rule 3: "double" — ブロック倍増（PAELS_LEGION, VITRUVIAN_MINION 等）
+            if (desc.Contains("gain [blue]{", StringComparison.Ordinal) ||
+                desc.Contains("each combat",  StringComparison.OrdinalIgnoreCase) ||
+                desc.Contains("double",       StringComparison.OrdinalIgnoreCase))
+                result.Add(key[..^descSuffix.Length]);
+        }
+        return result;
+    }
+
     public static bool IsBlockGiver(string id) => _blockGivers.Contains(ToRawId(id));
+    public static bool IsRelicBlockGiver(string id) => _blockRelicGivers.Contains(ToRawId(id));
 
     static LocData LoadLoc() => new(
         LoadLocJson("eng.cards"),

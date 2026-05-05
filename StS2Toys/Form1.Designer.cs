@@ -16,6 +16,7 @@ namespace StS2Toys
             panelTop = new Panel();
             lblUpdateFlash = new Label();
             lblLastUpdated = new Label();
+            btnBlockOverview = new Button();
             btnDeckOverview = new Button();
             btnCardDetail = new Button();
             btnImageViewer = new Button();
@@ -34,7 +35,6 @@ namespace StS2Toys
             colCardCount = new ColumnHeader();
             panelBlockActions = new Panel();
             btnFilterBlock = new Button();
-            btnBlockOverview = new Button();
             lblDeckTitle = new Label();
             listViewRelics = new ListView();
             colRelicName = new ColumnHeader();
@@ -54,6 +54,7 @@ namespace StS2Toys
             // 
             panelTop.Controls.Add(lblUpdateFlash);
             panelTop.Controls.Add(lblLastUpdated);
+            panelTop.Controls.Add(btnBlockOverview);
             panelTop.Controls.Add(btnDeckOverview);
             panelTop.Controls.Add(btnCardDetail);
             panelTop.Controls.Add(btnImageViewer);
@@ -70,7 +71,7 @@ namespace StS2Toys
             // 
             lblUpdateFlash.Dock = DockStyle.Fill;
             lblUpdateFlash.ForeColor = Color.ForestGreen;
-            lblUpdateFlash.Location = new Point(563, 8);
+            lblUpdateFlash.Location = new Point(663, 8);
             lblUpdateFlash.Name = "lblUpdateFlash";
             lblUpdateFlash.Size = new Size(0, 32);
             lblUpdateFlash.TabIndex = 0;
@@ -79,13 +80,23 @@ namespace StS2Toys
             // lblLastUpdated
             // 
             lblLastUpdated.Dock = DockStyle.Left;
-            lblLastUpdated.Location = new Point(408, 8);
+            lblLastUpdated.Location = new Point(508, 8);
             lblLastUpdated.Name = "lblLastUpdated";
             lblLastUpdated.Padding = new Padding(8, 0, 0, 0);
             lblLastUpdated.Size = new Size(155, 32);
             lblLastUpdated.TabIndex = 1;
             lblLastUpdated.Text = "最終更新: --:--:--";
             lblLastUpdated.TextAlign = ContentAlignment.MiddleLeft;
+            // 
+            // btnBlockOverview
+            // 
+            btnBlockOverview.Dock = DockStyle.Left;
+            btnBlockOverview.Location = new Point(408, 8);
+            btnBlockOverview.Name = "btnBlockOverview";
+            btnBlockOverview.Size = new Size(100, 32);
+            btnBlockOverview.TabIndex = 6;
+            btnBlockOverview.Text = "○ ブロック概観";
+            btnBlockOverview.Click += BtnBlockOverview_Click;
             // 
             // btnDeckOverview
             // 
@@ -243,7 +254,6 @@ namespace StS2Toys
             // panelBlockActions
             // 
             panelBlockActions.Controls.Add(btnFilterBlock);
-            panelBlockActions.Controls.Add(btnBlockOverview);
             panelBlockActions.Dock = DockStyle.Top;
             panelBlockActions.Location = new Point(0, 26);
             panelBlockActions.Name = "panelBlockActions";
@@ -255,20 +265,10 @@ namespace StS2Toys
             btnFilterBlock.Dock = DockStyle.Fill;
             btnFilterBlock.Location = new Point(0, 0);
             btnFilterBlock.Name = "btnFilterBlock";
-            btnFilterBlock.Size = new Size(555, 28);
+            btnFilterBlock.Size = new Size(645, 28);
             btnFilterBlock.TabIndex = 0;
             btnFilterBlock.Text = "○ ブロック絞り込み";
             btnFilterBlock.Click += BtnFilterBlock_Click;
-            // 
-            // btnBlockOverview
-            // 
-            btnBlockOverview.Dock = DockStyle.Right;
-            btnBlockOverview.Location = new Point(555, 0);
-            btnBlockOverview.Name = "btnBlockOverview";
-            btnBlockOverview.Size = new Size(90, 28);
-            btnBlockOverview.TabIndex = 1;
-            btnBlockOverview.Text = "○ ブロック概観";
-            btnBlockOverview.Click += BtnBlockOverview_Click;
             // 
             // lblDeckTitle
             // 

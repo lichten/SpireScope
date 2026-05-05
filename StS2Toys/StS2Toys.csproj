@@ -12,14 +12,14 @@
     <EmbeddedResource Include="Resources\card_database.json" />
     <EmbeddedResource Include="Resources\card_types.json" />
     <EmbeddedResource Include="Resources\card_costs.json" />
-    <EmbeddedResource Include="..\tools\extracted\localization\eng\cards.json"
-                      LogicalName="StS2Toys.localization.eng.cards.json" />
-    <EmbeddedResource Include="..\tools\extracted\localization\jpn\cards.json"
-                      LogicalName="StS2Toys.localization.jpn.cards.json" />
-    <EmbeddedResource Include="..\tools\extracted\localization\eng\relics.json"
-                      LogicalName="StS2Toys.localization.eng.relics.json" />
-    <EmbeddedResource Include="..\tools\extracted\localization\jpn\relics.json"
-                      LogicalName="StS2Toys.localization.jpn.relics.json" />
+    <EmbeddedResource Include="..\tools\extracted\localization\eng\cards.json" LogicalName="StS2Toys.localization.eng.cards.json" />
+    <EmbeddedResource Include="..\tools\extracted\localization\jpn\cards.json" LogicalName="StS2Toys.localization.jpn.cards.json" />
+    <EmbeddedResource Include="..\tools\extracted\localization\eng\relics.json" LogicalName="StS2Toys.localization.eng.relics.json" />
+    <EmbeddedResource Include="..\tools\extracted\localization\jpn\relics.json" LogicalName="StS2Toys.localization.jpn.relics.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Pfim" Version="0.11.4" />
   </ItemGroup>
 
 </Project>
