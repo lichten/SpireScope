@@ -3,7 +3,7 @@ using StS2Toys.Services;
 
 namespace StS2Toys;
 
-public record DeckCard(string Id, string NameEn, string NameJa, string Cost, string Type, int Count);
+public record DeckCard(string Id, string NameEn, string NameJa, string Cost, string Type, int Count, bool IsUpgraded = false);
 public record RelicEntry(string Id, string NameEn, string NameJa);
 
 public partial class DeckOverviewForm : Form
@@ -148,11 +148,35 @@ public partial class DeckOverviewForm : Form
         else
             DrawPlaceholder(g, card.NameEn, rect);
 
-        using var borderPen = new Pen(Color.FromArgb(100, 0, 0, 0));
-        g.DrawRectangle(borderPen, rect);
+        if (card.IsUpgraded)
+        {
+            using var goldPen = new Pen(Color.FromArgb(200, 180, 120, 0), 1.5f);
+            g.DrawRectangle(goldPen, rect);
+            DrawUpgradeBadge(g, rect);
+        }
+        else
+        {
+            using var borderPen = new Pen(Color.FromArgb(100, 0, 0, 0));
+            g.DrawRectangle(borderPen, rect);
+        }
 
         DrawCostBadge(g, card.Cost, rect);
         DrawCountBadge(g, card.Count, rect);
+    }
+
+    static void DrawUpgradeBadge(Graphics g, Rectangle cardRect)
+    {
+        var r = new Rectangle(cardRect.Right - 24, cardRect.Y + 2, 22, 22);
+        using var bg = new SolidBrush(Color.FromArgb(210, 180, 140, 0));
+        g.FillEllipse(bg, r);
+        using var font = new Font("Segoe UI", 9f, FontStyle.Bold);
+        using var fg = new SolidBrush(Color.White);
+        using var fmt = new StringFormat
+        {
+            Alignment = StringAlignment.Center,
+            LineAlignment = StringAlignment.Center,
+        };
+        g.DrawString("+", font, fg, (RectangleF)r, fmt);
     }
 
     static void DrawPlaceholder(Graphics g, string name, Rectangle rect)

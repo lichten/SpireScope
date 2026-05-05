@@ -223,15 +223,22 @@ namespace StS2Toys
         void DisplayDeck(PlayerData player)
         {
             _lastDeckCards = player.Deck
-                .GroupBy(c => c.Id)
-                .OrderBy(g => CardDatabaseService.GetName(g.Key, japanese: true))
-                .Select(g => new DeckCard(
-                    g.Key,
-                    CardDatabaseService.GetName(g.Key, japanese: false),
-                    CardDatabaseService.GetName(g.Key, japanese: true),
-                    CardDatabaseService.GetCardCost(g.Key),
-                    CardDatabaseService.GetCardType(g.Key),
-                    g.Count()))
+                .GroupBy(c => (c.Id, IsUpgraded: (c.CurrentUpgradeLevel ?? 0) >= 1))
+                .OrderBy(g => CardDatabaseService.GetName(g.Key.Id, japanese: true))
+                .ThenBy(g => g.Key.IsUpgraded)
+                .Select(g =>
+                {
+                    bool upgraded = g.Key.IsUpgraded;
+                    string suffix = upgraded ? "+" : "";
+                    return new DeckCard(
+                        g.Key.Id,
+                        CardDatabaseService.GetName(g.Key.Id, japanese: false) + suffix,
+                        CardDatabaseService.GetName(g.Key.Id, japanese: true)  + suffix,
+                        CardDatabaseService.GetCardCost(g.Key.Id),
+                        CardDatabaseService.GetCardType(g.Key.Id),
+                        g.Count(),
+                        upgraded);
+                })
                 .ToList();
 
             RefreshDeckList();

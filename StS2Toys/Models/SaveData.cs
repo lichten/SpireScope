@@ -49,8 +49,8 @@ class CardData
     [JsonPropertyName("floor_added_to_deck")]
     public int FloorAddedToDeck { get; init; }
 
-    [JsonPropertyName("upgrade_count")]
-    public int? UpgradeCount { get; init; }
+    [JsonPropertyName("current_upgrade_level")]
+    public int? CurrentUpgradeLevel { get; init; }
 }
 
 class RelicData
