@@ -48,9 +48,9 @@ public partial class DeckOverviewForm : Form
     {
         double pct = totalCount > 0 ? 100.0 * blockCount / totalCount : 0;
         var relicPart = relicCount > 0 ? $"  レリック: {relicCount}個" : "";
-        _statsLabel.Text = $"ブロック: {blockCount}枚 / デッキ全体: {totalCount}枚 ({pct:F0}%){relicPart}";
+        _statsLabel.Text = $"ブロック関連: {blockCount}枚 / デッキ全体: {totalCount}枚 ({pct:F0}%){relicPart}";
         _statsPanel.Visible = true;
-        Text = "ブロックカード概観";
+        Text = "ブロック関連カード概観";
     }
 
     void RecomposeIfNeeded()

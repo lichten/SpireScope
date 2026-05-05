@@ -23,7 +23,7 @@ namespace StS2Toys
         private int _sortColumn = -1;
         private bool _sortAscending = true;
 
-        // ブロックカード絞り込み
+        // ブロック関連カード絞り込み
         private bool _blockFilter = false;
 
         // カラムヘッダーのベーステキスト（種別カラムは index 2、枚数は index 3）
@@ -255,7 +255,7 @@ namespace StS2Toys
             var cards = _blockFilter ? (IReadOnlyList<DeckCard>)blockCards : _lastDeckCards;
 
             lblDeckTitle.Text = _blockFilter
-                ? $"デッキ（ブロック {blockCount}/{total}枚）"
+                ? $"デッキ（ブロック関連 {blockCount}/{total}枚）"
                 : $"デッキ ({total}枚)";
 
             listViewDeck.BeginUpdate();
@@ -432,7 +432,7 @@ namespace StS2Toys
 
         void UpdateBlockFilterButton(bool active)
         {
-            btnFilterBlock.Text = active ? "● ブロックのみ" : "○ ブロック絞り込み";
+            btnFilterBlock.Text = active ? "● ブロック関連のみ" : "○ ブロック関連絞り込み";
             btnFilterBlock.ForeColor = active ? Color.DarkBlue : SystemColors.ControlText;
         }
 
@@ -494,7 +494,7 @@ namespace StS2Toys
 
         void UpdateBlockOverviewButton(bool visible)
         {
-            btnBlockOverview.Text = visible ? "● ブロック概観" : "○ ブロック概観";
+            btnBlockOverview.Text = visible ? "● ブロック関連概観" : "○ ブロック関連概観";
             btnBlockOverview.ForeColor = visible ? Color.DarkBlue : SystemColors.ControlText;
         }
 

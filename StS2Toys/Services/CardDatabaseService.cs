@@ -102,15 +102,22 @@ static class CardDatabaseService
 
     static HashSet<string> ComputeBlockGivers()
     {
-        const string blockTag  = "[gold]Block[/gold]";
+        const string blockTag   = "[gold]Block[/gold]";
+        const string channelTag = "[gold]Channel[/gold]";
+        const string frostTag   = "[gold]Frost[/gold]";
         const string descSuffix = ".description";
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var (key, desc) in _loc.EngCards)
         {
             if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
-            if (!desc.Contains(blockTag, StringComparison.Ordinal)) continue;
-            if (desc.Contains("gain",   StringComparison.OrdinalIgnoreCase) ||
-                desc.Contains("Double", StringComparison.OrdinalIgnoreCase))
+            // ブロック直接付与・倍増
+            bool isBlockGiver = desc.Contains(blockTag, StringComparison.Ordinal) &&
+                (desc.Contains("gain",   StringComparison.OrdinalIgnoreCase) ||
+                 desc.Contains("Double", StringComparison.OrdinalIgnoreCase));
+            // Frostオーブ生成（ディフェクトのブロック源）
+            bool isFrostChanneler = desc.Contains(channelTag, StringComparison.Ordinal) &&
+                                    desc.Contains(frostTag,   StringComparison.Ordinal);
+            if (isBlockGiver || isFrostChanneler)
                 result.Add(key[..^descSuffix.Length]);
         }
         return result;

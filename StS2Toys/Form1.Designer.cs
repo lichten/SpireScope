@@ -95,7 +95,7 @@ namespace StS2Toys
             btnBlockOverview.Name = "btnBlockOverview";
             btnBlockOverview.Size = new Size(100, 32);
             btnBlockOverview.TabIndex = 6;
-            btnBlockOverview.Text = "○ ブロック概観";
+            btnBlockOverview.Text = "○ ブロック関連概観";
             btnBlockOverview.Click += BtnBlockOverview_Click;
             // 
             // btnDeckOverview
@@ -267,7 +267,7 @@ namespace StS2Toys
             btnFilterBlock.Name = "btnFilterBlock";
             btnFilterBlock.Size = new Size(645, 28);
             btnFilterBlock.TabIndex = 0;
-            btnFilterBlock.Text = "○ ブロック絞り込み";
+            btnFilterBlock.Text = "○ ブロック関連絞り込み";
             btnFilterBlock.Click += BtnFilterBlock_Click;
             // 
             // lblDeckTitle
