@@ -11,10 +11,10 @@ public partial class CardImageViewerForm : Form
         InitializeComponent();
     }
 
-    public void ShowCard(string cardId)
+    public void ShowCard(string cardId, string? typeHint = null)
     {
         var oldImage = pictureBox.Image;
-        var imagePath = FindCardImage(cardId);
+        var imagePath = FindCardImage(cardId, typeHint);
         pictureBox.Image = imagePath != null ? Image.FromFile(imagePath) : null;
         oldImage?.Dispose();
         pictureBox.Invalidate();
@@ -28,14 +28,27 @@ public partial class CardImageViewerForm : Form
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
     }
 
-    internal static string? FindCardImage(string cardId)
+    internal static string? FindCardImage(string cardId, string? typeHint = null)
     {
         var dir = GetPortraitsDir();
         if (dir is null) return null;
 
         var raw = cardId.Contains('.') ? cardId[(cardId.LastIndexOf('.') + 1)..] : cardId;
-        var filename = raw.ToLowerInvariant() + ".png";
+        var baseName = raw.ToLowerInvariant();
 
+        var found = SearchPortraitsDir(dir, baseName + ".png");
+        if (found is not null) return found;
+
+        // タイプ別ファイル名のフォールバック（例: mad_science_skill.png）
+        var type = (typeHint ?? Services.CardDatabaseService.GetCardType(cardId)).ToLowerInvariant();
+        if (!string.IsNullOrEmpty(type))
+            found = SearchPortraitsDir(dir, baseName + "_" + type + ".png");
+
+        return found;
+    }
+
+    static string? SearchPortraitsDir(string dir, string filename)
+    {
         foreach (var subdir in Directory.GetDirectories(dir))
         {
             var path = Path.Combine(subdir, filename);

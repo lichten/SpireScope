@@ -51,6 +51,27 @@ class CardData
 
     [JsonPropertyName("current_upgrade_level")]
     public int? CurrentUpgradeLevel { get; init; }
+
+    [JsonPropertyName("props")]
+    public CardProps? Props { get; init; }
+
+    public int? GetPropInt(string name) =>
+        Props?.Ints.FirstOrDefault(x => x.Name == name)?.Value;
+}
+
+class CardProps
+{
+    [JsonPropertyName("ints")]
+    public List<NamedInt> Ints { get; init; } = [];
+}
+
+class NamedInt
+{
+    [JsonPropertyName("name")]
+    public string Name { get; init; } = "";
+
+    [JsonPropertyName("value")]
+    public int Value { get; init; }
 }
 
 class RelicData

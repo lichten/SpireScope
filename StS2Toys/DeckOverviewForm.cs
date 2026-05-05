@@ -142,7 +142,7 @@ public partial class DeckOverviewForm : Form
 
     void DrawCard(Graphics g, DeckCard card, Rectangle rect)
     {
-        var thumbnail = GetCardThumbnail(card.Id);
+        var thumbnail = GetCardThumbnail(card.Id, card.Type);
         if (thumbnail != null)
             g.DrawImage(thumbnail, rect);
         else
@@ -276,11 +276,12 @@ public partial class DeckOverviewForm : Form
         }
     }
 
-    Bitmap? GetCardThumbnail(string cardId)
+    Bitmap? GetCardThumbnail(string cardId, string type)
     {
-        if (_imageCache.TryGetValue(cardId, out var cached)) return cached;
-        var path = CardImageViewerForm.FindCardImage(cardId);
-        if (path is null) { _imageCache[cardId] = null; return null; }
+        var cacheKey = cardId + "|" + type;
+        if (_imageCache.TryGetValue(cacheKey, out var cached)) return cached;
+        var path = CardImageViewerForm.FindCardImage(cardId, type);
+        if (path is null) { _imageCache[cacheKey] = null; return null; }
         try
         {
             using var original = Image.FromFile(path);
@@ -288,7 +289,7 @@ public partial class DeckOverviewForm : Form
             using var tg = Graphics.FromImage(thumb);
             tg.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
             tg.DrawImage(original, 0, 0, CardW, CardH);
-            _imageCache[cardId] = thumb;
+            _imageCache[cacheKey] = thumb;
             return thumb;
         }
         catch { _imageCache[cardId] = null; return null; }

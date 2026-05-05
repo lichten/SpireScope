@@ -223,19 +223,29 @@ namespace StS2Toys
         void DisplayDeck(PlayerData player)
         {
             _lastDeckCards = player.Deck
-                .GroupBy(c => (c.Id, IsUpgraded: (c.CurrentUpgradeLevel ?? 0) >= 1))
+                .GroupBy(c => (
+                    c.Id,
+                    IsUpgraded: (c.CurrentUpgradeLevel ?? 0) >= 1,
+                    TinkerType: c.GetPropInt("TinkerTimeType")))
                 .OrderBy(g => CardDatabaseService.GetName(g.Key.Id, japanese: true))
                 .ThenBy(g => g.Key.IsUpgraded)
                 .Select(g =>
                 {
                     bool upgraded = g.Key.IsUpgraded;
                     string suffix = upgraded ? "+" : "";
+                    string runtimeType = g.Key.TinkerType switch
+                    {
+                        1 => "Attack",
+                        2 => "Skill",
+                        3 => "Power",
+                        _ => CardDatabaseService.GetCardType(g.Key.Id)
+                    };
                     return new DeckCard(
                         g.Key.Id,
                         CardDatabaseService.GetName(g.Key.Id, japanese: false) + suffix,
                         CardDatabaseService.GetName(g.Key.Id, japanese: true)  + suffix,
                         CardDatabaseService.GetCardCost(g.Key.Id),
-                        CardDatabaseService.GetCardType(g.Key.Id),
+                        runtimeType,
                         g.Count(),
                         upgraded);
                 })
@@ -267,7 +277,7 @@ namespace StS2Toys
                 item.SubItems.Add(c.Cost);
                 item.SubItems.Add(LocalizeType(c.Type));
                 item.SubItems.Add(c.Count.ToString());
-                item.Tag = c.Id;
+                item.Tag = c;
                 listViewDeck.Items.Add(item);
             }
             listViewDeck.EndUpdate();
@@ -372,8 +382,8 @@ namespace StS2Toys
                 UpdateImageViewerButton(true);
 
                 if (listViewDeck.SelectedItems.Count > 0 &&
-                    listViewDeck.SelectedItems[0].Tag is string id)
-                    _imageViewer.ShowCard(id);
+                    listViewDeck.SelectedItems[0].Tag is DeckCard selectedCard)
+                    _imageViewer.ShowCard(selectedCard.Id, selectedCard.Type);
             }
             else
             {
@@ -501,12 +511,12 @@ namespace StS2Toys
         void ListViewDeck_SelectedIndexChanged(object? sender, EventArgs e)
         {
             if (listViewDeck.SelectedItems.Count == 0) return;
-            if (listViewDeck.SelectedItems[0].Tag is not string id) return;
+            if (listViewDeck.SelectedItems[0].Tag is not DeckCard card) return;
 
             if (_imageViewer is { IsDisposed: false } iv && iv.Visible)
-                iv.ShowCard(id);
+                iv.ShowCard(card.Id, card.Type);
             if (_detailViewer is { IsDisposed: false } dv && dv.Visible)
-                dv.UpdateCard(id, isRelic: false);
+                dv.UpdateCard(card.Id, isRelic: false);
         }
 
         void ListViewRelics_SelectedIndexChanged(object? sender, EventArgs e)
