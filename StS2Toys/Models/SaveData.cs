@@ -15,6 +15,42 @@ class RunSaveData
 
     [JsonPropertyName("players")]
     public List<PlayerData> Players { get; init; } = [];
+
+    [JsonPropertyName("map_point_history")]
+    public List<List<MapPointHistoryEntry>> MapPointHistory { get; init; } = [];
+}
+
+public class MapPointHistoryEntry
+{
+    [JsonPropertyName("map_point_type")]
+    public string MapPointType { get; init; } = "";
+
+    [JsonPropertyName("player_stats")]
+    public List<PlayerFloorStats>? PlayerStats { get; init; }
+}
+
+public class PlayerFloorStats
+{
+    [JsonPropertyName("current_hp")]
+    public int CurrentHp { get; init; }
+
+    [JsonPropertyName("max_hp")]
+    public int MaxHp { get; init; }
+
+    [JsonPropertyName("damage_taken")]
+    public int DamageTaken { get; init; }
+
+    [JsonPropertyName("hp_healed")]
+    public int HpHealed { get; init; }
+
+    [JsonPropertyName("max_hp_gained")]
+    public int MaxHpGained { get; init; }
+
+    [JsonPropertyName("max_hp_lost")]
+    public int MaxHpLost { get; init; }
+
+    [JsonPropertyName("current_gold")]
+    public int CurrentGold { get; init; }
 }
 
 class PlayerData

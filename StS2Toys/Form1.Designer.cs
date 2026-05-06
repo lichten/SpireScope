@@ -16,6 +16,7 @@ namespace StS2Toys
             panelTop = new Panel();
             lblUpdateFlash = new Label();
             lblLastUpdated = new Label();
+            btnHpHistory = new Button();
             btnBlockOverview = new Button();
             btnDeckOverview = new Button();
             btnCardDetail = new Button();
@@ -55,6 +56,7 @@ namespace StS2Toys
             // 
             panelTop.Controls.Add(lblUpdateFlash);
             panelTop.Controls.Add(lblLastUpdated);
+            panelTop.Controls.Add(btnHpHistory);
             panelTop.Controls.Add(btnBlockOverview);
             panelTop.Controls.Add(btnDeckOverview);
             panelTop.Controls.Add(btnCardDetail);
@@ -88,9 +90,9 @@ namespace StS2Toys
             lblLastUpdated.TabIndex = 1;
             lblLastUpdated.Text = "最終更新: --:--:--";
             lblLastUpdated.TextAlign = ContentAlignment.MiddleLeft;
-            // 
+            //
             // btnBlockOverview
-            // 
+            //
             btnBlockOverview.Dock = DockStyle.Left;
             btnBlockOverview.Location = new Point(408, 8);
             btnBlockOverview.Name = "btnBlockOverview";
@@ -98,6 +100,16 @@ namespace StS2Toys
             btnBlockOverview.TabIndex = 6;
             btnBlockOverview.Text = "○ ブロック関連概観";
             btnBlockOverview.Click += BtnBlockOverview_Click;
+            //
+            // btnHpHistory
+            //
+            btnHpHistory.Dock = DockStyle.Left;
+            btnHpHistory.Location = new Point(508, 8);
+            btnHpHistory.Name = "btnHpHistory";
+            btnHpHistory.Size = new Size(80, 32);
+            btnHpHistory.TabIndex = 7;
+            btnHpHistory.Text = "○ HP変動";
+            btnHpHistory.Click += BtnHpHistory_Click;
             // 
             // btnDeckOverview
             // 
@@ -361,6 +373,7 @@ namespace StS2Toys
         private Panel panelBlockActions;
         private Button btnFilterBlock;
         private Button btnBlockOverview;
+        private Button btnHpHistory;
         private ListView listViewDeck;
         private ColumnHeader colCardName;
         private ColumnHeader colCardNameJa;

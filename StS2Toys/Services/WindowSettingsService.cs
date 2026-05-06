@@ -9,7 +9,8 @@ record AppSettings(
     SubWindowSettings? ImageViewer = null,
     SubWindowSettings? CardDetail = null,
     SubWindowSettings? DeckOverview = null,
-    SubWindowSettings? BlockOverview = null);
+    SubWindowSettings? BlockOverview = null,
+    SubWindowSettings? HpHistory = null);
 
 static class WindowSettingsService
 {

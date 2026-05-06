@@ -12,12 +12,15 @@ namespace StS2Toys
         private CardDetailForm? _detailViewer;
         private DeckOverviewForm? _deckOverview;
         private DeckOverviewForm? _blockOverview;
+        private HpHistoryForm? _hpHistory;
         private SubWindowSettings? _imageViewerSettings;
         private SubWindowSettings? _cardDetailSettings;
         private SubWindowSettings? _deckOverviewSettings;
         private SubWindowSettings? _blockOverviewSettings;
+        private SubWindowSettings? _hpHistorySettings;
         private IReadOnlyList<DeckCard>? _lastDeckCards;
         private IReadOnlyList<RelicEntry>? _lastRelics;
+        private RunSaveData? _lastRunData;
 
         // デッキリストのソート状態
         private int _sortColumn = -1;
@@ -55,6 +58,7 @@ namespace StS2Toys
             _detailViewer?.Close();
             _deckOverview?.Close();
             _blockOverview?.Close();
+            _hpHistory?.Close();
         }
 
         void RestoreWindowSettings()
@@ -64,6 +68,7 @@ namespace StS2Toys
             _cardDetailSettings = app.CardDetail;
             _deckOverviewSettings = app.DeckOverview;
             _blockOverviewSettings = app.BlockOverview;
+            _hpHistorySettings = app.HpHistory;
 
             var main = app.Main;
             if (main is null) return;
@@ -88,11 +93,13 @@ namespace StS2Toys
                 _deckOverviewSettings = BoundsToSub(_deckOverview.Bounds);
             if (_blockOverview is { IsDisposed: false })
                 _blockOverviewSettings = BoundsToSub(_blockOverview.Bounds);
+            if (_hpHistory is { IsDisposed: false })
+                _hpHistorySettings = BoundsToSub(_hpHistory.Bounds);
 
             var state = WindowState == FormWindowState.Minimized ? FormWindowState.Normal : WindowState;
             var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
             var main = new WindowSettings(bounds.X, bounds.Y, bounds.Width, bounds.Height, state.ToString());
-            WindowSettingsService.Save(new AppSettings(main, _imageViewerSettings, _cardDetailSettings, _deckOverviewSettings, _blockOverviewSettings));
+            WindowSettingsService.Save(new AppSettings(main, _imageViewerSettings, _cardDetailSettings, _deckOverviewSettings, _blockOverviewSettings, _hpHistorySettings));
         }
 
         static SubWindowSettings BoundsToSub(Rectangle r) => new(r.X, r.Y, r.Width, r.Height);
@@ -202,6 +209,7 @@ namespace StS2Toys
 
         void DisplayData(RunSaveData data)
         {
+            _lastRunData = data;
             if (data.Players.Count == 0) return;
             var player = data.Players[0];
 
@@ -217,6 +225,7 @@ namespace StS2Toys
 
             DisplayDeck(player);
             DisplayRelics(player);
+            RefreshHpHistory();
         }
 
         void DisplayDeck(PlayerData player)
@@ -511,6 +520,44 @@ namespace StS2Toys
         {
             btnBlockOverview.Text = visible ? "● ブロック関連概観" : "○ ブロック関連概観";
             btnBlockOverview.ForeColor = visible ? Color.DarkBlue : SystemColors.ControlText;
+        }
+
+        void BtnHpHistory_Click(object? sender, EventArgs e)
+        {
+            if (_hpHistory is null || _hpHistory.IsDisposed || !_hpHistory.Visible)
+            {
+                if (_hpHistory is null || _hpHistory.IsDisposed)
+                {
+                    _hpHistory = new HpHistoryForm();
+                    ApplySubWindowSettings(_hpHistory, _hpHistorySettings, new Point(Right + 4, Top));
+                    _hpHistory.FormClosed += (_, _) =>
+                    {
+                        _hpHistorySettings = BoundsToSub(_hpHistory.Bounds);
+                        UpdateHpHistoryButton(false);
+                    };
+                }
+                _hpHistory.Show(this);
+                UpdateHpHistoryButton(true);
+                RefreshHpHistory();
+            }
+            else
+            {
+                _hpHistory.Hide();
+                UpdateHpHistoryButton(false);
+            }
+        }
+
+        void UpdateHpHistoryButton(bool visible)
+        {
+            btnHpHistory.Text = visible ? "● HP変動" : "○ HP変動";
+            btnHpHistory.ForeColor = visible ? Color.DarkRed : SystemColors.ControlText;
+        }
+
+        void RefreshHpHistory()
+        {
+            if (_hpHistory is null || _hpHistory.IsDisposed || !_hpHistory.Visible) return;
+            if (_lastRunData is null) return;
+            _hpHistory.UpdateHistory(_lastRunData.MapPointHistory);
         }
 
         void ListViewDeck_SelectedIndexChanged(object? sender, EventArgs e)
