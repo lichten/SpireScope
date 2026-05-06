@@ -162,6 +162,9 @@ public partial class DeckOverviewForm : Form
 
         DrawCostBadge(g, card.Cost, rect);
         DrawCountBadge(g, card.Count, rect);
+
+        if (!string.IsNullOrEmpty(card.EnchantmentId))
+            DrawEnchantBadge(g, card.EnchantmentId, rect);
     }
 
     static void DrawUpgradeBadge(Graphics g, Rectangle cardRect)
@@ -182,6 +185,41 @@ public partial class DeckOverviewForm : Form
             LineAlignment = StringAlignment.Center,
         };
         g.DrawString("+", font, fg, (RectangleF)r, fmt);
+    }
+
+    static void DrawEnchantBadge(Graphics g, string enchantmentId, Rectangle cardRect)
+    {
+        const int Size = 26;
+        var r = new Rectangle(cardRect.X + 2, cardRect.Bottom - Size - 2, Size, Size);
+
+        // 半透明の暗い背景 + 白縁
+        using var bg = new SolidBrush(Color.FromArgb(160, 20, 20, 20));
+        g.FillEllipse(bg, r);
+        using var outline = new Pen(Color.White, 1.5f);
+        g.DrawEllipse(outline, r);
+
+        var icon = Services.EnchantmentIconService.GetEnchantmentBitmap(enchantmentId);
+        if (icon is not null)
+        {
+            const int Pad = 3;
+            var iconRect = new Rectangle(r.X + Pad, r.Y + Pad, r.Width - Pad * 2, r.Height - Pad * 2);
+            var oldInterp = g.InterpolationMode;
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            g.DrawImage(icon, iconRect);
+            g.InterpolationMode = oldInterp;
+        }
+        else
+        {
+            // アイコン未取得時のフォールバック
+            using var font = new Font("Segoe UI", 9f, FontStyle.Bold);
+            using var fg = new SolidBrush(Color.White);
+            using var fmt = new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center,
+            };
+            g.DrawString("✦", font, fg, (RectangleF)r, fmt);
+        }
     }
 
     static void DrawPlaceholder(Graphics g, string name, Rectangle rect)
