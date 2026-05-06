@@ -26,8 +26,7 @@ namespace StS2Toys
         // ブロック関連カード絞り込み
         private bool _blockFilter = false;
 
-        // カラムヘッダーのベーステキスト（種別カラムは index 2、枚数は index 3）
-        private static readonly string[] DeckColumnTexts = ["カード名 (EN)", "カード名 (JP)", "コスト", "種別", "枚数"];
+        private static readonly string[] DeckColumnTexts = ["カード名 (EN)", "カード名 (JP)", "コスト", "種別", "エンチャント", "枚数"];
 
         public Form1()
         {
@@ -226,9 +225,12 @@ namespace StS2Toys
                 .GroupBy(c => (
                     c.Id,
                     IsUpgraded: (c.CurrentUpgradeLevel ?? 0) >= 1,
-                    TinkerType: c.GetPropInt("TinkerTimeType")))
+                    TinkerType: c.GetPropInt("TinkerTimeType"),
+                    EnchantmentId: c.Enchantment?.Id ?? "",
+                    EnchantmentAmount: c.Enchantment?.Amount ?? 0))
                 .OrderBy(g => CardDatabaseService.GetName(g.Key.Id, japanese: true))
                 .ThenBy(g => g.Key.IsUpgraded)
+                .ThenBy(g => g.Key.EnchantmentId)
                 .Select(g =>
                 {
                     bool upgraded = g.Key.IsUpgraded;
@@ -247,7 +249,9 @@ namespace StS2Toys
                         CardDatabaseService.GetCardCost(g.Key.Id),
                         runtimeType,
                         g.Count(),
-                        upgraded);
+                        upgraded,
+                        g.Key.EnchantmentId,
+                        g.Key.EnchantmentAmount);
                 })
                 .ToList();
 
@@ -276,6 +280,7 @@ namespace StS2Toys
                 item.SubItems.Add(c.NameJa);
                 item.SubItems.Add(c.Cost);
                 item.SubItems.Add(LocalizeType(c.Type));
+                item.SubItems.Add(CardDatabaseService.FormatEnchantmentLabel(c.EnchantmentId, c.EnchantmentAmount, japanese: true));
                 item.SubItems.Add(c.Count.ToString());
                 item.Tag = c;
                 listViewDeck.Items.Add(item);
@@ -415,8 +420,8 @@ namespace StS2Toys
                 _detailViewer.Show(this);
                 UpdateCardDetailButton(true);
 
-                if (listViewDeck.SelectedItems.Count > 0 && listViewDeck.SelectedItems[0].Tag is string deckId)
-                    _detailViewer.UpdateCard(deckId, isRelic: false);
+                if (listViewDeck.SelectedItems.Count > 0 && listViewDeck.SelectedItems[0].Tag is DeckCard selDeck)
+                    _detailViewer.UpdateCard(selDeck.Id, isRelic: false, selDeck.EnchantmentId, selDeck.EnchantmentAmount);
                 else if (listViewRelics.SelectedItems.Count > 0 && listViewRelics.SelectedItems[0].Tag is string relicId)
                     _detailViewer.UpdateCard(relicId, isRelic: true);
             }
@@ -516,7 +521,7 @@ namespace StS2Toys
             if (_imageViewer is { IsDisposed: false } iv && iv.Visible)
                 iv.ShowCard(card.Id, card.Type);
             if (_detailViewer is { IsDisposed: false } dv && dv.Visible)
-                dv.UpdateCard(card.Id, isRelic: false);
+                dv.UpdateCard(card.Id, isRelic: false, card.EnchantmentId, card.EnchantmentAmount);
         }
 
         void ListViewRelics_SelectedIndexChanged(object? sender, EventArgs e)
@@ -538,8 +543,8 @@ namespace StS2Toys
             string sa = column < a.SubItems.Count ? a.SubItems[column].Text : "";
             string sb = column < b.SubItems.Count ? b.SubItems[column].Text : "";
 
-            // コスト (index 2) と枚数 (index 4) は数値比較
-            int result = column is 2 or 4 && int.TryParse(sa, out int ia) && int.TryParse(sb, out int ib)
+            // コスト (index 2) と枚数 (index 5) は数値比較
+            int result = column is 2 or 5 && int.TryParse(sa, out int ia) && int.TryParse(sb, out int ib)
                 ? ia.CompareTo(ib)
                 : string.Compare(sa, sb, StringComparison.CurrentCulture);
 

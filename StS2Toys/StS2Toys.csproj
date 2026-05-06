@@ -16,6 +16,8 @@
     <EmbeddedResource Include="..\tools\extracted\localization\jpn\cards.json" LogicalName="StS2Toys.localization.jpn.cards.json" />
     <EmbeddedResource Include="..\tools\extracted\localization\eng\relics.json" LogicalName="StS2Toys.localization.eng.relics.json" />
     <EmbeddedResource Include="..\tools\extracted\localization\jpn\relics.json" LogicalName="StS2Toys.localization.jpn.relics.json" />
+    <EmbeddedResource Include="..\tools\extracted\localization\eng\enchantments.json" LogicalName="StS2Toys.localization.eng.enchantments.json" />
+    <EmbeddedResource Include="..\tools\extracted\localization\jpn\enchantments.json" LogicalName="StS2Toys.localization.jpn.enchantments.json" />
   </ItemGroup>
 
   <ItemGroup>

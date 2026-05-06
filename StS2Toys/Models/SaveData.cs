@@ -41,6 +41,15 @@ class PlayerData
     public List<RelicData> Relics { get; init; } = [];
 }
 
+class EnchantmentData
+{
+    [JsonPropertyName("id")]
+    public string Id { get; init; } = "";
+
+    [JsonPropertyName("amount")]
+    public int Amount { get; init; }
+}
+
 class CardData
 {
     [JsonPropertyName("id")]
@@ -51,6 +60,9 @@ class CardData
 
     [JsonPropertyName("current_upgrade_level")]
     public int? CurrentUpgradeLevel { get; init; }
+
+    [JsonPropertyName("enchantment")]
+    public EnchantmentData? Enchantment { get; init; }
 
     [JsonPropertyName("props")]
     public CardProps? Props { get; init; }

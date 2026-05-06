@@ -3,7 +3,7 @@ using StS2Toys.Services;
 
 namespace StS2Toys;
 
-public record DeckCard(string Id, string NameEn, string NameJa, string Cost, string Type, int Count, bool IsUpgraded = false);
+public record DeckCard(string Id, string NameEn, string NameJa, string Cost, string Type, int Count, bool IsUpgraded = false, string EnchantmentId = "", int EnchantmentAmount = 0);
 public record RelicEntry(string Id, string NameEn, string NameJa);
 
 public partial class DeckOverviewForm : Form

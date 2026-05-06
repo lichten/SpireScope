@@ -13,16 +13,18 @@ namespace StS2Toys
 
         private void InitializeComponent()
         {
-            tableLayout = new TableLayoutPanel();
-            lblTitle    = new Label();
-            lblDescEn   = new Label();
-            rtbDescEn   = new RichTextBox();
-            lblDescJa   = new Label();
-            rtbDescJa   = new RichTextBox();
-            lblFlavor   = new Label();
-            rtbFlavor   = new RichTextBox();
-            pnlBottom   = new FlowLayoutPanel();
-            btnClose    = new Button();
+            tableLayout  = new TableLayoutPanel();
+            lblTitle     = new Label();
+            lblDescEn    = new Label();
+            rtbDescEn    = new RichTextBox();
+            lblDescJa    = new Label();
+            rtbDescJa    = new RichTextBox();
+            lblEnchant   = new Label();
+            rtbEnchant   = new RichTextBox();
+            lblFlavor    = new Label();
+            rtbFlavor    = new RichTextBox();
+            pnlBottom    = new FlowLayoutPanel();
+            btnClose     = new Button();
 
             tableLayout.SuspendLayout();
             pnlBottom.SuspendLayout();
@@ -33,15 +35,17 @@ namespace StS2Toys
             tableLayout.Padding     = new Padding(8);
             tableLayout.ColumnCount = 1;
             tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            tableLayout.RowCount    = 8;
+            tableLayout.RowCount    = 10;
             tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // 0: lblTitle
             tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // 1: lblDescEn
             tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));    // 2: rtbDescEn
             tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // 3: lblDescJa
             tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));    // 4: rtbDescJa
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 0f));    // 5: lblFlavor (collapsed)
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 0f));    // 6: rtbFlavor (collapsed)
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // 7: pnlBottom
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 0f));    // 5: lblEnchant (collapsed)
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 0f));    // 6: rtbEnchant (collapsed)
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 0f));    // 7: lblFlavor (collapsed)
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 0f));    // 8: rtbFlavor (collapsed)
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // 9: pnlBottom
 
             // ---- lblTitle ----
             lblTitle.Dock      = DockStyle.Fill;
@@ -83,6 +87,24 @@ namespace StS2Toys
             rtbDescJa.Font        = new Font("Segoe UI", 10f);
             rtbDescJa.Margin      = new Padding(0, 0, 0, 4);
 
+            // ---- lblEnchant (collapsed by default) ----
+            lblEnchant.Text     = "エンチャント";
+            lblEnchant.Dock     = DockStyle.Fill;
+            lblEnchant.Font     = new Font("Segoe UI", 9f, FontStyle.Bold);
+            lblEnchant.Margin   = new Padding(0, 4, 0, 2);
+            lblEnchant.AutoSize = true;
+            lblEnchant.Visible  = false;
+
+            // ---- rtbEnchant (collapsed by default) ----
+            rtbEnchant.Dock        = DockStyle.Fill;
+            rtbEnchant.ReadOnly    = true;
+            rtbEnchant.BackColor   = SystemColors.Control;
+            rtbEnchant.BorderStyle = BorderStyle.None;
+            rtbEnchant.ScrollBars  = RichTextBoxScrollBars.Vertical;
+            rtbEnchant.WordWrap    = true;
+            rtbEnchant.Font        = new Font("Segoe UI", 10f);
+            rtbEnchant.Visible     = false;
+
             // ---- lblFlavor (collapsed by default) ----
             lblFlavor.Text     = "Flavor";
             lblFlavor.Dock     = DockStyle.Fill;
@@ -115,14 +137,16 @@ namespace StS2Toys
             btnClose.Margin  = new Padding(0);
 
             // ---- wire up table ----
-            tableLayout.Controls.Add(lblTitle,   0, 0);
-            tableLayout.Controls.Add(lblDescEn,  0, 1);
-            tableLayout.Controls.Add(rtbDescEn,  0, 2);
-            tableLayout.Controls.Add(lblDescJa,  0, 3);
-            tableLayout.Controls.Add(rtbDescJa,  0, 4);
-            tableLayout.Controls.Add(lblFlavor,  0, 5);
-            tableLayout.Controls.Add(rtbFlavor,  0, 6);
-            tableLayout.Controls.Add(pnlBottom,  0, 7);
+            tableLayout.Controls.Add(lblTitle,    0, 0);
+            tableLayout.Controls.Add(lblDescEn,   0, 1);
+            tableLayout.Controls.Add(rtbDescEn,   0, 2);
+            tableLayout.Controls.Add(lblDescJa,   0, 3);
+            tableLayout.Controls.Add(rtbDescJa,   0, 4);
+            tableLayout.Controls.Add(lblEnchant,  0, 5);
+            tableLayout.Controls.Add(rtbEnchant,  0, 6);
+            tableLayout.Controls.Add(lblFlavor,   0, 7);
+            tableLayout.Controls.Add(rtbFlavor,   0, 8);
+            tableLayout.Controls.Add(pnlBottom,   0, 9);
 
             // ---- Form ----
             AutoScaleMode   = AutoScaleMode.Font;
@@ -147,6 +171,8 @@ namespace StS2Toys
         private RichTextBox      rtbDescEn;
         private Label            lblDescJa;
         private RichTextBox      rtbDescJa;
+        private Label            lblEnchant;
+        private RichTextBox      rtbEnchant;
         private Label            lblFlavor;
         private RichTextBox      rtbFlavor;
         private FlowLayoutPanel  pnlBottom;

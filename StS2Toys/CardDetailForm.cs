@@ -10,7 +10,7 @@ public partial class CardDetailForm : Form
         btnClose.Click += (_, _) => Close();
     }
 
-    public void UpdateCard(string id, bool isRelic)
+    public void UpdateCard(string id, bool isRelic, string? enchantmentId = null, int enchantmentAmount = 0)
     {
         var en = CardDatabaseService.GetName(id, japanese: false);
         var ja = CardDatabaseService.GetName(id, japanese: true);
@@ -21,6 +21,36 @@ public partial class CardDetailForm : Form
         rtbDescEn.Text = DescriptionFormatter.Clean(descEn);
         rtbDescJa.Text = DescriptionFormatter.Clean(descJa);
 
+        // エンチャント（カードのみ対象。レリックには付かない）
+        bool hasEnchant = !isRelic && !string.IsNullOrEmpty(enchantmentId);
+        if (hasEnchant)
+        {
+            var enName = CardDatabaseService.FormatEnchantmentLabel(enchantmentId!, enchantmentAmount, japanese: false);
+            var jaName = CardDatabaseService.FormatEnchantmentLabel(enchantmentId!, enchantmentAmount, japanese: true);
+            var enDesc = CardDatabaseService.GetEnchantmentDescription(enchantmentId!, enchantmentAmount, japanese: false);
+            var jaDesc = CardDatabaseService.GetEnchantmentDescription(enchantmentId!, enchantmentAmount, japanese: true);
+            rtbEnchant.Text = $"{enName} / {jaName}" +
+                (string.IsNullOrEmpty(enDesc) ? "" : $"\n{enDesc}") +
+                (string.IsNullOrEmpty(jaDesc) ? "" : $"\n{jaDesc}");
+            lblEnchant.Visible = true;
+            rtbEnchant.Visible = true;
+            tableLayout.RowStyles[5].SizeType = SizeType.AutoSize;
+            tableLayout.RowStyles[5].Height   = 0f;
+            tableLayout.RowStyles[6].SizeType = SizeType.Absolute;
+            tableLayout.RowStyles[6].Height   = 72f;
+        }
+        else
+        {
+            rtbEnchant.Text    = "";
+            lblEnchant.Visible = false;
+            rtbEnchant.Visible = false;
+            tableLayout.RowStyles[5].SizeType = SizeType.Absolute;
+            tableLayout.RowStyles[5].Height   = 0f;
+            tableLayout.RowStyles[6].SizeType = SizeType.Absolute;
+            tableLayout.RowStyles[6].Height   = 0f;
+        }
+
+        // フレーバーテキスト（レリックのみ）
         var flavor = CardDatabaseService.GetFlavor(id);
         if (flavor is { } f)
         {
@@ -28,12 +58,12 @@ public partial class CardDetailForm : Form
             rtbFlavor.Visible = true;
             rtbFlavor.Text    = $"{f.En}\n\n{f.Ja}";
 
-            tableLayout.RowStyles[2].Height = 33.3f;
-            tableLayout.RowStyles[4].Height = 33.3f;
-            tableLayout.RowStyles[5].SizeType = SizeType.AutoSize;
-            tableLayout.RowStyles[5].Height   = 0f;
-            tableLayout.RowStyles[6].SizeType = SizeType.Percent;
-            tableLayout.RowStyles[6].Height   = 33.4f;
+            tableLayout.RowStyles[2].Height   = 33.3f;
+            tableLayout.RowStyles[4].Height   = 33.3f;
+            tableLayout.RowStyles[7].SizeType = SizeType.AutoSize;
+            tableLayout.RowStyles[7].Height   = 0f;
+            tableLayout.RowStyles[8].SizeType = SizeType.Percent;
+            tableLayout.RowStyles[8].Height   = 33.4f;
         }
         else
         {
@@ -43,10 +73,10 @@ public partial class CardDetailForm : Form
 
             tableLayout.RowStyles[2].Height   = 50f;
             tableLayout.RowStyles[4].Height   = 50f;
-            tableLayout.RowStyles[5].SizeType = SizeType.Absolute;
-            tableLayout.RowStyles[5].Height   = 0f;
-            tableLayout.RowStyles[6].SizeType = SizeType.Absolute;
-            tableLayout.RowStyles[6].Height   = 0f;
+            tableLayout.RowStyles[7].SizeType = SizeType.Absolute;
+            tableLayout.RowStyles[7].Height   = 0f;
+            tableLayout.RowStyles[8].SizeType = SizeType.Absolute;
+            tableLayout.RowStyles[8].Height   = 0f;
         }
     }
 }

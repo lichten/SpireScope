@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace StS2Toys.Services;
 
@@ -179,6 +180,39 @@ static class CardDatabaseService
 
     static string ToRawId(string id) =>
         id.Contains('.') ? id[(id.IndexOf('.') + 1)..] : id;
+
+    // ---- enchantment localization ----
+
+    static readonly IReadOnlyDictionary<string, string> _enchantEng = LoadLocJson("eng.enchantments");
+    static readonly IReadOnlyDictionary<string, string> _enchantJpn = LoadLocJson("jpn.enchantments");
+
+    static readonly Regex _amountTemplate =
+        new(@"\{Amount[^}]*\}", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    public static string GetEnchantmentName(string id, bool japanese)
+    {
+        var raw = ToRawId(id);
+        var dict = japanese ? _enchantJpn : _enchantEng;
+        return dict.TryGetValue($"{raw}.title", out var v) ? v : ToTitleCase(raw.Replace('_', ' '));
+    }
+
+    public static string FormatEnchantmentLabel(string id, int amount, bool japanese)
+    {
+        if (string.IsNullOrEmpty(id)) return "";
+        var name = GetEnchantmentName(id, japanese);
+        return amount > 0 ? $"{name} +{amount}" : name;
+    }
+
+    public static string GetEnchantmentDescription(string id, int amount, bool japanese)
+    {
+        if (string.IsNullOrEmpty(id)) return "";
+        var raw = ToRawId(id);
+        var dict = japanese ? _enchantJpn : _enchantEng;
+        if (!dict.TryGetValue($"{raw}.description", out var desc) || string.IsNullOrEmpty(desc))
+            return "";
+        desc = _amountTemplate.Replace(desc, amount.ToString());
+        return DescriptionFormatter.Clean(desc);
+    }
 
     public static (string En, string Ja) GetDescription(string id)
     {
