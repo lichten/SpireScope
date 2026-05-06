@@ -105,6 +105,7 @@ static class CardDatabaseService
         const string blockTag   = "[gold]Block[/gold]";
         const string channelTag = "[gold]Channel[/gold]";
         const string frostTag   = "[gold]Frost[/gold]";
+        const string platingTag = "[gold]Plating[/gold]";
         const string descSuffix = ".description";
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var (key, desc) in _loc.EngCards)
@@ -117,7 +118,10 @@ static class CardDatabaseService
             // Frostオーブ生成（ディフェクトのブロック源）
             bool isFrostChanneler = desc.Contains(channelTag, StringComparison.Ordinal) &&
                                     desc.Contains(frostTag,   StringComparison.Ordinal);
-            if (isBlockGiver || isFrostChanneler)
+            // プレート付与（ターン終了時にブロックを得るバフ）
+            bool isPlatingGiver = desc.Contains(platingTag, StringComparison.Ordinal) &&
+                                  desc.Contains("gain", StringComparison.OrdinalIgnoreCase);
+            if (isBlockGiver || isFrostChanneler || isPlatingGiver)
                 result.Add(key[..^descSuffix.Length]);
         }
         return result;
@@ -126,18 +130,23 @@ static class CardDatabaseService
     static HashSet<string> ComputeBlockRelicGivers()
     {
         const string blockTag   = "[gold]Block[/gold]";
+        const string platingTag = "[gold]Plating[/gold]";
         const string descSuffix = ".description";
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var (key, desc) in _loc.EngRelics)
         {
             if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
-            if (!desc.Contains(blockTag, StringComparison.Ordinal)) continue;
             // Rule 1: "gain [blue]{VALUE}[/blue] [gold]Block[/gold]" — 直接ブロック付与
             // Rule 2: "each combat" — 戦闘開始時付与（ANCHOR 等）＋ VAMBRACE
             // Rule 3: "double" — ブロック倍増（PAELS_LEGION, VITRUVIAN_MINION 等）
-            if (desc.Contains("gain [blue]{", StringComparison.Ordinal) ||
-                desc.Contains("each combat",  StringComparison.OrdinalIgnoreCase) ||
-                desc.Contains("double",       StringComparison.OrdinalIgnoreCase))
+            bool isBlockGiver = desc.Contains(blockTag, StringComparison.Ordinal) &&
+                (desc.Contains("gain [blue]{", StringComparison.Ordinal) ||
+                 desc.Contains("each combat",  StringComparison.OrdinalIgnoreCase) ||
+                 desc.Contains("double",       StringComparison.OrdinalIgnoreCase));
+            // Rule 4: プレート付与（GORGET 等）
+            bool isPlatingGiver = desc.Contains(platingTag, StringComparison.Ordinal) &&
+                                  desc.Contains("gain", StringComparison.OrdinalIgnoreCase);
+            if (isBlockGiver || isPlatingGiver)
                 result.Add(key[..^descSuffix.Length]);
         }
         return result;
