@@ -14,7 +14,11 @@ record AppSettings(
     SubWindowSettings? DrawOverview = null,
     SubWindowSettings? EncounterOverview = null,
     int? SidePanelWidth = null,
-    SubWindowSettings? NecroOverview = null);
+    SubWindowSettings? NecroOverview = null,
+    SubWindowSettings? IroncladOverview = null,
+    SubWindowSettings? SilentOverview = null,
+    SubWindowSettings? DefectOverview = null,
+    SubWindowSettings? RegentOverview = null);
 
 static class WindowSettingsService
 {

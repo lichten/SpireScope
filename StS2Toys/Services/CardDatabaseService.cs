@@ -102,9 +102,18 @@ static class CardDatabaseService
     static readonly HashSet<string> _blockRelicGivers = ComputeBlockRelicGivers();
     static readonly HashSet<string> _drawRelated = ComputeDrawRelated();
     static readonly HashSet<string> _drawRelicRelated = ComputeDrawRelicRelated();
-    static readonly HashSet<string> _necroOsty = ComputeByTag("[gold]Osty[/gold]", "[gold]Osty's[/gold]");
-    static readonly HashSet<string> _necroSoul = ComputeByTag("[gold]Soul[/gold]");
-    static readonly HashSet<string> _necroDoom = ComputeByTag("[gold]Doom[/gold]");
+    static readonly HashSet<string> _necroOsty     = ComputeByTag("[gold]Osty[/gold]", "[gold]Osty's[/gold]");
+    static readonly HashSet<string> _necroSoul     = ComputeByTag("[gold]Soul[/gold]");
+    static readonly HashSet<string> _necroDoom     = ComputeByTag("[gold]Doom[/gold]");
+    static readonly HashSet<string> _ironcladStr   = ComputeByTag("[gold]Strength[/gold]");
+    static readonly HashSet<string> _ironcladEx    = ComputeByTag("[gold]Exhaust[/gold]", "[gold]Exhausted[/gold]", "[gold]Exhaust Pile[/gold]");
+    static readonly HashSet<string> _silentPoison  = ComputeByTag("[gold]Poison[/gold]");
+    static readonly HashSet<string> _silentShiv    = ComputeByTag("[gold]Shiv[/gold]", "[gold]Shivs[/gold]");
+    static readonly HashSet<string> _defectChannel = ComputeByTag("[gold]Channel[/gold]", "[gold]Channeled[/gold]", "[gold]Channels[/gold]");
+    static readonly HashSet<string> _defectEvoke   = ComputeByTag("[gold]Evoke[/gold]");
+    static readonly HashSet<string> _defectFocus   = ComputeByTag("[gold]Focus[/gold]");
+    static readonly HashSet<string> _regentForge   = ComputeByTag("[gold]Forge[/gold]", "[gold]Forges[/gold]");
+    static readonly HashSet<string> _regentBlade   = ComputeByTag("[gold]Sovereign Blade[/gold]");
 
     static HashSet<string> ComputeBlockGivers()
     {
@@ -201,9 +210,18 @@ static class CardDatabaseService
         return result;
     }
 
-    public static bool IsNecroOsty(string id) => _necroOsty.Contains(ToRawId(id));
-    public static bool IsNecroSoul(string id) => _necroSoul.Contains(ToRawId(id));
-    public static bool IsNecroDoom(string id) => _necroDoom.Contains(ToRawId(id));
+    public static bool IsNecroOsty(string id)      => _necroOsty.Contains(ToRawId(id));
+    public static bool IsNecroSoul(string id)      => _necroSoul.Contains(ToRawId(id));
+    public static bool IsNecroDoom(string id)      => _necroDoom.Contains(ToRawId(id));
+    public static bool IsIroncladStrength(string id) => _ironcladStr.Contains(ToRawId(id));
+    public static bool IsIroncladExhaust(string id)  => _ironcladEx.Contains(ToRawId(id));
+    public static bool IsSilentPoison(string id)   => _silentPoison.Contains(ToRawId(id));
+    public static bool IsSilentShiv(string id)     => _silentShiv.Contains(ToRawId(id));
+    public static bool IsDefectChannel(string id)  => _defectChannel.Contains(ToRawId(id));
+    public static bool IsDefectEvoke(string id)    => _defectEvoke.Contains(ToRawId(id));
+    public static bool IsDefectFocus(string id)    => _defectFocus.Contains(ToRawId(id));
+    public static bool IsRegentForge(string id)    => _regentForge.Contains(ToRawId(id));
+    public static bool IsRegentBlade(string id)    => _regentBlade.Contains(ToRawId(id));
 
     public static bool IsBlockGiver(string id) => _blockGivers.Contains(ToRawId(id));
     public static bool IsRelicBlockGiver(string id) => _blockRelicGivers.Contains(ToRawId(id));

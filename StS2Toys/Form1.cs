@@ -14,6 +14,10 @@ namespace StS2Toys
         private DeckOverviewForm? _blockOverview;
         private DeckOverviewForm? _drawOverview;
         private DeckOverviewForm? _necroOverview;
+        private DeckOverviewForm? _ironcladOverview;
+        private DeckOverviewForm? _silentOverview;
+        private DeckOverviewForm? _defectOverview;
+        private DeckOverviewForm? _regentOverview;
         private EncounterOverviewForm? _encounterOverview;
         private HpHistoryForm? _hpHistory;
         private SubWindowSettings? _imageViewerSettings;
@@ -24,6 +28,10 @@ namespace StS2Toys
         private SubWindowSettings? _encounterOverviewSettings;
         private SubWindowSettings? _hpHistorySettings;
         private SubWindowSettings? _necroOverviewSettings;
+        private SubWindowSettings? _ironcladOverviewSettings;
+        private SubWindowSettings? _silentOverviewSettings;
+        private SubWindowSettings? _defectOverviewSettings;
+        private SubWindowSettings? _regentOverviewSettings;
         private IReadOnlyList<DeckCard>? _lastDeckCards;
         private IReadOnlyList<RelicEntry>? _lastRelics;
         private RunSaveData? _lastRunData;
@@ -71,6 +79,10 @@ namespace StS2Toys
             _encounterOverview?.Close();
             _hpHistory?.Close();
             _necroOverview?.Close();
+            _ironcladOverview?.Close();
+            _silentOverview?.Close();
+            _defectOverview?.Close();
+            _regentOverview?.Close();
         }
 
         void RestoreWindowSettings()
@@ -83,7 +95,11 @@ namespace StS2Toys
             _drawOverviewSettings = app.DrawOverview;
             _encounterOverviewSettings = app.EncounterOverview;
             _hpHistorySettings = app.HpHistory;
-            _necroOverviewSettings = app.NecroOverview;
+            _necroOverviewSettings    = app.NecroOverview;
+            _ironcladOverviewSettings = app.IroncladOverview;
+            _silentOverviewSettings   = app.SilentOverview;
+            _defectOverviewSettings   = app.DefectOverview;
+            _regentOverviewSettings   = app.RegentOverview;
 
             if (app.SidePanelWidth is int w)
                 splitContainerOuter.SplitterDistance = w;
@@ -115,6 +131,14 @@ namespace StS2Toys
                 _drawOverviewSettings = WindowToSub(_drawOverview);
             if (_necroOverview is { IsDisposed: false })
                 _necroOverviewSettings = WindowToSub(_necroOverview);
+            if (_ironcladOverview is { IsDisposed: false })
+                _ironcladOverviewSettings = WindowToSub(_ironcladOverview);
+            if (_silentOverview is { IsDisposed: false })
+                _silentOverviewSettings = WindowToSub(_silentOverview);
+            if (_defectOverview is { IsDisposed: false })
+                _defectOverviewSettings = WindowToSub(_defectOverview);
+            if (_regentOverview is { IsDisposed: false })
+                _regentOverviewSettings = WindowToSub(_regentOverview);
             if (_encounterOverview is { IsDisposed: false })
                 _encounterOverviewSettings = WindowToSub(_encounterOverview);
             if (_hpHistory is { IsDisposed: false })
@@ -123,7 +147,7 @@ namespace StS2Toys
             var state = WindowState == FormWindowState.Minimized ? FormWindowState.Normal : WindowState;
             var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
             var main = new WindowSettings(bounds.X, bounds.Y, bounds.Width, bounds.Height, state.ToString());
-            WindowSettingsService.Save(new AppSettings(main, _imageViewerSettings, _cardDetailSettings, _deckOverviewSettings, _blockOverviewSettings, _hpHistorySettings, _drawOverviewSettings, _encounterOverviewSettings, splitContainerOuter.SplitterDistance, _necroOverviewSettings));
+            WindowSettingsService.Save(new AppSettings(main, _imageViewerSettings, _cardDetailSettings, _deckOverviewSettings, _blockOverviewSettings, _hpHistorySettings, _drawOverviewSettings, _encounterOverviewSettings, splitContainerOuter.SplitterDistance, _necroOverviewSettings, _ironcladOverviewSettings, _silentOverviewSettings, _defectOverviewSettings, _regentOverviewSettings));
         }
 
         static SubWindowSettings WindowToSub(Form form) =>
@@ -137,6 +161,10 @@ namespace StS2Toys
             if (_encounterOverviewSettings?.Visible == true)  BtnEncounterOverview_Click(null, EventArgs.Empty);
             if (_hpHistorySettings?.Visible == true)          BtnHpHistory_Click(null, EventArgs.Empty);
             if (_necroOverviewSettings?.Visible == true)      BtnNecroOverview_Click(null, EventArgs.Empty);
+            if (_ironcladOverviewSettings?.Visible == true)   BtnIroncladOverview_Click(null, EventArgs.Empty);
+            if (_silentOverviewSettings?.Visible == true)     BtnSilentOverview_Click(null, EventArgs.Empty);
+            if (_defectOverviewSettings?.Visible == true)     BtnDefectOverview_Click(null, EventArgs.Empty);
+            if (_regentOverviewSettings?.Visible == true)     BtnRegentOverview_Click(null, EventArgs.Empty);
         }
 
         static SubWindowSettings BoundsToSub(Rectangle r) => new(r.X, r.Y, r.Width, r.Height);
@@ -340,6 +368,10 @@ namespace StS2Toys
             RefreshBlockOverview();
             RefreshDrawOverview();
             RefreshNecroOverview();
+            RefreshIroncladOverview();
+            RefreshSilentOverview();
+            RefreshDefectOverview();
+            RefreshRegentOverview();
         }
 
         void DisplayRelics(PlayerData player)
@@ -519,6 +551,188 @@ namespace StS2Toys
             int soul = _lastDeckCards.Where(c => CardDatabaseService.IsNecroSoul(c.Id)).Sum(c => c.Count);
             int doom = _lastDeckCards.Where(c => CardDatabaseService.IsNecroDoom(c.Id)).Sum(c => c.Count);
             _necroOverview.SetStatsText($"Osty: {osty}枚  Soul: {soul}枚  Doom: {doom}枚");
+        }
+
+        void BtnIroncladOverview_Click(object? sender, EventArgs e)
+        {
+            if (_ironcladOverview is null || _ironcladOverview.IsDisposed || !_ironcladOverview.Visible)
+            {
+                if (_ironcladOverview is null || _ironcladOverview.IsDisposed)
+                {
+                    _ironcladOverview = new DeckOverviewForm();
+                    _ironcladOverview.SetKeywordGroups([
+                        ("Strength", c => CardDatabaseService.IsIroncladStrength(c.Id)),
+                        ("Exhaust",  c => CardDatabaseService.IsIroncladExhaust(c.Id)),
+                    ], "Ironclad概観");
+                    ApplySubWindowSettings(_ironcladOverview, _ironcladOverviewSettings, new Point(Right + 4, Top));
+                    _ironcladOverview.FormClosed += (_, _) =>
+                    {
+                        _ironcladOverviewSettings = BoundsToSub(_ironcladOverview.Bounds);
+                        UpdateIroncladOverviewButton(false);
+                    };
+                }
+                _ironcladOverview.Show(this);
+                UpdateIroncladOverviewButton(true);
+                RefreshIroncladOverview();
+            }
+            else
+            {
+                _ironcladOverview.Hide();
+                UpdateIroncladOverviewButton(false);
+            }
+        }
+
+        void UpdateIroncladOverviewButton(bool visible)
+        {
+            btnIroncladOverview.Text = visible ? "● Ironclad概観" : "○ Ironclad概観";
+            btnIroncladOverview.ForeColor = visible ? Color.Firebrick : SystemColors.ControlText;
+        }
+
+        void RefreshIroncladOverview()
+        {
+            if (_ironcladOverview is null || _ironcladOverview.IsDisposed || !_ironcladOverview.Visible) return;
+            if (_lastDeckCards is null) return;
+            _ironcladOverview.UpdateDeck(_lastDeckCards);
+            int str = _lastDeckCards.Where(c => CardDatabaseService.IsIroncladStrength(c.Id)).Sum(c => c.Count);
+            int ex  = _lastDeckCards.Where(c => CardDatabaseService.IsIroncladExhaust(c.Id)).Sum(c => c.Count);
+            _ironcladOverview.SetStatsText($"Strength: {str}枚  Exhaust: {ex}枚");
+        }
+
+        void BtnSilentOverview_Click(object? sender, EventArgs e)
+        {
+            if (_silentOverview is null || _silentOverview.IsDisposed || !_silentOverview.Visible)
+            {
+                if (_silentOverview is null || _silentOverview.IsDisposed)
+                {
+                    _silentOverview = new DeckOverviewForm();
+                    _silentOverview.SetKeywordGroups([
+                        ("Poison", c => CardDatabaseService.IsSilentPoison(c.Id)),
+                        ("Shiv",   c => CardDatabaseService.IsSilentShiv(c.Id)),
+                    ], "Silent概観");
+                    ApplySubWindowSettings(_silentOverview, _silentOverviewSettings, new Point(Right + 4, Top));
+                    _silentOverview.FormClosed += (_, _) =>
+                    {
+                        _silentOverviewSettings = BoundsToSub(_silentOverview.Bounds);
+                        UpdateSilentOverviewButton(false);
+                    };
+                }
+                _silentOverview.Show(this);
+                UpdateSilentOverviewButton(true);
+                RefreshSilentOverview();
+            }
+            else
+            {
+                _silentOverview.Hide();
+                UpdateSilentOverviewButton(false);
+            }
+        }
+
+        void UpdateSilentOverviewButton(bool visible)
+        {
+            btnSilentOverview.Text = visible ? "● Silent概観" : "○ Silent概観";
+            btnSilentOverview.ForeColor = visible ? Color.DarkSlateGray : SystemColors.ControlText;
+        }
+
+        void RefreshSilentOverview()
+        {
+            if (_silentOverview is null || _silentOverview.IsDisposed || !_silentOverview.Visible) return;
+            if (_lastDeckCards is null) return;
+            _silentOverview.UpdateDeck(_lastDeckCards);
+            int poison = _lastDeckCards.Where(c => CardDatabaseService.IsSilentPoison(c.Id)).Sum(c => c.Count);
+            int shiv   = _lastDeckCards.Where(c => CardDatabaseService.IsSilentShiv(c.Id)).Sum(c => c.Count);
+            _silentOverview.SetStatsText($"Poison: {poison}枚  Shiv: {shiv}枚");
+        }
+
+        void BtnDefectOverview_Click(object? sender, EventArgs e)
+        {
+            if (_defectOverview is null || _defectOverview.IsDisposed || !_defectOverview.Visible)
+            {
+                if (_defectOverview is null || _defectOverview.IsDisposed)
+                {
+                    _defectOverview = new DeckOverviewForm();
+                    _defectOverview.SetKeywordGroups([
+                        ("Channel", c => CardDatabaseService.IsDefectChannel(c.Id)),
+                        ("Evoke",   c => CardDatabaseService.IsDefectEvoke(c.Id)),
+                        ("Focus",   c => CardDatabaseService.IsDefectFocus(c.Id)),
+                    ], "Defect概観");
+                    ApplySubWindowSettings(_defectOverview, _defectOverviewSettings, new Point(Right + 4, Top));
+                    _defectOverview.FormClosed += (_, _) =>
+                    {
+                        _defectOverviewSettings = BoundsToSub(_defectOverview.Bounds);
+                        UpdateDefectOverviewButton(false);
+                    };
+                }
+                _defectOverview.Show(this);
+                UpdateDefectOverviewButton(true);
+                RefreshDefectOverview();
+            }
+            else
+            {
+                _defectOverview.Hide();
+                UpdateDefectOverviewButton(false);
+            }
+        }
+
+        void UpdateDefectOverviewButton(bool visible)
+        {
+            btnDefectOverview.Text = visible ? "● Defect概観" : "○ Defect概観";
+            btnDefectOverview.ForeColor = visible ? Color.RoyalBlue : SystemColors.ControlText;
+        }
+
+        void RefreshDefectOverview()
+        {
+            if (_defectOverview is null || _defectOverview.IsDisposed || !_defectOverview.Visible) return;
+            if (_lastDeckCards is null) return;
+            _defectOverview.UpdateDeck(_lastDeckCards);
+            int ch = _lastDeckCards.Where(c => CardDatabaseService.IsDefectChannel(c.Id)).Sum(c => c.Count);
+            int ev = _lastDeckCards.Where(c => CardDatabaseService.IsDefectEvoke(c.Id)).Sum(c => c.Count);
+            int fo = _lastDeckCards.Where(c => CardDatabaseService.IsDefectFocus(c.Id)).Sum(c => c.Count);
+            _defectOverview.SetStatsText($"Channel: {ch}枚  Evoke: {ev}枚  Focus: {fo}枚");
+        }
+
+        void BtnRegentOverview_Click(object? sender, EventArgs e)
+        {
+            if (_regentOverview is null || _regentOverview.IsDisposed || !_regentOverview.Visible)
+            {
+                if (_regentOverview is null || _regentOverview.IsDisposed)
+                {
+                    _regentOverview = new DeckOverviewForm();
+                    _regentOverview.SetKeywordGroups([
+                        ("Forge",          c => CardDatabaseService.IsRegentForge(c.Id)),
+                        ("Sovereign Blade", c => CardDatabaseService.IsRegentBlade(c.Id)),
+                    ], "Regent概観");
+                    ApplySubWindowSettings(_regentOverview, _regentOverviewSettings, new Point(Right + 4, Top));
+                    _regentOverview.FormClosed += (_, _) =>
+                    {
+                        _regentOverviewSettings = BoundsToSub(_regentOverview.Bounds);
+                        UpdateRegentOverviewButton(false);
+                    };
+                }
+                _regentOverview.Show(this);
+                UpdateRegentOverviewButton(true);
+                RefreshRegentOverview();
+            }
+            else
+            {
+                _regentOverview.Hide();
+                UpdateRegentOverviewButton(false);
+            }
+        }
+
+        void UpdateRegentOverviewButton(bool visible)
+        {
+            btnRegentOverview.Text = visible ? "● Regent概観" : "○ Regent概観";
+            btnRegentOverview.ForeColor = visible ? Color.SaddleBrown : SystemColors.ControlText;
+        }
+
+        void RefreshRegentOverview()
+        {
+            if (_regentOverview is null || _regentOverview.IsDisposed || !_regentOverview.Visible) return;
+            if (_lastDeckCards is null) return;
+            _regentOverview.UpdateDeck(_lastDeckCards);
+            int forge = _lastDeckCards.Where(c => CardDatabaseService.IsRegentForge(c.Id)).Sum(c => c.Count);
+            int blade = _lastDeckCards.Where(c => CardDatabaseService.IsRegentBlade(c.Id)).Sum(c => c.Count);
+            _regentOverview.SetStatsText($"Forge: {forge}枚  Sovereign Blade: {blade}枚");
         }
 
         void ListViewDeck_ColumnClick(object? sender, ColumnClickEventArgs e)

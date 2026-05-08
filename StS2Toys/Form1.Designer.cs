@@ -33,6 +33,10 @@ namespace StS2Toys
             btnEncounterOverview = new Button();
             btnFilterBlock = new Button();
             btnNecroOverview = new Button();
+            btnIroncladOverview = new Button();
+            btnSilentOverview = new Button();
+            btnDefectOverview = new Button();
+            btnRegentOverview = new Button();
             lblGroupOverview = new Label();
             lblGroupOther = new Label();
             splitContainer = new SplitContainer();
@@ -168,6 +172,10 @@ namespace StS2Toys
             panelSideButtons.Controls.Add(btnEncounterOverview);
             panelSideButtons.Controls.Add(btnHpHistory);
             panelSideButtons.Controls.Add(lblGroupOther);
+            panelSideButtons.Controls.Add(btnRegentOverview);
+            panelSideButtons.Controls.Add(btnDefectOverview);
+            panelSideButtons.Controls.Add(btnSilentOverview);
+            panelSideButtons.Controls.Add(btnIroncladOverview);
             panelSideButtons.Controls.Add(btnNecroOverview);
             panelSideButtons.Controls.Add(btnDrawOverview);
             panelSideButtons.Controls.Add(btnBlockOverview);
@@ -244,6 +252,42 @@ namespace StS2Toys
             btnNecroOverview.TabIndex = 8;
             btnNecroOverview.Text = "○ Necrobinder概観";
             btnNecroOverview.Click += BtnNecroOverview_Click;
+            //
+            // btnIroncladOverview
+            //
+            btnIroncladOverview.Dock = DockStyle.Top;
+            btnIroncladOverview.Height = 30;
+            btnIroncladOverview.Name = "btnIroncladOverview";
+            btnIroncladOverview.TabIndex = 9;
+            btnIroncladOverview.Text = "○ Ironclad概観";
+            btnIroncladOverview.Click += BtnIroncladOverview_Click;
+            //
+            // btnSilentOverview
+            //
+            btnSilentOverview.Dock = DockStyle.Top;
+            btnSilentOverview.Height = 30;
+            btnSilentOverview.Name = "btnSilentOverview";
+            btnSilentOverview.TabIndex = 10;
+            btnSilentOverview.Text = "○ Silent概観";
+            btnSilentOverview.Click += BtnSilentOverview_Click;
+            //
+            // btnDefectOverview
+            //
+            btnDefectOverview.Dock = DockStyle.Top;
+            btnDefectOverview.Height = 30;
+            btnDefectOverview.Name = "btnDefectOverview";
+            btnDefectOverview.TabIndex = 11;
+            btnDefectOverview.Text = "○ Defect概観";
+            btnDefectOverview.Click += BtnDefectOverview_Click;
+            //
+            // btnRegentOverview
+            //
+            btnRegentOverview.Dock = DockStyle.Top;
+            btnRegentOverview.Height = 30;
+            btnRegentOverview.Name = "btnRegentOverview";
+            btnRegentOverview.TabIndex = 12;
+            btnRegentOverview.Text = "○ Regent概観";
+            btnRegentOverview.Click += BtnRegentOverview_Click;
             //
             // lblGroupOther
             //
@@ -437,6 +481,10 @@ namespace StS2Toys
         private Button btnEncounterOverview;
         private Button btnFilterBlock;
         private Button btnNecroOverview;
+        private Button btnIroncladOverview;
+        private Button btnSilentOverview;
+        private Button btnDefectOverview;
+        private Button btnRegentOverview;
         private Label lblGroupOverview;
         private Label lblGroupOther;
         private SplitContainer splitContainer;

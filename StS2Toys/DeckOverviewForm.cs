@@ -190,7 +190,7 @@ public partial class DeckOverviewForm : Form
         {
             var group = cards.Where(filter).OrderBy(c => c.NameJa).ToList();
             foreach (var c in group) assigned.Add(c);
-            if (group.Count > 0) result.Add((label, group));
+            result.Add((label, group));
         }
         var others = cards.Where(c => !assigned.Contains(c)).OrderBy(c => c.NameJa).ToList();
         if (others.Count > 0) result.Add(("その他", others));
