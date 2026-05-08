@@ -32,6 +32,8 @@ namespace StS2Toys
             btnHpHistory = new Button();
             btnEncounterOverview = new Button();
             btnFilterBlock = new Button();
+            lblGroupOverview = new Label();
+            lblGroupOther = new Label();
             splitContainer = new SplitContainer();
             listViewDeck = new ListView();
             colCardName = new ColumnHeader();
@@ -164,9 +166,11 @@ namespace StS2Toys
             panelSideButtons.Controls.Add(btnFilterBlock);
             panelSideButtons.Controls.Add(btnEncounterOverview);
             panelSideButtons.Controls.Add(btnHpHistory);
+            panelSideButtons.Controls.Add(lblGroupOther);
             panelSideButtons.Controls.Add(btnDrawOverview);
             panelSideButtons.Controls.Add(btnBlockOverview);
             panelSideButtons.Controls.Add(btnDeckOverview);
+            panelSideButtons.Controls.Add(lblGroupOverview);
             panelSideButtons.Controls.Add(btnCardDetail);
             panelSideButtons.Controls.Add(btnImageViewer);
             panelSideButtons.Dock = DockStyle.Fill;
@@ -190,6 +194,18 @@ namespace StS2Toys
             btnCardDetail.TabIndex = 1;
             btnCardDetail.Text = "○ カード詳細";
             btnCardDetail.Click += BtnCardDetail_Click;
+            //
+            // lblGroupOverview
+            //
+            lblGroupOverview.BackColor = SystemColors.ControlDark;
+            lblGroupOverview.Dock = DockStyle.Top;
+            lblGroupOverview.Font = new Font("Segoe UI", 7.5F, FontStyle.Bold);
+            lblGroupOverview.ForeColor = Color.White;
+            lblGroupOverview.Height = 18;
+            lblGroupOverview.Name = "lblGroupOverview";
+            lblGroupOverview.Padding = new Padding(4, 0, 0, 0);
+            lblGroupOverview.Text = "概観";
+            lblGroupOverview.TextAlign = ContentAlignment.MiddleLeft;
             //
             // btnDeckOverview
             //
@@ -217,6 +233,18 @@ namespace StS2Toys
             btnDrawOverview.TabIndex = 4;
             btnDrawOverview.Text = "○ ドロー関連概観";
             btnDrawOverview.Click += BtnDrawOverview_Click;
+            //
+            // lblGroupOther
+            //
+            lblGroupOther.BackColor = SystemColors.ControlDark;
+            lblGroupOther.Dock = DockStyle.Top;
+            lblGroupOther.Font = new Font("Segoe UI", 7.5F, FontStyle.Bold);
+            lblGroupOther.ForeColor = Color.White;
+            lblGroupOther.Height = 18;
+            lblGroupOther.Name = "lblGroupOther";
+            lblGroupOther.Padding = new Padding(4, 0, 0, 0);
+            lblGroupOther.Text = "その他";
+            lblGroupOther.TextAlign = ContentAlignment.MiddleLeft;
             //
             // btnHpHistory
             //
@@ -397,6 +425,8 @@ namespace StS2Toys
         private Button btnHpHistory;
         private Button btnEncounterOverview;
         private Button btnFilterBlock;
+        private Label lblGroupOverview;
+        private Label lblGroupOther;
         private SplitContainer splitContainer;
         private Label lblDeckTitle;
         private ListView listViewDeck;
