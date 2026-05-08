@@ -13,6 +13,7 @@ namespace StS2Toys
         private DeckOverviewForm? _deckOverview;
         private DeckOverviewForm? _blockOverview;
         private DeckOverviewForm? _drawOverview;
+        private DeckOverviewForm? _necroOverview;
         private EncounterOverviewForm? _encounterOverview;
         private HpHistoryForm? _hpHistory;
         private SubWindowSettings? _imageViewerSettings;
@@ -22,6 +23,7 @@ namespace StS2Toys
         private SubWindowSettings? _drawOverviewSettings;
         private SubWindowSettings? _encounterOverviewSettings;
         private SubWindowSettings? _hpHistorySettings;
+        private SubWindowSettings? _necroOverviewSettings;
         private IReadOnlyList<DeckCard>? _lastDeckCards;
         private IReadOnlyList<RelicEntry>? _lastRelics;
         private RunSaveData? _lastRunData;
@@ -68,6 +70,7 @@ namespace StS2Toys
             _drawOverview?.Close();
             _encounterOverview?.Close();
             _hpHistory?.Close();
+            _necroOverview?.Close();
         }
 
         void RestoreWindowSettings()
@@ -80,6 +83,7 @@ namespace StS2Toys
             _drawOverviewSettings = app.DrawOverview;
             _encounterOverviewSettings = app.EncounterOverview;
             _hpHistorySettings = app.HpHistory;
+            _necroOverviewSettings = app.NecroOverview;
 
             if (app.SidePanelWidth is int w)
                 splitContainerOuter.SplitterDistance = w;
@@ -109,6 +113,8 @@ namespace StS2Toys
                 _blockOverviewSettings = WindowToSub(_blockOverview);
             if (_drawOverview is { IsDisposed: false })
                 _drawOverviewSettings = WindowToSub(_drawOverview);
+            if (_necroOverview is { IsDisposed: false })
+                _necroOverviewSettings = WindowToSub(_necroOverview);
             if (_encounterOverview is { IsDisposed: false })
                 _encounterOverviewSettings = WindowToSub(_encounterOverview);
             if (_hpHistory is { IsDisposed: false })
@@ -117,7 +123,7 @@ namespace StS2Toys
             var state = WindowState == FormWindowState.Minimized ? FormWindowState.Normal : WindowState;
             var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
             var main = new WindowSettings(bounds.X, bounds.Y, bounds.Width, bounds.Height, state.ToString());
-            WindowSettingsService.Save(new AppSettings(main, _imageViewerSettings, _cardDetailSettings, _deckOverviewSettings, _blockOverviewSettings, _hpHistorySettings, _drawOverviewSettings, _encounterOverviewSettings, splitContainerOuter.SplitterDistance));
+            WindowSettingsService.Save(new AppSettings(main, _imageViewerSettings, _cardDetailSettings, _deckOverviewSettings, _blockOverviewSettings, _hpHistorySettings, _drawOverviewSettings, _encounterOverviewSettings, splitContainerOuter.SplitterDistance, _necroOverviewSettings));
         }
 
         static SubWindowSettings WindowToSub(Form form) =>
@@ -130,6 +136,7 @@ namespace StS2Toys
             if (_drawOverviewSettings?.Visible == true)       BtnDrawOverview_Click(null, EventArgs.Empty);
             if (_encounterOverviewSettings?.Visible == true)  BtnEncounterOverview_Click(null, EventArgs.Empty);
             if (_hpHistorySettings?.Visible == true)          BtnHpHistory_Click(null, EventArgs.Empty);
+            if (_necroOverviewSettings?.Visible == true)      BtnNecroOverview_Click(null, EventArgs.Empty);
         }
 
         static SubWindowSettings BoundsToSub(Rectangle r) => new(r.X, r.Y, r.Width, r.Height);
@@ -332,6 +339,7 @@ namespace StS2Toys
 
             RefreshBlockOverview();
             RefreshDrawOverview();
+            RefreshNecroOverview();
         }
 
         void DisplayRelics(PlayerData player)
@@ -464,6 +472,53 @@ namespace StS2Toys
         {
             btnDrawOverview.Text = visible ? "● ドロー関連概観" : "○ ドロー関連概観";
             btnDrawOverview.ForeColor = visible ? Color.DarkGreen : SystemColors.ControlText;
+        }
+
+        void BtnNecroOverview_Click(object? sender, EventArgs e)
+        {
+            if (_necroOverview is null || _necroOverview.IsDisposed || !_necroOverview.Visible)
+            {
+                if (_necroOverview is null || _necroOverview.IsDisposed)
+                {
+                    _necroOverview = new DeckOverviewForm();
+                    _necroOverview.SetKeywordGroups([
+                        ("Osty",  c => CardDatabaseService.IsNecroOsty(c.Id)),
+                        ("Soul",  c => CardDatabaseService.IsNecroSoul(c.Id)),
+                        ("Doom",  c => CardDatabaseService.IsNecroDoom(c.Id)),
+                    ], "Necrobinder概観");
+                    ApplySubWindowSettings(_necroOverview, _necroOverviewSettings, new Point(Right + 4, Top));
+                    _necroOverview.FormClosed += (_, _) =>
+                    {
+                        _necroOverviewSettings = BoundsToSub(_necroOverview.Bounds);
+                        UpdateNecroOverviewButton(false);
+                    };
+                }
+                _necroOverview.Show(this);
+                UpdateNecroOverviewButton(true);
+                RefreshNecroOverview();
+            }
+            else
+            {
+                _necroOverview.Hide();
+                UpdateNecroOverviewButton(false);
+            }
+        }
+
+        void UpdateNecroOverviewButton(bool visible)
+        {
+            btnNecroOverview.Text = visible ? "● Necrobinder概観" : "○ Necrobinder概観";
+            btnNecroOverview.ForeColor = visible ? Color.DarkMagenta : SystemColors.ControlText;
+        }
+
+        void RefreshNecroOverview()
+        {
+            if (_necroOverview is null || _necroOverview.IsDisposed || !_necroOverview.Visible) return;
+            if (_lastDeckCards is null) return;
+            _necroOverview.UpdateDeck(_lastDeckCards);
+            int osty = _lastDeckCards.Where(c => CardDatabaseService.IsNecroOsty(c.Id)).Sum(c => c.Count);
+            int soul = _lastDeckCards.Where(c => CardDatabaseService.IsNecroSoul(c.Id)).Sum(c => c.Count);
+            int doom = _lastDeckCards.Where(c => CardDatabaseService.IsNecroDoom(c.Id)).Sum(c => c.Count);
+            _necroOverview.SetStatsText($"Osty: {osty}枚  Soul: {soul}枚  Doom: {doom}枚");
         }
 
         void ListViewDeck_ColumnClick(object? sender, ColumnClickEventArgs e)

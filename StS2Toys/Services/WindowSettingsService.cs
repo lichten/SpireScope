@@ -13,7 +13,8 @@ record AppSettings(
     SubWindowSettings? HpHistory = null,
     SubWindowSettings? DrawOverview = null,
     SubWindowSettings? EncounterOverview = null,
-    int? SidePanelWidth = null);
+    int? SidePanelWidth = null,
+    SubWindowSettings? NecroOverview = null);
 
 static class WindowSettingsService
 {

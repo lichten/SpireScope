@@ -32,6 +32,7 @@ namespace StS2Toys
             btnHpHistory = new Button();
             btnEncounterOverview = new Button();
             btnFilterBlock = new Button();
+            btnNecroOverview = new Button();
             lblGroupOverview = new Label();
             lblGroupOther = new Label();
             splitContainer = new SplitContainer();
@@ -167,6 +168,7 @@ namespace StS2Toys
             panelSideButtons.Controls.Add(btnEncounterOverview);
             panelSideButtons.Controls.Add(btnHpHistory);
             panelSideButtons.Controls.Add(lblGroupOther);
+            panelSideButtons.Controls.Add(btnNecroOverview);
             panelSideButtons.Controls.Add(btnDrawOverview);
             panelSideButtons.Controls.Add(btnBlockOverview);
             panelSideButtons.Controls.Add(btnDeckOverview);
@@ -233,6 +235,15 @@ namespace StS2Toys
             btnDrawOverview.TabIndex = 4;
             btnDrawOverview.Text = "○ ドロー関連概観";
             btnDrawOverview.Click += BtnDrawOverview_Click;
+            //
+            // btnNecroOverview
+            //
+            btnNecroOverview.Dock = DockStyle.Top;
+            btnNecroOverview.Height = 30;
+            btnNecroOverview.Name = "btnNecroOverview";
+            btnNecroOverview.TabIndex = 8;
+            btnNecroOverview.Text = "○ Necrobinder概観";
+            btnNecroOverview.Click += BtnNecroOverview_Click;
             //
             // lblGroupOther
             //
@@ -425,6 +436,7 @@ namespace StS2Toys
         private Button btnHpHistory;
         private Button btnEncounterOverview;
         private Button btnFilterBlock;
+        private Button btnNecroOverview;
         private Label lblGroupOverview;
         private Label lblGroupOther;
         private SplitContainer splitContainer;

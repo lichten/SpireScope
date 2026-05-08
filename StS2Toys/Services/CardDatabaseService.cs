@@ -102,6 +102,9 @@ static class CardDatabaseService
     static readonly HashSet<string> _blockRelicGivers = ComputeBlockRelicGivers();
     static readonly HashSet<string> _drawRelated = ComputeDrawRelated();
     static readonly HashSet<string> _drawRelicRelated = ComputeDrawRelicRelated();
+    static readonly HashSet<string> _necroOsty = ComputeByTag("[gold]Osty[/gold]", "[gold]Osty's[/gold]");
+    static readonly HashSet<string> _necroSoul = ComputeByTag("[gold]Soul[/gold]");
+    static readonly HashSet<string> _necroDoom = ComputeByTag("[gold]Doom[/gold]");
 
     static HashSet<string> ComputeBlockGivers()
     {
@@ -184,6 +187,23 @@ static class CardDatabaseService
         }
         return result;
     }
+
+    static HashSet<string> ComputeByTag(params string[] tags)
+    {
+        const string descSuffix = ".description";
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, desc) in _loc.EngCards)
+        {
+            if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
+            if (tags.Any(t => desc.Contains(t, StringComparison.Ordinal)))
+                result.Add(key[..^descSuffix.Length]);
+        }
+        return result;
+    }
+
+    public static bool IsNecroOsty(string id) => _necroOsty.Contains(ToRawId(id));
+    public static bool IsNecroSoul(string id) => _necroSoul.Contains(ToRawId(id));
+    public static bool IsNecroDoom(string id) => _necroDoom.Contains(ToRawId(id));
 
     public static bool IsBlockGiver(string id) => _blockGivers.Contains(ToRawId(id));
     public static bool IsRelicBlockGiver(string id) => _blockRelicGivers.Contains(ToRawId(id));
