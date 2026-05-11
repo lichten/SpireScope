@@ -114,6 +114,9 @@ static class CardDatabaseService
     static readonly HashSet<string> _defectFocus   = ComputeByTag("[gold]Focus[/gold]");
     static readonly HashSet<string> _regentForge   = ComputeByTag("[gold]Forge[/gold]", "[gold]Forges[/gold]");
     static readonly HashSet<string> _regentBlade   = ComputeByTag("[gold]Sovereign Blade[/gold]");
+    static readonly HashSet<string> _regentCreate     = ComputeByPlainText("Whenever you create", "created this combat");
+    static readonly HashSet<string> _regentStatusGen  = ComputeStatusGenerators();
+    static readonly HashSet<string> _regentTransform  = ComputeByTag("[gold]Transform[/gold]");
 
     static HashSet<string> ComputeBlockGivers()
     {
@@ -210,6 +213,40 @@ static class CardDatabaseService
         return result;
     }
 
+    static HashSet<string> ComputeByPlainText(params string[] phrases)
+    {
+        const string descSuffix = ".description";
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, desc) in _loc.EngCards)
+        {
+            if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
+            if (phrases.Any(p => desc.Contains(p, StringComparison.OrdinalIgnoreCase)))
+                result.Add(key[..^descSuffix.Length]);
+        }
+        return result;
+    }
+
+    static HashSet<string> ComputeStatusGenerators()
+    {
+        // card_types.json の Status 型カード名から [gold]{Name}[/gold] タグを構築
+        var statusTags = _types
+            .Where(kv => kv.Value.Equals("Status", StringComparison.OrdinalIgnoreCase))
+            .Select(kv => ToTitleCase(ToRawId(kv.Key).Replace('_', ' ')))
+            .SelectMany(name => new[] { $"[gold]{name}[/gold]", $"[gold]{name}s[/gold]" })
+            .ToArray();
+
+        const string descSuffix = ".description";
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, desc) in _loc.EngCards)
+        {
+            if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
+            if (!desc.Contains("Add", StringComparison.Ordinal)) continue;
+            if (statusTags.Any(tag => desc.Contains(tag, StringComparison.OrdinalIgnoreCase)))
+                result.Add(key[..^descSuffix.Length]);
+        }
+        return result;
+    }
+
     public static bool IsNecroOsty(string id)      => _necroOsty.Contains(ToRawId(id));
     public static bool IsNecroSoul(string id)      => _necroSoul.Contains(ToRawId(id));
     public static bool IsNecroDoom(string id)      => _necroDoom.Contains(ToRawId(id));
@@ -222,6 +259,11 @@ static class CardDatabaseService
     public static bool IsDefectFocus(string id)    => _defectFocus.Contains(ToRawId(id));
     public static bool IsRegentForge(string id)    => _regentForge.Contains(ToRawId(id));
     public static bool IsRegentBlade(string id)    => _regentBlade.Contains(ToRawId(id));
+    static readonly HashSet<string> _regentCreateExtra = new(StringComparer.OrdinalIgnoreCase) { "METAMORPHOSIS" };
+    public static bool IsRegentCreate(string id)   => _regentCreate.Contains(ToRawId(id))
+                                                    || _regentStatusGen.Contains(ToRawId(id))
+                                                    || _regentTransform.Contains(ToRawId(id))
+                                                    || _regentCreateExtra.Contains(ToRawId(id));
 
     public static bool IsBlockGiver(string id) => _blockGivers.Contains(ToRawId(id));
     public static bool IsRelicBlockGiver(string id) => _blockRelicGivers.Contains(ToRawId(id));

@@ -698,8 +698,8 @@ namespace StS2Toys
                 {
                     _regentOverview = new DeckOverviewForm();
                     _regentOverview.SetKeywordGroups([
-                        ("Forge",          c => CardDatabaseService.IsRegentForge(c.Id)),
-                        ("Sovereign Blade", c => CardDatabaseService.IsRegentBlade(c.Id)),
+                        ("Forge / Sovereign Blade", c => CardDatabaseService.IsRegentForge(c.Id) || CardDatabaseService.IsRegentBlade(c.Id)),
+                        ("カード作成シナジー",        c => CardDatabaseService.IsRegentCreate(c.Id)),
                     ], "Regent概観");
                     ApplySubWindowSettings(_regentOverview, _regentOverviewSettings, new Point(Right + 4, Top));
                     _regentOverview.FormClosed += (_, _) =>
@@ -730,9 +730,10 @@ namespace StS2Toys
             if (_regentOverview is null || _regentOverview.IsDisposed || !_regentOverview.Visible) return;
             if (_lastDeckCards is null) return;
             _regentOverview.UpdateDeck(_lastDeckCards);
-            int forge = _lastDeckCards.Where(c => CardDatabaseService.IsRegentForge(c.Id)).Sum(c => c.Count);
-            int blade = _lastDeckCards.Where(c => CardDatabaseService.IsRegentBlade(c.Id)).Sum(c => c.Count);
-            _regentOverview.SetStatsText($"Forge: {forge}枚  Sovereign Blade: {blade}枚");
+            int forge  = _lastDeckCards.Where(c => CardDatabaseService.IsRegentForge(c.Id)).Sum(c => c.Count);
+            int blade  = _lastDeckCards.Where(c => CardDatabaseService.IsRegentBlade(c.Id)).Sum(c => c.Count);
+            int create = _lastDeckCards.Where(c => CardDatabaseService.IsRegentCreate(c.Id)).Sum(c => c.Count);
+            _regentOverview.SetStatsText($"Forge: {forge}枚  Sovereign Blade: {blade}枚  カード作成: {create}枚");
         }
 
         void ListViewDeck_ColumnClick(object? sender, ColumnClickEventArgs e)
