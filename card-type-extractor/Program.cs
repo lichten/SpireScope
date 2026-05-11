@@ -5,9 +5,8 @@ using System.Text.RegularExpressions;
 
 // 引数: [sts2.dll のパス] [出力 JSON のパス]
 // 省略時はデフォルトパスを使用
-var dllPath = args.Length > 0
-    ? args[0]
-    : @"C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\data_sts2_windows_x86_64\sts2.dll";
+const string defaultDll = @"C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\data_sts2_windows_x86_64\sts2.dll";
+var dllPath = (args.Length > 0 && !args[0].StartsWith("--")) ? args[0] : defaultDll;
 
 // デフォルト出力先: リポジトリルートの StS2Toys/Resources/
 // AppContext.BaseDirectory = .../card-type-extractor/bin/Debug/net10.0/
@@ -19,6 +18,378 @@ var outPath = args.Length > 1 ? args[1] : defaultOut;
 using var stream = File.OpenRead(dllPath);
 using var peReader = new PEReader(stream);
 var mr = peReader.GetMetadataReader();
+
+// --- 調査: マニフェスト埋め込みリソース一覧 ---
+if (args.Length > 0 && args[0] == "--list-resources")
+{
+    foreach (var handle in mr.ManifestResources)
+    {
+        var res = mr.GetManifestResource(handle);
+        Console.WriteLine(mr.GetString(res.Name));
+    }
+    return;
+}
+
+// --- 調査: DynamicVarSet の get_Xxx メソッドが使うキー文字列をダンプ ---
+if (args.Length > 0 && args[0] == "--dump-varset-keys")
+{
+    foreach (var typeHandle in mr.TypeDefinitions)
+    {
+        var typeDef = mr.GetTypeDefinition(typeHandle);
+        if (mr.GetString(typeDef.Name) != "DynamicVarSet") continue;
+        foreach (var mh in typeDef.GetMethods())
+        {
+            var method = mr.GetMethodDefinition(mh);
+            var methodName = mr.GetString(method.Name);
+            if (!methodName.StartsWith("get_") || method.RelativeVirtualAddress == 0) continue;
+            var body = peReader.GetMethodBody(method.RelativeVirtualAddress);
+            if (body == null) continue;
+            var il = body.GetILBytes();
+            // ldstr (0x72) at start of method after ldfld
+            for (int i = 0; i + 4 < il.Length; i++)
+            {
+                if (il[i] != 0x72) continue;
+                int strToken = il[i+1]|(il[i+2]<<8)|(il[i+3]<<16)|(il[i+4]<<24);
+                // castclass (0x74) to find the target type
+                int castToken = 0;
+                for (int j = i+5; j+4 < il.Length; j++)
+                {
+                    if (il[j] == 0x74) { castToken = il[j+1]|(il[j+2]<<8)|(il[j+3]<<16)|(il[j+4]<<24); break; }
+                }
+                string keyStr = "";
+                try { keyStr = mr.GetUserString(MetadataTokens.UserStringHandle(strToken & 0xFFFFFF)); } catch { }
+                string castType = "";
+                try
+                {
+                    var ch = MetadataTokens.EntityHandle(castToken);
+                    if (ch.Kind == HandleKind.TypeDefinition)
+                        castType = mr.GetString(mr.GetTypeDefinition((TypeDefinitionHandle)ch).Name);
+                    else if (ch.Kind == HandleKind.TypeReference)
+                        castType = mr.GetString(mr.GetTypeReference((TypeReferenceHandle)ch).Name);
+                    else if (ch.Kind == HandleKind.TypeSpecification)
+                        castType = $"TypeSpec(0x{castToken:X8})";
+                } catch { }
+                Console.WriteLine($"{methodName[4..],24} key=\"{keyStr}\" castTo={castType}");
+                break;
+            }
+        }
+        break;
+    }
+    return;
+}
+
+// --- 調査: *Var クラスのコンストラクタトークン一覧を表示 ---
+if (args.Length > 0 && args[0] == "--list-var-ctors")
+{
+    foreach (var typeHandle in mr.TypeDefinitions)
+    {
+        var typeDef = mr.GetTypeDefinition(typeHandle);
+        var typeName = mr.GetString(typeDef.Name);
+        if (!typeName.EndsWith("Var")) continue;
+        var ns = mr.GetString(typeDef.Namespace);
+        if (!ns.Contains("DynamicVars", StringComparison.OrdinalIgnoreCase)) continue;
+        foreach (var mh in typeDef.GetMethods())
+        {
+            var method = mr.GetMethodDefinition(mh);
+            if (mr.GetString(method.Name) != ".ctor") continue;
+            int token = MetadataTokens.GetToken(mr, mh);
+            Console.WriteLine($"0x{token:X8}  {typeName}");
+        }
+    }
+    return;
+}
+
+// --- 調査: UserString トークンを読み取る ---
+if (args.Length > 0 && args[0] == "--read-string")
+{
+    int token = Convert.ToInt32(args[1], 16);
+    int offset = token & 0xFFFFFF;
+    var s = mr.GetUserString(MetadataTokens.UserStringHandle(offset));
+    Console.WriteLine($"0x{token:X8} → \"{s}\"");
+    return;
+}
+
+// --- 調査: *Var クラスのコンストラクタが渡す name 文字列を一覧表示 ---
+if (args.Length > 0 && args[0] == "--list-var-names")
+{
+    // DynamicVar..ctor token (base ctor that stores the name)
+    const int dynamicVarCtorToken = 0x06007861;
+    foreach (var typeHandle in mr.TypeDefinitions)
+    {
+        var typeDef = mr.GetTypeDefinition(typeHandle);
+        var typeName = mr.GetString(typeDef.Name);
+        if (!typeName.EndsWith("Var") && !typeName.Contains("Var<")) continue;
+        foreach (var mh in typeDef.GetMethods())
+        {
+            var method = mr.GetMethodDefinition(mh);
+            if (mr.GetString(method.Name) != ".ctor") continue;
+            if (method.RelativeVirtualAddress == 0) continue;
+            var body = peReader.GetMethodBody(method.RelativeVirtualAddress);
+            if (body == null) continue;
+            var il = body.GetILBytes();
+            // Find ldstr (0x72) followed eventually by call DynamicVar..ctor
+            for (int i = 0; i + 4 < il.Length; i++)
+            {
+                if (il[i] != 0x72) continue;
+                int strTok = il[i+1]|(il[i+2]<<8)|(il[i+3]<<16)|(il[i+4]<<24);
+                // Verify next call after ldstr is DynamicVar..ctor
+                bool hasDynCtor = false;
+                for (int j = i+5; j+4 < il.Length; j++)
+                {
+                    if (il[j] == 0x28)
+                    {
+                        int callTok = il[j+1]|(il[j+2]<<8)|(il[j+3]<<16)|(il[j+4]<<24);
+                        if (callTok == dynamicVarCtorToken) { hasDynCtor = true; break; }
+                    }
+                    if (il[j] == 0x2A) break;
+                }
+                if (!hasDynCtor) continue;
+                string name = "";
+                try { name = mr.GetUserString(MetadataTokens.UserStringHandle(strTok & 0xFFFFFF)); } catch { }
+                int ctorToken = MetadataTokens.GetToken(mr, mh);
+                Console.WriteLine($"0x{ctorToken:X8}  {typeName,-30} name=\"{name}\"");
+                break;
+            }
+        }
+    }
+    return;
+}
+
+// --- 調査: MemberRef の親 TypeSpec を確認 ---
+if (args.Length > 0 && args[0] == "--check-memberref-parent")
+{
+    int token = Convert.ToInt32(args[1], 16);
+    var h = MetadataTokens.EntityHandle(token);
+    if (h.Kind == HandleKind.MemberReference)
+    {
+        var member = mr.GetMemberReference((MemberReferenceHandle)h);
+        var parent = member.Parent;
+        Console.WriteLine($"MemberRef 0x{token:X8} name={mr.GetString(member.Name)} parent.Kind={parent.Kind} parent.Token=0x{MetadataTokens.GetToken(parent):X8}");
+    }
+    return;
+}
+
+// --- 調査: DynamicVarSet プロパティの TypeSpec キャストトークン → プロパティ名 の対応を表示 ---
+if (args.Length > 0 && args[0] == "--build-typespec-map")
+{
+    // DynamicVarSet の各 get_Xxx で使われる castclass TypeSpec トークンを収集
+    // → その TypeSpec の MemberRef .ctor を見つける
+    var typeSpecToPropName = new Dictionary<int, string>();
+    foreach (var typeHandle in mr.TypeDefinitions)
+    {
+        var typeDef = mr.GetTypeDefinition(typeHandle);
+        if (mr.GetString(typeDef.Name) != "DynamicVarSet") continue;
+        foreach (var mh in typeDef.GetMethods())
+        {
+            var method = mr.GetMethodDefinition(mh);
+            var methodName = mr.GetString(method.Name);
+            if (!methodName.StartsWith("get_") || method.RelativeVirtualAddress == 0) continue;
+            var body = peReader.GetMethodBody(method.RelativeVirtualAddress);
+            if (body == null) continue;
+            var il = body.GetILBytes();
+            for (int i = 0; i + 4 < il.Length; i++)
+            {
+                if (il[i] != 0x74) continue; // castclass
+                int castToken = il[i+1]|(il[i+2]<<8)|(il[i+3]<<16)|(il[i+4]<<24);
+                var ch = MetadataTokens.EntityHandle(castToken);
+                if (ch.Kind == HandleKind.TypeSpecification)
+                    typeSpecToPropName.TryAdd(castToken, methodName[4..]);
+                break;
+            }
+        }
+        break;
+    }
+    // 全 MemberReference を走査して TypeSpec 親を持つ .ctor を列挙
+    foreach (var mrHandle in mr.MemberReferences)
+    {
+        var memberRef = mr.GetMemberReference(mrHandle);
+        if (mr.GetString(memberRef.Name) != ".ctor") continue;
+        if (memberRef.Parent.Kind != HandleKind.TypeSpecification) continue;
+        int parentToken = MetadataTokens.GetToken(memberRef.Parent);
+        if (!typeSpecToPropName.TryGetValue(parentToken, out var propName)) continue;
+        int memberRefToken = MetadataTokens.GetToken(mr, mrHandle);
+        Console.WriteLine($"0x{memberRefToken:X8}  → {propName}  (TypeSpec 0x{parentToken:X8})");
+    }
+    return;
+}
+
+// --- 調査: トークンを解決してクラス.メソッド名を表示 ---
+if (args.Length > 0 && args[0] == "--resolve-token")
+{
+    int token = Convert.ToInt32(args[1], 16);
+    var h = MetadataTokens.EntityHandle(token);
+    if (h.Kind == HandleKind.MethodDefinition)
+    {
+        var method = mr.GetMethodDefinition((MethodDefinitionHandle)h);
+        var methodName = mr.GetString(method.Name);
+        var declaringType = mr.GetTypeDefinition(method.GetDeclaringType());
+        var ns = mr.GetString(declaringType.Namespace);
+        var typeName = mr.GetString(declaringType.Name);
+        Console.WriteLine($"{(string.IsNullOrEmpty(ns) ? "" : ns + ".")}{typeName}.{methodName}");
+    }
+    else if (h.Kind == HandleKind.MemberReference)
+    {
+        var member = mr.GetMemberReference((MemberReferenceHandle)h);
+        var memberName = mr.GetString(member.Name);
+        var parentHandle = member.Parent;
+        if (parentHandle.Kind == HandleKind.TypeReference)
+        {
+            var typeRef = mr.GetTypeReference((TypeReferenceHandle)parentHandle);
+            Console.WriteLine($"{mr.GetString(typeRef.Namespace)}.{mr.GetString(typeRef.Name)}.{memberName}");
+        }
+        else
+        {
+            Console.WriteLine($"(parent kind {parentHandle.Kind}).{memberName}");
+        }
+    }
+    return;
+}
+
+// --- 調査: メソッドトークンから IL をダンプ ---
+if (args.Length > 0 && args[0] == "--dump-token")
+{
+    int token = Convert.ToInt32(args[1], 16);
+    var h = MetadataTokens.EntityHandle(token);
+    if (h.Kind == HandleKind.MethodDefinition)
+    {
+        var method = mr.GetMethodDefinition((MethodDefinitionHandle)h);
+        Console.Error.WriteLine($"Method: {mr.GetString(method.Name)}");
+        if (method.RelativeVirtualAddress == 0) { Console.WriteLine("No RVA"); return; }
+        var body = peReader.GetMethodBody(method.RelativeVirtualAddress);
+        var il = body!.GetILBytes();
+        for (int i = 0; i < il.Length;)
+        {
+            byte op = il[i];
+            var (val, size) = ReadLdcI4(il, i);
+            if (val.HasValue) { Console.WriteLine($"  [{i:X3}] ldc.i4 {val}"); i += size; continue; }
+            if (op == 0x02) { Console.WriteLine($"  [{i:X3}] ldarg.0"); i++; continue; }
+            if (op == 0x03) { Console.WriteLine($"  [{i:X3}] ldarg.1"); i++; continue; }
+            if (op == 0x04) { Console.WriteLine($"  [{i:X3}] ldarg.2"); i++; continue; }
+            if (op == 0x05) { Console.WriteLine($"  [{i:X3}] ldarg.3"); i++; continue; }
+            if ((op == 0x28 || op == 0x6F) && i+4 < il.Length)
+            {
+                int tok = il[i+1]|(il[i+2]<<8)|(il[i+3]<<16)|(il[i+4]<<24);
+                var mn = ResolveMethodName(mr, tok);
+                Console.WriteLine($"  [{i:X3}] {(op==0x28?"call":"callvirt")} {mn} (0x{tok:X8})");
+                i += 5; continue;
+            }
+            if ((op == 0x7B || op == 0x7D) && i+4 < il.Length)
+            {
+                int tok = il[i+1]|(il[i+2]<<8)|(il[i+3]<<16)|(il[i+4]<<24);
+                var fn = ResolveFieldToken(mr, tok);
+                Console.WriteLine($"  [{i:X3}] {(op==0x7B?"ldfld":"stfld")} {fn} (0x{tok:X8})");
+                i += 5; continue;
+            }
+            if (op == 0x14) { Console.WriteLine($"  [{i:X3}] ldnull"); i++; continue; }
+            if (op == 0x2A) { Console.WriteLine($"  [{i:X3}] ret"); i++; continue; }
+            Console.WriteLine($"  [{i:X3}] 0x{op:X2}");
+            i++;
+        }
+    }
+    return;
+}
+
+// --- 調査: 特定クラスの全メソッド IL をダンプ ---
+if (args.Length > 0 && args[0] == "--dump-class")
+{
+    var targetClass = args.Length > 1 ? args[1] : "Bash";
+    foreach (var typeHandle in mr.TypeDefinitions)
+    {
+        var typeDef = mr.GetTypeDefinition(typeHandle);
+        if (mr.GetString(typeDef.Name) != targetClass) continue;
+        foreach (var mh in typeDef.GetMethods())
+        {
+            var method = mr.GetMethodDefinition(mh);
+            var methodName = mr.GetString(method.Name);
+            if (method.RelativeVirtualAddress == 0) { Console.WriteLine($"[{methodName}] (abstract/extern)"); continue; }
+            var body = peReader.GetMethodBody(method.RelativeVirtualAddress);
+            if (body == null) { Console.WriteLine($"[{methodName}] (no body)"); continue; }
+            var il = body.GetILBytes();
+            Console.WriteLine($"[{methodName}] ({il.Length} bytes)");
+            for (int i = 0; i < il.Length;)
+            {
+                byte op = il[i];
+                var (val, size) = ReadLdcI4(il, i);
+                if (val.HasValue) { Console.WriteLine($"  [{i:X3}] ldc.i4 {val}"); i += size; continue; }
+                if (op == 0x02) { Console.WriteLine($"  [{i:X3}] ldarg.0"); i++; continue; }
+                if (op == 0x03) { Console.WriteLine($"  [{i:X3}] ldarg.1"); i++; continue; }
+                if (op == 0x04) { Console.WriteLine($"  [{i:X3}] ldarg.2"); i++; continue; }
+                if (op == 0x05) { Console.WriteLine($"  [{i:X3}] ldarg.3"); i++; continue; }
+                if ((op == 0x28 || op == 0x6F || op == 0x73) && i+4 < il.Length)
+                {
+                    int tok = il[i+1]|(il[i+2]<<8)|(il[i+3]<<16)|(il[i+4]<<24);
+                    var mn = ResolveMethodName(mr, tok);
+                    var opName = op == 0x28 ? "call" : op == 0x6F ? "callvirt" : "newobj";
+                    Console.WriteLine($"  [{i:X3}] {opName} {mn} (0x{tok:X8})");
+                    i += 5; continue;
+                }
+                if ((op == 0x7B || op == 0x7D) && i+4 < il.Length)
+                {
+                    int tok = il[i+1]|(il[i+2]<<8)|(il[i+3]<<16)|(il[i+4]<<24);
+                    var fn = ResolveFieldToken(mr, tok);
+                    Console.WriteLine($"  [{i:X3}] {(op==0x7B?"ldfld":"stfld")} {fn} (0x{tok:X8})");
+                    i += 5; continue;
+                }
+                if (op == 0x14) { Console.WriteLine($"  [{i:X3}] ldnull"); i++; continue; }
+                if (op == 0x2A) { Console.WriteLine($"  [{i:X3}] ret"); i++; continue; }
+                if (op == 0x25) { Console.WriteLine($"  [{i:X3}] dup"); i++; continue; }
+                if (op == 0x26) { Console.WriteLine($"  [{i:X3}] pop"); i++; continue; }
+                Console.WriteLine($"  [{i:X3}] 0x{op:X2}");
+                i++;
+            }
+        }
+        break;
+    }
+    return;
+}
+
+// --- 調査: 特定カードの .ctor IL を全命令ダンプ ---
+if (args.Length > 0 && args[0] == "--dump-ctor")
+{
+    var targetClass = args.Length > 1 ? args[1] : "Bash";
+    foreach (var typeHandle in mr.TypeDefinitions)
+    {
+        var typeDef = mr.GetTypeDefinition(typeHandle);
+        if (mr.GetString(typeDef.Name) != targetClass) continue;
+        foreach (var mh in typeDef.GetMethods())
+        {
+            var method = mr.GetMethodDefinition(mh);
+            if (mr.GetString(method.Name) != ".ctor") continue;
+            if (method.RelativeVirtualAddress == 0) continue;
+            var body = peReader.GetMethodBody(method.RelativeVirtualAddress);
+            if (body == null) continue;
+            var il = body.GetILBytes();
+            Console.Error.WriteLine($".ctor IL for {targetClass} ({il.Length} bytes):");
+            for (int i = 0; i < il.Length;)
+            {
+                byte op = il[i];
+                var (val, size) = ReadLdcI4(il, i);
+                if (val.HasValue)
+                    { Console.WriteLine($"  [{i:X3}] ldc.i4 {val}"); i += size; continue; }
+                if (op == 0x02) { Console.WriteLine($"  [{i:X3}] ldarg.0"); i++; continue; }
+                if ((op == 0x28 || op == 0x6F) && i+4 < il.Length)
+                {
+                    int tok = il[i+1]|(il[i+2]<<8)|(il[i+3]<<16)|(il[i+4]<<24);
+                    var mn = ResolveMethodName(mr, tok);
+                    Console.WriteLine($"  [{i:X3}] {(op==0x28?"call":"callvirt")} {mn} (0x{tok:X8})");
+                    i += 5; continue;
+                }
+                if (op == 0x7D && i+4 < il.Length)
+                {
+                    int tok = il[i+1]|(il[i+2]<<8)|(il[i+3]<<16)|(il[i+4]<<24);
+                    var fn = ResolveFieldToken(mr, tok);
+                    Console.WriteLine($"  [{i:X3}] stfld {fn} (0x{tok:X8})");
+                    i += 5; continue;
+                }
+                Console.WriteLine($"  [{i:X3}] 0x{op:X2}");
+                i++;
+            }
+            break;
+        }
+        break;
+    }
+    return;
+}
 
 // CardType enum 値マップ
 var cardTypeByInt = new Dictionary<int, string>();
@@ -69,9 +440,82 @@ foreach (var typeHandle in mr.TypeDefinitions)
     }
 }
 
-// 各カードクラスの .ctor IL から CardType (2番目の ldc.i4) とコスト (1番目) を取得
-var results = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-var costs   = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+// 各カードクラスの .ctor IL から CardType (2番目の ldc.i4) とコスト (1番目)、
+// およびフィールド代入 (ldarg.0, ldc.i4 N, stfld F) を取得
+var results   = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+var costs     = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+var cardStats = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
+
+// コンストラクタトークン → DynamicVar 名 のマップを構築
+// フェーズA: 具体 *Var クラス（ldstr で名前を持つもの）
+var varNameByCtorToken = new Dictionary<int, string>();
+foreach (var typeHandle in mr.TypeDefinitions)
+{
+    var typeDef = mr.GetTypeDefinition(typeHandle);
+    if (!mr.GetString(typeDef.Name).EndsWith("Var")) continue;
+    string? varName = null;
+    foreach (var mhv in typeDef.GetMethods())
+    {
+        var mv = mr.GetMethodDefinition(mhv);
+        if (mr.GetString(mv.Name) != ".ctor" || mv.RelativeVirtualAddress == 0) continue;
+        var bv = peReader.GetMethodBody(mv.RelativeVirtualAddress);
+        if (bv == null) continue;
+        var iv = bv.GetILBytes();
+        for (int i = 0; i + 4 < iv.Length; i++)
+        {
+            if (iv[i] != 0x72) continue;
+            int strTok = iv[i+1]|(iv[i+2]<<8)|(iv[i+3]<<16)|(iv[i+4]<<24);
+            try { var s = mr.GetUserString(MetadataTokens.UserStringHandle(strTok & 0xFFFFFF)); if (!string.IsNullOrEmpty(s)) { varName = s; break; } } catch { }
+        }
+        if (varName != null) break;
+    }
+    if (varName == null) continue;
+    foreach (var mhv in typeDef.GetMethods())
+    {
+        var mv = mr.GetMethodDefinition(mhv);
+        if (mr.GetString(mv.Name) != ".ctor") continue;
+        varNameByCtorToken.TryAdd(MetadataTokens.GetToken(mr, mhv), varName);
+    }
+}
+// フェーズB: TypeSpec Var (Vulnerable, Doom 等) — DynamicVarSet の castclass トークンから逆引き
+{
+    var typeSpecToPropName = new Dictionary<int, string>();
+    foreach (var th in mr.TypeDefinitions)
+    {
+        var td = mr.GetTypeDefinition(th);
+        if (mr.GetString(td.Name) != "DynamicVarSet") continue;
+        foreach (var mhv in td.GetMethods())
+        {
+            var mv = mr.GetMethodDefinition(mhv);
+            var mn = mr.GetString(mv.Name);
+            if (!mn.StartsWith("get_") || mv.RelativeVirtualAddress == 0) continue;
+            var bv = peReader.GetMethodBody(mv.RelativeVirtualAddress);
+            if (bv == null) continue;
+            var iv = bv.GetILBytes();
+            for (int i = 0; i + 4 < iv.Length; i++)
+            {
+                if (iv[i] != 0x74) continue;
+                int castTok = iv[i+1]|(iv[i+2]<<8)|(iv[i+3]<<16)|(iv[i+4]<<24);
+                if (MetadataTokens.EntityHandle(castTok).Kind == HandleKind.TypeSpecification)
+                    typeSpecToPropName.TryAdd(castTok, mn[4..]);
+                break;
+            }
+        }
+        break;
+    }
+    foreach (var mrh in mr.MemberReferences)
+    {
+        var memberRef = mr.GetMemberReference(mrh);
+        if (mr.GetString(memberRef.Name) != ".ctor") continue;
+        if (memberRef.Parent.Kind != HandleKind.TypeSpecification) continue;
+        int parentTok = MetadataTokens.GetToken(memberRef.Parent);
+        if (!typeSpecToPropName.TryGetValue(parentTok, out var propName)) continue;
+        varNameByCtorToken.TryAdd(MetadataTokens.GetToken(mr, mrh), propName);
+    }
+}
+
+// System.Decimal..ctor(int) のトークン
+const int decimalIntCtorToken = 0x0A001317;
 
 foreach (var typeHandle in mr.TypeDefinitions)
 {
@@ -79,6 +523,9 @@ foreach (var typeHandle in mr.TypeDefinitions)
     var className = mr.GetString(typeDef.Name);
     if (!cardClasses.Contains(className)) continue;
 
+    var cardId = "CARD." + CamelToUpperSnake(className);
+
+    // パス1+2: .ctor からコスト・タイプ・stfld を取得
     foreach (var mh in typeDef.GetMethods())
     {
         var method = mr.GetMethodDefinition(mh);
@@ -88,7 +535,7 @@ foreach (var typeHandle in mr.TypeDefinitions)
         if (body == null) continue;
         var il = body.GetILBytes();
 
-        // ldc.i4 系の値を順番に収集
+        // パス1: ldc.i4 系の値を順番に収集（コスト・カード種別）
         var intArgs = new List<int>();
         for (int i = 0; i < il.Length; )
         {
@@ -100,13 +547,97 @@ foreach (var typeHandle in mr.TypeDefinitions)
 
         if (intArgs.Count >= 2)
         {
-            var cardId = "CARD." + CamelToUpperSnake(className);
-            // 1番目の整数引数がコスト、2番目が CardType
             costs.TryAdd(cardId, intArgs[0]);
             if (cardTypeByInt.TryGetValue(intArgs[1], out var typeName))
                 results.TryAdd(cardId, typeName);
         }
-        break; // .ctor は一つだけ
+
+        // パス2: フィールド代入 (stfld) とプロパティセッター (call/callvirt set_Xxx) を収集
+        int? lastInt = null;
+        var fields = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < il.Length;)
+        {
+            byte op = il[i];
+            if ((op == 0x7D || op == 0x28 || op == 0x6F) && i + 4 < il.Length)
+            {
+                if (lastInt.HasValue)
+                {
+                    int token = il[i+1] | (il[i+2]<<8) | (il[i+3]<<16) | (il[i+4]<<24);
+                    string? name = null;
+                    if (op == 0x7D)
+                        name = ResolveFieldToken(mr, token);
+                    else
+                    {
+                        var rawName = ResolveMethodName(mr, token);
+                        if (rawName.StartsWith("set_", StringComparison.Ordinal))
+                            name = rawName[4..];
+                    }
+                    if (!string.IsNullOrEmpty(name))
+                        fields.TryAdd(name, lastInt.Value);
+                }
+                lastInt = null;
+                i += 5;
+                continue;
+            }
+            var (val, size) = ReadLdcI4(il, i);
+            if (val.HasValue) lastInt = val;
+            else if (op != 0x02) lastInt = null;
+            i += size;
+        }
+        if (fields.Count > 0)
+            cardStats[cardId] = fields;
+
+        break;
+    }
+
+    // パス3: get_CanonicalVars から DynamicVar 値を取得
+    // パターン: ldc.i4 N → newobj Decimal..ctor → [ldc.i4 M] → newobj XxxVar..ctor
+    foreach (var mh in typeDef.GetMethods())
+    {
+        var method = mr.GetMethodDefinition(mh);
+        if (mr.GetString(method.Name) != "get_CanonicalVars") continue;
+        if (method.RelativeVirtualAddress == 0) continue;
+        var body = peReader.GetMethodBody(method.RelativeVirtualAddress);
+        if (body == null) continue;
+        var il = body.GetILBytes();
+
+        int? lastInt = null;
+        int? pendingDecimal = null;
+        var canonFields = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < il.Length; )
+        {
+            byte op = il[i];
+            if (op == 0x73 && i + 4 < il.Length) // newobj
+            {
+                int tok = il[i+1]|(il[i+2]<<8)|(il[i+3]<<16)|(il[i+4]<<24);
+                if (tok == decimalIntCtorToken)
+                {
+                    pendingDecimal = lastInt;
+                    lastInt = null;
+                }
+                else if (pendingDecimal.HasValue && varNameByCtorToken.TryGetValue(tok, out var vname))
+                {
+                    canonFields.TryAdd(vname, pendingDecimal.Value);
+                    pendingDecimal = null;
+                    lastInt = null;
+                }
+                i += 5;
+                continue;
+            }
+            var (val, size) = ReadLdcI4(il, i);
+            if (val.HasValue) lastInt = val;
+            else if (op is not (0x02 or 0x25)) lastInt = null; // ldarg.0/dup はリセットしない
+            i += size;
+        }
+        if (canonFields.Count > 0)
+        {
+            if (!cardStats.ContainsKey(cardId))
+                cardStats[cardId] = canonFields;
+            else
+                foreach (var (k, v) in canonFields)
+                    cardStats[cardId].TryAdd(k, v);
+        }
+        break;
     }
 }
 
@@ -124,6 +655,18 @@ var costLines = costs.OrderBy(kv => kv.Key)
     .Select(kv => $"  \"{kv.Key}\": {kv.Value}");
 File.WriteAllText(costsOutPath, "{\n" + string.Join(",\n", costLines) + "\n}\n");
 Console.WriteLine(costsOutPath);
+
+// card_stats.json 出力
+var statsOutPath = Path.Combine(Path.GetDirectoryName(outPath)!, "card_stats.json");
+Console.Error.WriteLine($"Extracted {cardStats.Count} card stat mappings.");
+var statsEntries = cardStats.OrderBy(kv => kv.Key).Select(kv =>
+{
+    var fieldPairs = kv.Value.OrderBy(f => f.Key)
+        .Select(f => $"    \"{f.Key}\": {f.Value}");
+    return $"  \"{kv.Key}\": {{\n{string.Join(",\n", fieldPairs)}\n  }}";
+});
+File.WriteAllText(statsOutPath, "{\n" + string.Join(",\n", statsEntries) + "\n}\n");
+Console.WriteLine(statsOutPath);
 
 // ---- helpers ----
 
@@ -162,6 +705,34 @@ static (int? val, int size) ReadLdcI4(byte[] il, int i)
         0x0E or 0x0F or 0x12 or 0x13 => (null, 2), // ldarg.s/starg.s/ldloc.s/stloc.s
         _ => (null, 1)
     };
+}
+
+static string ResolveMethodName(MetadataReader mr, int token)
+{
+    try
+    {
+        var h = MetadataTokens.EntityHandle(token);
+        if (h.Kind == HandleKind.MethodDefinition)
+            return mr.GetString(mr.GetMethodDefinition((MethodDefinitionHandle)h).Name);
+        if (h.Kind == HandleKind.MemberReference)
+            return mr.GetString(mr.GetMemberReference((MemberReferenceHandle)h).Name);
+    }
+    catch { }
+    return "";
+}
+
+static string ResolveFieldToken(MetadataReader mr, int token)
+{
+    try
+    {
+        var h = MetadataTokens.EntityHandle(token);
+        if (h.Kind == HandleKind.FieldDefinition)
+            return mr.GetString(mr.GetFieldDefinition((FieldDefinitionHandle)h).Name);
+        if (h.Kind == HandleKind.MemberReference)
+            return mr.GetString(mr.GetMemberReference((MemberReferenceHandle)h).Name);
+    }
+    catch { }
+    return "";
 }
 
 static string ResolveMethodSpecFirstArg(MetadataReader mr, int token)

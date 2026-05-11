@@ -18,8 +18,9 @@ public partial class CardDetailForm : Form
         Text = isRelic ? $"レリック: {ja}" : $"カード: {ja}";
 
         var (descEn, descJa) = CardDatabaseService.GetDescription(id);
-        rtbDescEn.Text = DescriptionFormatter.Clean(descEn);
-        rtbDescJa.Text = DescriptionFormatter.Clean(descJa);
+        var stats = isRelic ? null : CardDatabaseService.GetCardStats(id);
+        rtbDescEn.Text = DescriptionFormatter.Resolve(descEn, stats);
+        rtbDescJa.Text = DescriptionFormatter.Resolve(descJa, stats);
 
         // エンチャント（カードのみ対象。レリックには付かない）
         bool hasEnchant = !isRelic && !string.IsNullOrEmpty(enchantmentId);

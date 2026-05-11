@@ -300,8 +300,32 @@ static class CardDatabaseService
     static readonly IReadOnlyDictionary<string, string> _enchantEng = LoadLocJson("eng.enchantments");
     static readonly IReadOnlyDictionary<string, string> _enchantJpn = LoadLocJson("jpn.enchantments");
 
-    static readonly Regex _amountTemplate =
-        new(@"\{Amount[^}]*\}", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    // ---- card stats (card_stats.json) ----
+
+    static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> _stats = LoadStats();
+
+    static IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> LoadStats()
+    {
+        var asm = Assembly.GetExecutingAssembly();
+        var name = asm.GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith("card_stats.json", StringComparison.OrdinalIgnoreCase));
+        if (name is null) return new Dictionary<string, IReadOnlyDictionary<string, int>>();
+
+        using var stream = asm.GetManifestResourceStream(name)!;
+        var doc = JsonDocument.Parse(stream);
+        var result = new Dictionary<string, IReadOnlyDictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var card in doc.RootElement.EnumerateObject())
+        {
+            var fields = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (var field in card.Value.EnumerateObject())
+                fields[field.Name] = field.Value.GetInt32();
+            result[ToRawId(card.Name)] = fields;
+        }
+        return result;
+    }
+
+    public static IReadOnlyDictionary<string, int>? GetCardStats(string id) =>
+        _stats.TryGetValue(ToRawId(id), out var v) ? v : null;
 
     public static string GetEnchantmentName(string id, bool japanese)
     {
@@ -324,8 +348,7 @@ static class CardDatabaseService
         var dict = japanese ? _enchantJpn : _enchantEng;
         if (!dict.TryGetValue($"{raw}.description", out var desc) || string.IsNullOrEmpty(desc))
             return "";
-        desc = _amountTemplate.Replace(desc, amount.ToString());
-        return DescriptionFormatter.Clean(desc);
+        return DescriptionFormatter.CleanWithAmount(desc, amount);
     }
 
     public static (string En, string Ja) GetDescription(string id)
