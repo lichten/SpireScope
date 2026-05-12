@@ -327,6 +327,8 @@ public static class CardDatabaseService
     public static IReadOnlyDictionary<string, int>? GetCardStats(string id) =>
         _stats.TryGetValue(ToRawId(id), out var v) ? v : null;
 
+    public static IEnumerable<string> GetAllCardIds() => _types.Keys;
+
     public static string GetEnchantmentName(string id, bool japanese)
     {
         var raw = ToRawId(id);
