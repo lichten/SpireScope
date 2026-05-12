@@ -289,6 +289,58 @@ if (args.Length > 0 && args[0] == "--dump-token")
     return;
 }
 
+// --- 調査: CardPool クラス名一覧を表示 ---
+if (args.Length > 0 && args[0] == "--list-cardpools")
+{
+    foreach (var typeHandle in mr.TypeDefinitions)
+    {
+        var typeDef = mr.GetTypeDefinition(typeHandle);
+        var name = mr.GetString(typeDef.Name);
+        if (name.EndsWith("CardPool") || name.Contains("CardPool"))
+            Console.WriteLine($"{mr.GetString(typeDef.Namespace)}.{name}");
+    }
+    return;
+}
+
+// --- 調査: カードクラスの名前空間一覧を表示 ---
+if (args.Length > 0 && args[0] == "--dump-namespaces")
+{
+    // GenerateAllCards から cardClasses を収集
+    var cardClassesNs = new HashSet<string>(StringComparer.Ordinal);
+    foreach (var typeHandle in mr.TypeDefinitions)
+    {
+        var typeDef = mr.GetTypeDefinition(typeHandle);
+        if (!mr.GetString(typeDef.Name).EndsWith("CardPool")) continue;
+        foreach (var mh in typeDef.GetMethods())
+        {
+            var method = mr.GetMethodDefinition(mh);
+            if (mr.GetString(method.Name) != "GenerateAllCards") continue;
+            if (method.RelativeVirtualAddress == 0) continue;
+            var body = peReader.GetMethodBody(method.RelativeVirtualAddress);
+            if (body == null) continue;
+            var il = body.GetILBytes();
+            for (int i = 0; i + 4 < il.Length; i++)
+            {
+                if (il[i] != 0x28) continue;
+                int token = il[i+1] | (il[i+2]<<8) | (il[i+3]<<16) | (il[i+4]<<24);
+                var typeName = ResolveMethodSpecFirstArg(mr, token);
+                if (!string.IsNullOrEmpty(typeName))
+                    cardClassesNs.Add(typeName);
+            }
+        }
+    }
+    // 各カードクラスの名前空間を表示
+    foreach (var typeHandle in mr.TypeDefinitions)
+    {
+        var typeDef = mr.GetTypeDefinition(typeHandle);
+        var className = mr.GetString(typeDef.Name);
+        if (!cardClassesNs.Contains(className)) continue;
+        var ns = mr.GetString(typeDef.Namespace);
+        Console.WriteLine($"{className}\t{ns}");
+    }
+    return;
+}
+
 // --- 調査: 特定クラスの全メソッド IL をダンプ ---
 if (args.Length > 0 && args[0] == "--dump-class")
 {
@@ -440,12 +492,27 @@ foreach (var typeHandle in mr.TypeDefinitions)
 // Alchemize の例: ldarg.0, ldc.i4(cost), ldc.i4(type), ldc.i4(rarity), ...
 // つまり IL の ldc.i4 系が 2 番目に押し込まれる値が CardType
 
+// キャラクター名マップ: CardPool クラス名 → キャラクター名
+var characterPoolMap = new Dictionary<string, string>(StringComparer.Ordinal)
+{
+    ["IroncladCardPool"]   = "Ironclad",
+    ["SilentCardPool"]     = "Silent",
+    ["DefectCardPool"]     = "Defect",
+    ["NecrobinderCardPool"] = "Necrobinder",
+    ["RegentCardPool"]     = "Regent",
+};
+
 // カードクラス名の Set を CardPool.GenerateAllCards IL から取得
+// また、キャラクター別の Set も収集する
 var cardClasses = new HashSet<string>(StringComparer.Ordinal);
+var cardCharacters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);  // CARD.XXX → character
 foreach (var typeHandle in mr.TypeDefinitions)
 {
     var typeDef = mr.GetTypeDefinition(typeHandle);
-    if (!mr.GetString(typeDef.Name).EndsWith("CardPool")) continue;
+    var poolName = mr.GetString(typeDef.Name);
+    if (!poolName.EndsWith("CardPool")) continue;
+    characterPoolMap.TryGetValue(poolName, out var character);
+
     foreach (var mh in typeDef.GetMethods())
     {
         var method = mr.GetMethodDefinition(mh);
@@ -460,8 +527,10 @@ foreach (var typeHandle in mr.TypeDefinitions)
             if (il[i] != 0x28) continue;
             int token = il[i+1] | (il[i+2]<<8) | (il[i+3]<<16) | (il[i+4]<<24);
             var typeName = ResolveMethodSpecFirstArg(mr, token);
-            if (!string.IsNullOrEmpty(typeName))
-                cardClasses.Add(typeName);
+            if (string.IsNullOrEmpty(typeName)) continue;
+            cardClasses.Add(typeName);
+            if (character != null)
+                cardCharacters.TryAdd("CARD." + CamelToUpperSnake(typeName), character);
         }
     }
 }
@@ -668,7 +737,31 @@ foreach (var typeHandle in mr.TypeDefinitions)
         }
         break;
     }
+
+    // パス4: Has*CostX が true を返す場合はコストを -1（X-cost）に上書き
+    // （HasEnergyCostX, HasStarCostX など複数のリソース種別に対応）
+    foreach (var mh in typeDef.GetMethods())
+    {
+        var method = mr.GetMethodDefinition(mh);
+        var mn = mr.GetString(method.Name);
+        if (!mn.StartsWith("get_Has") || !mn.EndsWith("CostX")) continue;
+        if (method.RelativeVirtualAddress == 0) continue;
+        var body = peReader.GetMethodBody(method.RelativeVirtualAddress);
+        if (body == null) continue;
+        var il = body.GetILBytes();
+        // ldc.i4.1 (0x17) + ret (0x2A) = 常に true を返す
+        if (il.Length == 2 && il[0] == 0x17 && il[1] == 0x2A)
+            costs[cardId] = -1;
+    }
 }
+
+// card_characters.json 出力
+var charsOutPath = Path.Combine(Path.GetDirectoryName(outPath)!, "card_characters.json");
+Console.Error.WriteLine($"Extracted {cardCharacters.Count} card character mappings.");
+var charLines = cardCharacters.OrderBy(kv => kv.Key)
+    .Select(kv => $"  \"{kv.Key}\": \"{kv.Value}\"");
+File.WriteAllText(charsOutPath, "{\n" + string.Join(",\n", charLines) + "\n}\n");
+Console.WriteLine(charsOutPath);
 
 // card_types.json 出力
 Console.Error.WriteLine($"Extracted {results.Count} card type mappings.");

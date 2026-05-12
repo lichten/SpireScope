@@ -11,6 +11,7 @@ public static class CardDatabaseService
     static readonly Dictionary<string, Entry> _db = Load();
     static readonly Dictionary<string, string> _types = LoadTypes();
     static readonly Dictionary<string, string> _rarities = LoadStringDict("card_rarities.json");
+    static readonly Dictionary<string, string> _characters = LoadStringDict("card_characters.json");
     static readonly Dictionary<string, int> _costs = LoadCosts();
 
     static Dictionary<string, Entry> Load()
@@ -75,6 +76,12 @@ public static class CardDatabaseService
     {
         _rarities.TryGetValue(id, out var rarity);
         return rarity ?? "";
+    }
+
+    public static string GetCardCharacter(string id)
+    {
+        _characters.TryGetValue(id, out var character);
+        return character ?? "";
     }
 
     public static string GetCardCost(string id)

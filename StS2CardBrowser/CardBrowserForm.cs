@@ -2,7 +2,7 @@ using StS2Shared.Services;
 
 namespace StS2CardBrowser;
 
-record CardEntry(string Id, string NameEn, string NameJa, string Type, string Rarity, string Cost);
+record CardEntry(string Id, string NameEn, string NameJa, string Type, string Rarity, string Cost, string Character);
 
 public class CardBrowserForm : Form
 {
@@ -45,13 +45,15 @@ public class CardBrowserForm : Form
     List<CardEntry> _filtered = [];
     bool _isJp = true;
 
-    // ---- レア度定義 ----
+    // ---- レア度・コスト定義 ----
     static readonly string[] Rarities = ["Common", "Uncommon", "Rare", "Starter", "Event", "Shop", "Ancient"];
+    static readonly string[] Costs = ["0", "1", "2", "3+", "X"];
 
     // ---- フィルタ状態 ----
     int _selectedChar = -1;
     readonly HashSet<int> _selectedMechanics = [];
     readonly HashSet<string> _selectedRarities = [];
+    readonly HashSet<string> _selectedCosts = [];
 
     // ---- UI コントロール ----
     TextBox _filterBox = null!;
@@ -59,6 +61,7 @@ public class CardBrowserForm : Form
     Panel _charPanel = null!;
     Panel _subPanel = null!;
     Panel _rarityPanel = null!;
+    Panel _costPanel = null!;
     ListBox _cardList = null!;
     RichTextBox _detailBox = null!;
     Label _countLabel = null!;
@@ -67,6 +70,7 @@ public class CardBrowserForm : Form
     Button[] _charButtons = [];
     Button[] _subButtons = [];
     Button[] _rarityButtons = [];
+    Button[] _costButtons = [];
 
     public CardBrowserForm()
     {
@@ -148,7 +152,27 @@ public class CardBrowserForm : Form
         _rarityButtons = rarityBtns;
         panel.Controls.Add(_rarityPanel);
 
-        // セパレータ（言語 ↔ レア度間）
+        // セパレータ（コスト ↔ レア度間）
+        panel.Controls.Add(new Label { Dock = DockStyle.Top, Height = 6 });
+        panel.Controls.Add(new Panel { Dock = DockStyle.Top, Height = 1, BackColor = SystemColors.ControlDark });
+        panel.Controls.Add(new Label { Dock = DockStyle.Top, Height = 6 });
+
+        // コストフィルタパネル
+        _costPanel = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = SidebarBtnH * Costs.Length,
+        };
+        var costBtns = new Button[Costs.Length];
+        for (int i = Costs.Length - 1; i >= 0; i--)
+        {
+            string cost = Costs[i];
+            costBtns[i] = AddSidebarButton(_costPanel, cost, () => ToggleCost(cost));
+        }
+        _costButtons = costBtns;
+        panel.Controls.Add(_costPanel);
+
+        // セパレータ（言語 ↔ コスト間）
         panel.Controls.Add(new Label { Dock = DockStyle.Top, Height = 4 });
         panel.Controls.Add(new Panel { Dock = DockStyle.Top, Height = 1, BackColor = SystemColors.ControlDark });
         panel.Controls.Add(new Label { Dock = DockStyle.Top, Height = 4 });
@@ -256,7 +280,8 @@ public class CardBrowserForm : Form
                 CardDatabaseService.GetName(id, japanese: true),
                 CardDatabaseService.GetCardType(id),
                 CardDatabaseService.GetCardRarity(id),
-                CardDatabaseService.GetCardCost(id)))
+                CardDatabaseService.GetCardCost(id),
+                CardDatabaseService.GetCardCharacter(id)))
             .OrderBy(c => _isJp ? c.NameJa : c.NameEn)
             .ToList();
     }
@@ -271,6 +296,20 @@ public class CardBrowserForm : Form
         RefreshCharButtons();
         ApplyFilter();
     }
+
+    void ToggleCost(string cost)
+    {
+        if (!_selectedCosts.Add(cost))
+            _selectedCosts.Remove(cost);
+        RefreshCostButtons();
+        ApplyFilter();
+    }
+
+    static bool MatchesCostFilter(string cardCost, string filter) => filter switch
+    {
+        "3+" => int.TryParse(cardCost, out var n) && n >= 3,
+        _    => cardCost == filter,
+    };
 
     void ToggleRarity(string rarity)
     {
@@ -295,12 +334,19 @@ public class CardBrowserForm : Form
         // キャラクターフィルタ
         if (_selectedChar >= 0)
         {
+            var charLabel = Characters[_selectedChar].CharLabel;
             var mechanics = Characters[_selectedChar].Mechanics;
             if (_selectedMechanics.Count > 0)
+                // サブメカニクス選択時: そのシナジーに該当するカード
                 query = query.Where(c => _selectedMechanics.Any(i => mechanics[i].Filter(c.Id)));
             else
-                query = query.Where(c => mechanics.Any(m => m.Filter(c.Id)));
+                // キャラクター選択のみ: キャラクター帰属データで絞り込む
+                query = query.Where(c => c.Character == charLabel);
         }
+
+        // コストフィルタ
+        if (_selectedCosts.Count > 0)
+            query = query.Where(c => _selectedCosts.Any(f => MatchesCostFilter(c.Cost, f)));
 
         // レア度フィルタ
         if (_selectedRarities.Count > 0)
@@ -459,6 +505,16 @@ public class CardBrowserForm : Form
         RefreshSubButtons();
     }
 
+    void RefreshCostButtons()
+    {
+        for (int i = 0; i < _costButtons.Length; i++)
+        {
+            bool active = _selectedCosts.Contains(Costs[i]);
+            _costButtons[i].BackColor = active ? SystemColors.Highlight : SystemColors.Control;
+            _costButtons[i].ForeColor = active ? SystemColors.HighlightText : SystemColors.ControlText;
+        }
+    }
+
     void RefreshRarityButtons()
     {
         for (int i = 0; i < _rarityButtons.Length; i++)
@@ -497,6 +553,7 @@ public class CardBrowserForm : Form
         _split.Panel2MinSize = 200;
         _split.SplitterDistance = 280;
         RefreshCharButtons();
+        RefreshCostButtons();
         RefreshRarityButtons();
         RefreshLangButtons();
     }
