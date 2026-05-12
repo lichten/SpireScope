@@ -63,7 +63,10 @@ public class CardBrowserForm : Form
     Panel _subPanel = null!;
     Panel _rarityPanel = null!;
     Panel _costPanel = null!;
-    ListBox _cardList = null!;
+    ListView _cardList = null!;
+    ImageList _imageList = null!;
+    readonly Dictionary<string, Bitmap> _thumbCache = new(StringComparer.OrdinalIgnoreCase);
+    bool _populatingList;
     RichTextBox _detailBox = null!;
     Label _countLabel = null!;
     SplitContainer _outerSplit = null!;
@@ -72,6 +75,32 @@ public class CardBrowserForm : Form
     Button[] _subButtons = [];
     Button[] _rarityButtons = [];
     Button[] _costButtons = [];
+
+    // ---- カード画像 ----
+    PictureBox _portraitBox = null!;
+    CardEntry? _currentCard;
+    List<string> _currentSynergies = [];
+    Image? _portraitImage;
+
+    static readonly string _portraitBaseDir = ComputePortraitBaseDir();
+    static readonly Dictionary<string, string> _charToDir = new(StringComparer.Ordinal)
+    {
+        ["Ironclad"]    = "ironclad",
+        ["Silent"]      = "silent",
+        ["Defect"]      = "defect",
+        ["Necrobinder"] = "necrobinder",
+        ["Regent"]      = "regent",
+    };
+    static readonly string[] _otherDirs = ["colorless", "curse", "event", "status", "token", "quest"];
+
+    static string ComputePortraitBaseDir()
+    {
+        // AppContext.BaseDirectory は末尾に \ が付くため、先に除去してから4階層上がる
+        var dir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        for (int i = 0; i < 4; i++)
+            dir = Path.GetDirectoryName(dir) ?? dir;
+        return Path.Combine(dir, "tools", "extracted", "images", "card_portraits_png");
+    }
 
     public CardBrowserForm()
     {
@@ -208,16 +237,25 @@ public class CardBrowserForm : Form
         _split = new SplitContainer { Dock = DockStyle.Fill };
         _outerSplit.Panel2.Controls.Add(_split);
 
-        _cardList = new ListBox
+        _imageList = new ImageList
+        {
+            ImageSize = new Size(120, 91),
+            ColorDepth = ColorDepth.Depth32Bit,
+        };
+
+        _cardList = new ListView
         {
             Dock = DockStyle.Fill,
-            Font = new Font("Meiryo", 9.5f),
-            ScrollAlwaysVisible = true,
-            IntegralHeight = false,
+            View = View.LargeIcon,
+            LargeImageList = _imageList,
+            MultiSelect = false,
+            HideSelection = false,
+            Font = new Font("Meiryo", 8f),
         };
         _cardList.SelectedIndexChanged += OnCardSelected;
         _split.Panel1.Controls.Add(_cardList);
 
+        // 説明テキスト（先に追加 → Dock=Fill で残りを埋める）
         _detailBox = new RichTextBox
         {
             Dock = DockStyle.Fill,
@@ -228,6 +266,27 @@ public class CardBrowserForm : Form
             WordWrap = true,
         };
         _split.Panel2.Controls.Add(_detailBox);
+
+        // カードポートレート（後から追加 → Dock=Top で上部に配置）
+        _portraitBox = new PictureBox
+        {
+            Dock = DockStyle.Top,
+            Height = 280,
+            SizeMode = PictureBoxSizeMode.Zoom,
+            BackColor = Color.FromArgb(30, 30, 30),
+        };
+        _portraitBox.Paint += OnPortraitPaint;
+        _split.Panel2.Controls.Add(_portraitBox);
+        _split.Panel2.Resize += (_, _) => UpdatePortraitHeight();
+    }
+
+    void UpdatePortraitHeight()
+    {
+        var img = _portraitBox.Image;
+        if (img is null) { _portraitBox.Height = 280; return; }
+        float aspect = (float)img.Width / img.Height;
+        int h = (int)(_split.Panel2.ClientSize.Width / aspect);
+        _portraitBox.Height = Math.Clamp(h, 120, 460);
     }
 
     // サイドバー用の全幅ボタンを parent に追加して返す
@@ -264,8 +323,6 @@ public class CardBrowserForm : Form
             _isJp = isJp;
             RefreshLangButtons();
             PopulateList();
-            ShowDetail(_filtered.Count == 0 ? null
-                : _cardList.SelectedIndex >= 0 ? _filtered[_cardList.SelectedIndex] : null);
         };
         return btn;
     }
@@ -370,30 +427,55 @@ public class CardBrowserForm : Form
 
     void PopulateList()
     {
+        _populatingList = true;
         _cardList.BeginUpdate();
         _cardList.Items.Clear();
-        foreach (var c in _filtered)
-            _cardList.Items.Add(_isJp ? c.NameJa : c.NameEn);
+        _imageList.Images.Clear();
+
+        ListViewItem? selectItem = null;
+        for (int i = 0; i < _filtered.Count; i++)
+        {
+            var c = _filtered[i];
+            _imageList.Images.Add(GetOrCreateThumb(c));
+            var item = new ListViewItem(_isJp ? c.NameJa : c.NameEn, i) { Tag = c };
+            _cardList.Items.Add(item);
+            if (c.Id == _currentCard?.Id) selectItem = item;
+        }
+
         _cardList.EndUpdate();
+        _populatingList = false;
 
         _countLabel.Text = $"{_filtered.Count} 件";
 
-        if (_filtered.Count > 0)
-            _cardList.SelectedIndex = 0;
+        selectItem ??= _filtered.Count > 0 ? _cardList.Items[0] : null;
+        if (selectItem is not null)
+        {
+            selectItem.Selected = true;
+            selectItem.Focused = true;
+            _cardList.EnsureVisible(_cardList.Items.IndexOf(selectItem));
+            ShowDetail((CardEntry)selectItem.Tag!);
+        }
         else
+        {
             ShowDetail(null);
+        }
     }
 
     // ---- 詳細表示 ----
 
     void OnCardSelected(object? sender, EventArgs e)
     {
-        if (_cardList.SelectedIndex < 0 || _cardList.SelectedIndex >= _filtered.Count) return;
-        ShowDetail(_filtered[_cardList.SelectedIndex]);
+        if (_populatingList) return;
+        if (_cardList.SelectedItems.Count == 0) return;
+        ShowDetail((CardEntry)_cardList.SelectedItems[0].Tag!);
     }
 
     void ShowDetail(CardEntry? card)
     {
+        _currentCard = card;
+        _currentSynergies = card is null ? [] : CollectSynergies(card.Id);
+        ShowPortrait(card);
+
         _detailBox.Clear();
         if (card is null) return;
 
@@ -402,24 +484,9 @@ public class CardBrowserForm : Form
         var descEnClean = DescriptionFormatter.Resolve(descEn, stats);
         var descJaClean = DescriptionFormatter.Resolve(descJa, stats);
 
-        var synergies = CollectSynergies(card.Id);
-
         var rtb = _detailBox;
         rtb.SuspendLayout();
 
-        AppendBold($"{card.NameJa}  /  {card.NameEn}\n", 13f);
-        var rarityText = string.IsNullOrEmpty(card.Rarity) ? "" : $"     レア度: {card.Rarity}";
-        AppendNormal($"タイプ: {card.Type}{rarityText}     コスト: {card.Cost}\n", 9.5f);
-        AppendNormal($"ID: {card.Id}\n", 8.5f, Color.Gray);
-
-        if (synergies.Count > 0)
-        {
-            AppendNormal("\n");
-            AppendBold("シナジー: ", 9.5f);
-            AppendNormal(string.Join("  /  ", synergies) + "\n", 9.5f, Color.DarkGreen);
-        }
-
-        AppendNormal("\n");
         if (!string.IsNullOrEmpty(descJaClean))
         {
             AppendBold("説明 (JP)\n", 9.5f);
@@ -427,7 +494,7 @@ public class CardBrowserForm : Form
         }
         if (!string.IsNullOrEmpty(descEnClean))
         {
-            AppendNormal("\n");
+            if (!string.IsNullOrEmpty(descJaClean)) AppendNormal("\n");
             AppendBold("説明 (EN)\n", 9.5f);
             AppendNormal(descEnClean + "\n", 9.5f);
         }
@@ -435,6 +502,48 @@ public class CardBrowserForm : Form
         rtb.ResumeLayout();
         rtb.SelectionStart = 0;
         rtb.ScrollToCaret();
+    }
+
+    void ShowPortrait(CardEntry? card)
+    {
+        var old = _portraitImage;
+        _portraitImage = null;
+        _portraitBox.Image = null;
+        old?.Dispose();
+
+        if (card is not null && Directory.Exists(_portraitBaseDir))
+        {
+            var path = ResolvePortraitPath(card);
+            if (path is not null)
+            {
+                _portraitImage = Image.FromFile(path);
+                _portraitBox.Image = _portraitImage;
+            }
+        }
+
+        UpdatePortraitHeight();
+        _portraitBox.Invalidate();
+    }
+
+    string? ResolvePortraitPath(CardEntry card)
+    {
+        var name = (card.Id.Contains('.') ? card.Id[(card.Id.IndexOf('.') + 1)..] : card.Id)
+                   .ToLowerInvariant();
+
+        if (card.Character != "" && _charToDir.TryGetValue(card.Character, out var dir))
+        {
+            var p = Path.Combine(_portraitBaseDir, dir, name + ".png");
+            if (File.Exists(p)) return p;
+        }
+
+        foreach (var d in _otherDirs)
+        {
+            var p = Path.Combine(_portraitBaseDir, d, name + ".png");
+            if (File.Exists(p)) return p;
+        }
+
+        var beta = Path.Combine(_portraitBaseDir, "beta.png");
+        return File.Exists(beta) ? beta : null;
     }
 
     List<string> CollectSynergies(string id)
@@ -445,6 +554,185 @@ public class CardBrowserForm : Form
                 if (filter(id))
                     result.Add($"{charLabel}:{mecLabel}");
         return result;
+    }
+
+    // ---- ポートレートオーバーレイ描画 ----
+
+    void OnPortraitPaint(object? sender, PaintEventArgs e)
+    {
+        if (_currentCard is null) return;
+        var g = e.Graphics;
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+
+        var imgRect = _portraitBox.Image is not null
+            ? GetZoomedRect(_portraitBox)
+            : _portraitBox.ClientRectangle;
+
+        if (_portraitBox.Image is null)
+        {
+            using var bg = new SolidBrush(Color.FromArgb(50, 50, 50));
+            g.FillRectangle(bg, imgRect);
+        }
+
+        DrawCostBadge(g, imgRect, _currentCard.Cost);
+        DrawTypeBadge(g, imgRect, _currentCard.Type);
+        DrawBottomBar(g, imgRect, _currentCard);
+    }
+
+    static Rectangle GetZoomedRect(PictureBox pb)
+    {
+        if (pb.Image is null) return pb.ClientRectangle;
+        float iw = pb.Image.Width, ih = pb.Image.Height;
+        float bw = pb.ClientSize.Width, bh = pb.ClientSize.Height;
+        float scale = Math.Min(bw / iw, bh / ih);
+        int w = (int)(iw * scale), h = (int)(ih * scale);
+        return new Rectangle((int)((bw - w) / 2), (int)((bh - h) / 2), w, h);
+    }
+
+    static void DrawCostBadge(Graphics g, Rectangle imgRect, string cost)
+    {
+        const int r = 20, margin = 8;
+        var rect = new Rectangle(imgRect.X + margin, imgRect.Y + margin, r * 2, r * 2);
+        using var bgBrush = new SolidBrush(Color.FromArgb(170, 0, 0, 0));
+        g.FillEllipse(bgBrush, rect);
+        using var font = new Font("Meiryo", 12, FontStyle.Bold);
+        var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+        g.DrawString(string.IsNullOrEmpty(cost) ? "?" : cost, font, Brushes.White, rect, sf);
+    }
+
+    static void DrawTypeBadge(Graphics g, Rectangle imgRect, string type)
+    {
+        var baseColor = type switch
+        {
+            "Attack" => Color.FromArgb(180, 55, 55),
+            "Skill"  => Color.FromArgb(55, 95, 175),
+            "Power"  => Color.FromArgb(115, 55, 175),
+            _        => Color.FromArgb(95, 95, 95),
+        };
+        var bgColor = Color.FromArgb(190, baseColor.R, baseColor.G, baseColor.B);
+        const int margin = 8, padX = 8, padY = 3;
+        using var font = new Font("Meiryo", 9);
+        var text = string.IsNullOrEmpty(type) ? "?" : type;
+        var sz = g.MeasureString(text, font);
+        int bw = (int)sz.Width + padX * 2, bh = (int)sz.Height + padY * 2;
+        var rect = new Rectangle(imgRect.Right - bw - margin, imgRect.Y + margin, bw, bh);
+        using var bgBrush = new SolidBrush(bgColor);
+        FillRoundedRect(g, bgBrush, rect, 4);
+        var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+        g.DrawString(text, font, Brushes.White, rect, sf);
+    }
+
+    void DrawBottomBar(Graphics g, Rectangle imgRect, CardEntry card)
+    {
+        int barH = Math.Max(84, (int)(imgRect.Height * 0.32f));
+        var barRect = new Rectangle(imgRect.X, imgRect.Bottom - barH, imgRect.Width, barH);
+
+        using var grad = new System.Drawing.Drawing2D.LinearGradientBrush(
+            new Point(barRect.X, barRect.Y),
+            new Point(barRect.X, barRect.Bottom),
+            Color.FromArgb(0, 0, 0, 0),
+            Color.FromArgb(215, 0, 0, 0));
+        g.FillRectangle(grad, barRect);
+
+        const int padX = 8;
+        int y = barRect.Y + (int)(barH * 0.14f);
+
+        // カード名
+        var nameText = _isJp
+            ? $"{card.NameJa}  /  {card.NameEn}"
+            : $"{card.NameEn}  /  {card.NameJa}";
+        using var nameFont = new Font("Meiryo", 12, FontStyle.Bold);
+        g.DrawString(nameText, nameFont, Brushes.White,
+            new RectangleF(imgRect.X + padX, y, imgRect.Width - padX * 2, 24));
+        y += 26;
+
+        // キャラクター · レア度 · ID
+        var infoParts = new[] { card.Character, card.Rarity, card.Id }
+            .Where(s => !string.IsNullOrEmpty(s));
+        using var infoFont = new Font("Meiryo", 8);
+        using var grayBrush = new SolidBrush(Color.FromArgb(210, 200, 200, 200));
+        g.DrawString(string.Join("  ·  ", infoParts), infoFont, grayBrush,
+            new RectangleF(imgRect.X + padX, y, imgRect.Width - padX * 2, 16));
+        y += 20;
+
+        // シナジーチップ
+        if (_currentSynergies.Count > 0)
+            DrawSynergyChips(g, imgRect.X + padX, y, _currentSynergies);
+    }
+
+    static void DrawSynergyChips(Graphics g, int x, int y, List<string> synergies)
+    {
+        using var font = new Font("Meiryo", 7.5f);
+        using var bgBrush = new SolidBrush(Color.FromArgb(185, 35, 100, 55));
+        var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+        const int padX = 5, padY = 2, gap = 4;
+        foreach (var syn in synergies)
+        {
+            var sz = g.MeasureString(syn, font);
+            var rect = new Rectangle(x, y, (int)sz.Width + padX * 2, (int)sz.Height + padY * 2);
+            FillRoundedRect(g, bgBrush, rect, 3);
+            g.DrawString(syn, font, Brushes.White, rect, sf);
+            x += rect.Width + gap;
+        }
+    }
+
+    static void FillRoundedRect(Graphics g, Brush brush, Rectangle rect, int r)
+    {
+        using var path = new System.Drawing.Drawing2D.GraphicsPath();
+        path.AddArc(rect.X, rect.Y, r * 2, r * 2, 180, 90);
+        path.AddArc(rect.Right - r * 2, rect.Y, r * 2, r * 2, 270, 90);
+        path.AddArc(rect.Right - r * 2, rect.Bottom - r * 2, r * 2, r * 2, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - r * 2, r * 2, r * 2, 90, 90);
+        path.CloseFigure();
+        g.FillPath(brush, path);
+    }
+
+    // ---- サムネイル ----
+
+    Bitmap GetOrCreateThumb(CardEntry card)
+    {
+        if (_thumbCache.TryGetValue(card.Id, out var cached)) return cached;
+        var thumb = CreateThumbnail(card);
+        _thumbCache[card.Id] = thumb;
+        return thumb;
+    }
+
+    Bitmap CreateThumbnail(CardEntry card)
+    {
+        var sz = _imageList.ImageSize;
+        var bmp = new Bitmap(sz.Width, sz.Height);
+        using var g = Graphics.FromImage(bmp);
+        g.Clear(Color.FromArgb(40, 40, 40));
+        g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+
+        var path = ResolvePortraitPath(card);
+        if (path is not null)
+        {
+            try
+            {
+                using var orig = Image.FromFile(path);
+                float scale = Math.Min((float)sz.Width / orig.Width, (float)sz.Height / orig.Height);
+                int w = (int)(orig.Width * scale), h = (int)(orig.Height * scale);
+                g.DrawImage(orig, (sz.Width - w) / 2, (sz.Height - h) / 2, w, h);
+                return bmp;
+            }
+            catch { /* fall through to text placeholder */ }
+        }
+
+        // 画像なし: テキストでフォールバック
+        using var font = new Font("Meiryo", 7);
+        using var brush = new SolidBrush(Color.FromArgb(180, 180, 180));
+        var name = _isJp ? card.NameJa : card.NameEn;
+        g.DrawString(name, font, brush, new RectangleF(2, 2, sz.Width - 4, sz.Height - 4));
+        return bmp;
+    }
+
+    protected override void OnFormClosed(FormClosedEventArgs e)
+    {
+        base.OnFormClosed(e);
+        _portraitImage?.Dispose();
+        foreach (var bmp in _thumbCache.Values) bmp.Dispose();
     }
 
     void AppendBold(string text, float size, Color? color = null)
@@ -553,9 +841,9 @@ public class CardBrowserForm : Form
         // フォームの実サイズ確定後にスプリッター位置を設定
         _outerSplit.Panel1MinSize = 140;
         _outerSplit.SplitterDistance = 200;
-        _split.Panel1MinSize = 150;
+        _split.Panel1MinSize = 260;
         _split.Panel2MinSize = 200;
-        _split.SplitterDistance = 280;
+        _split.SplitterDistance = 320;
         RefreshCharButtons();
         RefreshCostButtons();
         RefreshRarityButtons();
