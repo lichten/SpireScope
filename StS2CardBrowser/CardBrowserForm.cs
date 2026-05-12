@@ -38,6 +38,7 @@ public class CardBrowserForm : Form
             ("Forge / Sovereign Blade", id => CardDatabaseService.IsRegentForge(id) || CardDatabaseService.IsRegentBlade(id)),
             ("カード作成シナジー",        CardDatabaseService.IsRegentCreate),
         ]),
+        ("その他", []),
     ];
 
     // ---- データ ----
@@ -341,7 +342,10 @@ public class CardBrowserForm : Form
                 query = query.Where(c => _selectedMechanics.Any(i => mechanics[i].Filter(c.Id)));
             else
                 // キャラクター選択のみ: キャラクター帰属データで絞り込む
-                query = query.Where(c => c.Character == charLabel);
+                // 「その他」は帰属なし（空文字）のカードを対象とする
+                query = query.Where(c => charLabel == "その他"
+                    ? c.Character == ""
+                    : c.Character == charLabel);
         }
 
         // コストフィルタ
