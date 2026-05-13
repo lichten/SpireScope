@@ -137,6 +137,8 @@ public static class CardDatabaseService
     static readonly HashSet<string> _regentCreate     = ComputeByPlainText("Whenever you create", "created this combat");
     static readonly HashSet<string> _regentStatusGen  = ComputeStatusGenerators();
     static readonly HashSet<string> _regentTransform  = ComputeByTag("[gold]Transform[/gold]");
+    static readonly HashSet<string> _regentStarGain   = ComputeRegentStarGain();
+    static readonly HashSet<string> _regentStarSpend  = ComputeRegentStarSpend();
 
     static HashSet<string> ComputeBlockGivers()
     {
@@ -259,6 +261,41 @@ public static class CardDatabaseService
         return result;
     }
 
+    static HashSet<string> ComputeRegentStarGain()
+    {
+        var result = ComputeByPlainText("starIcons()", "Gain {singleStarIcon}", "gain {singleStarIcon}");
+        result.Add("ROYAL_GAMBLE"); // "Gain {Stars:diff()} {singleStarIcon}" — 既存パターン非対応のため手動追加
+        return result;
+    }
+
+    static HashSet<string> ComputeRegentStarSpend()
+    {
+        var result = ComputeByPlainText(
+            "spend {singleStarIcon}", "spend or gain {singleStarIcon}",
+            "{singleStarIcon} are used", "{singleStarIcon} cost", "{StarThreshold");
+        // Starをマナコストとして消費するカードを追加（card_star_costs.json から）
+        foreach (var id in LoadStarCostIds())
+            result.Add(id);
+        return result;
+    }
+
+    static IEnumerable<string> LoadStarCostIds()
+    {
+        var asm = Assembly.GetExecutingAssembly();
+        var name = asm.GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith("card_star_costs.json", StringComparison.OrdinalIgnoreCase));
+        if (name is null) yield break;
+
+        using var stream = asm.GetManifestResourceStream(name)!;
+        var doc = JsonDocument.Parse(stream);
+        foreach (var elem in doc.RootElement.EnumerateArray())
+        {
+            var id = elem.GetString();
+            if (!string.IsNullOrEmpty(id))
+                yield return ToRawId(id);
+        }
+    }
+
     static HashSet<string> ComputeStatusGenerators()
     {
         // card_types.json の Status 型カード名から [gold]{Name}[/gold] タグを構築
@@ -293,8 +330,10 @@ public static class CardDatabaseService
     public static bool IsDefectChannel(string id)  => _defectChannel.Contains(ToRawId(id));
     public static bool IsDefectEvoke(string id)    => _defectEvoke.Contains(ToRawId(id));
     public static bool IsDefectFocus(string id)    => _defectFocus.Contains(ToRawId(id));
-    public static bool IsRegentForge(string id)    => _regentForge.Contains(ToRawId(id));
-    public static bool IsRegentBlade(string id)    => _regentBlade.Contains(ToRawId(id));
+    public static bool IsRegentForge(string id)     => _regentForge.Contains(ToRawId(id));
+    public static bool IsRegentBlade(string id)     => _regentBlade.Contains(ToRawId(id));
+    public static bool IsRegentStarGain(string id)  => _regentStarGain.Contains(ToRawId(id));
+    public static bool IsRegentStarSpend(string id) => _regentStarSpend.Contains(ToRawId(id));
     static readonly HashSet<string> _regentCreateExtra = new(StringComparer.OrdinalIgnoreCase) { "METAMORPHOSIS", "SPECTRUM_SHIFT" };
     public static bool IsRegentCreate(string id)   => _regentCreate.Contains(ToRawId(id))
                                                     || _regentStatusGen.Contains(ToRawId(id))

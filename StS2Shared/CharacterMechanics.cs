@@ -31,6 +31,8 @@ public static class CharacterMechanics
         [
             ("Forge / Sovereign Blade", id => CardDatabaseService.IsRegentForge(id) || CardDatabaseService.IsRegentBlade(id)),
             ("カード作成シナジー",        CardDatabaseService.IsRegentCreate),
+            ("Starを得る",              CardDatabaseService.IsRegentStarGain),
+            ("Starを使用する",           CardDatabaseService.IsRegentStarSpend),
         ]),
         ("その他", []),
         ("共通",

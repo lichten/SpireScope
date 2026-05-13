@@ -537,10 +537,11 @@ foreach (var typeHandle in mr.TypeDefinitions)
 
 // 各カードクラスの .ctor IL から CardType (2番目の ldc.i4) とコスト (1番目)、
 // およびフィールド代入 (ldarg.0, ldc.i4 N, stfld F) を取得
-var results   = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-var costs     = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-var rarities  = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-var cardStats = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
+var results       = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+var costs         = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+var rarities      = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+var cardStats     = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
+var starCostCards = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 // コンストラクタトークン → DynamicVar 名 のマップを構築
 // フェーズA: 具体 *Var クラス（ldstr で名前を持つもの）
@@ -738,20 +739,36 @@ foreach (var typeHandle in mr.TypeDefinitions)
         break;
     }
 
-    // パス4: Has*CostX が true を返す場合はコストを -1（X-cost）に上書き
-    // （HasEnergyCostX, HasStarCostX など複数のリソース種別に対応）
+    // パス4: Has*CostX / HasStarCost / CanonicalStarCost が true/正値を返す場合の処理
+    // HasEnergyCostX / HasStarCostX → cost=-1、HasStarCost(X) / CanonicalStarCost(>0) → starCostCards に追加
     foreach (var mh in typeDef.GetMethods())
     {
         var method = mr.GetMethodDefinition(mh);
         var mn = mr.GetString(method.Name);
-        if (!mn.StartsWith("get_Has") || !mn.EndsWith("CostX")) continue;
+        bool isXCost          = mn.StartsWith("get_Has") && mn.EndsWith("CostX");
+        bool isFixedStar      = mn == "get_HasStarCost";
+        bool isCanonicalStar  = mn == "get_CanonicalStarCost";
+        if (!isXCost && !isFixedStar && !isCanonicalStar) continue;
         if (method.RelativeVirtualAddress == 0) continue;
         var body = peReader.GetMethodBody(method.RelativeVirtualAddress);
         if (body == null) continue;
         var il = body.GetILBytes();
-        // ldc.i4.1 (0x17) + ret (0x2A) = 常に true を返す
-        if (il.Length == 2 && il[0] == 0x17 && il[1] == 0x2A)
-            costs[cardId] = -1;
+        if (isCanonicalStar)
+        {
+            // 正の整数を返す = 固定スターコスト（1★, 2★, 3★ 等）
+            var (val, _) = ReadLdcI4(il, 0);
+            if (val.HasValue && val > 0)
+                starCostCards.Add(cardId);
+        }
+        else
+        {
+            // ldc.i4.1 (0x17) + ret (0x2A) = 常に true を返す
+            if (il.Length == 2 && il[0] == 0x17 && il[1] == 0x2A)
+            {
+                if (isXCost) costs[cardId] = -1;
+                if (mn.Contains("Star")) starCostCards.Add(cardId);
+            }
+        }
     }
 }
 
@@ -797,6 +814,13 @@ var statsEntries = cardStats.OrderBy(kv => kv.Key).Select(kv =>
 });
 File.WriteAllText(statsOutPath, "{\n" + string.Join(",\n", statsEntries) + "\n}\n");
 Console.WriteLine(statsOutPath);
+
+// card_star_costs.json 出力 (Starをコストとして消費するカードの ID リスト)
+var starCostsOutPath = Path.Combine(Path.GetDirectoryName(outPath)!, "card_star_costs.json");
+Console.Error.WriteLine($"Extracted {starCostCards.Count} star-cost card mappings.");
+var starCostLines = starCostCards.OrderBy(id => id).Select(id => $"  \"{id}\"");
+File.WriteAllText(starCostsOutPath, "[\n" + string.Join(",\n", starCostLines) + "\n]\n");
+Console.WriteLine(starCostsOutPath);
 
 // ---- helpers ----
 
