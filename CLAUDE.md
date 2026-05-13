@@ -5,49 +5,107 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Run
 
 ```powershell
-dotnet build
-dotnet run --project StS2Toys
+dotnet build                                  # ソリューション全体
+dotnet run --project StS2Toys                 # セーブデータビューア
+dotnet run --project StS2CardBrowser          # カードブラウザ
+dotnet run --project StS2EventBrowser         # イベントブラウザ
+dotnet run --project card-type-extractor      # カードメタデータ再生成（要ゲームDLL）
 ```
 
-No test or lint commands are configured.
+テスト・lint コマンドは設定されていない。
 
-## Tools Setup (one-time, git-ignored)
+## Tools Setup（一回限り・git 管理外）
 
-The `tools/` directory is not tracked. Localization data for cards/relics is extracted from the game's `.pck` file:
+`tools/` ディレクトリは未追跡。ゲームの `.pck` ファイルからアセットを展開する必要がある：
 
-1. Place `GodotPCKExplorer.Console.exe` at `tools/GodotPCKExplorer/GodotPCKExplorer.Console.exe`
-2. Extract game assets:
-   ```powershell
-   $pck = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\SlayTheSpire2.pck"
-   .\tools\GodotPCKExplorer\GodotPCKExplorer.Console.exe -e $pck .\tools\extracted
-   ```
-3. The extracted `tools/extracted/` directory (~1.8 GB) provides localization JSON embedded at build time.
+```powershell
+# PCKExplorer でゲームアセットを展開（約 1.8 GB）
+$pck = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\SlayTheSpire2.pck"
+.\tools\GodotPCKExplorer\GodotPCKExplorer.Console.exe -e $pck .\tools\extracted
+```
+
+展開後は `tools/extracted/` に以下が生成される：
+
+- `localization/{eng,jpn,deu,...}/*.json` — ゲーム全テキスト
+- `images/events/`, `images/card_portraits_png/` — 画像ファイル（`.png.import` + `.ctex`）
+
+画像は BC7 圧縮テクスチャ（`.ctex`）で、StS2EventBrowser が初回アクセス時に PNG 変換してキャッシュする。
 
 ## Architecture
 
-**StS2Toys** is a Windows Forms desktop app (.NET 10) that reads Slay the Spire 2 save files and displays the player's current deck and relics with EN/JP localized names.
+本リポジトリは .NET 10 / Windows Forms のデスクトップアプリ群で、Slay the Spire 2 のゲームデータを参照・閲覧する。
 
-### Data flow
+### プロジェクト構成
 
-1. `SaveDataService` loads a `.save` file (JSON) from the auto-detected Steam path (`%APPDATA%\SlayTheSpire2\steam\{steamId}\profile1\saves\current_run.save`) and deserializes it into `Models/SaveData.cs` records.
-2. `CardDatabaseService` provides name/description lookups. It merges two sources:
-   - `Resources/card_database.json` — hand-curated EN/JP name overrides (embedded resource)
-   - Localization JSON extracted from the game (`localization/{eng,jpn}/{cards,relics}.json`) — also embedded at build time via `.csproj`
-3. `DescriptionFormatter` strips HTML-like tags and template variables from raw description strings before display.
-4. `Form1` is the main window with two `ListView` panels (deck + relics). Double-clicking opens `CardDetailForm`, a resizable modal showing the full card/relic details in both languages.
-
-### Key files
-
-| File | Role |
+| プロジェクト | 役割 |
 |---|---|
-| `Models/SaveData.cs` | `[JsonPropertyName]`-annotated records: `RunSaveData`, `PlayerData`, `CardData`, `RelicData` |
-| `Services/SaveDataService.cs` | `Load(path)` and `GetDefaultSavePath()` |
-| `Services/CardDatabaseService.cs` | `GetName`, `GetDescription`, `GetFlavor` with EN/JP toggle |
-| `Services/DescriptionFormatter.cs` | Tag-stripping utility |
-| `Form1.cs` | Main UI; auto-loads on startup |
-| `CardDetailForm.cs` | Detail modal |
+| `StS2Shared` | 全アプリが参照する共有ライブラリ（サービス・メカニクス定義） |
+| `StS2Toys` | セーブデータビューア（デッキ・レリック表示） |
+| `StS2CardBrowser` | カードブラウザ（キャラクター・メカニクスフィルタ付き） |
+| `StS2EventBrowser` | イベントブラウザ（テキスト・画像表示） |
+| `card-type-extractor` | ゲーム DLL の IL を解析してカードメタデータ JSON を生成するCLIツール |
 
-### Known limitations / pending work
+### StS2Shared — 共有ライブラリ
 
-- Card type (Attack/Skill/Power) is not in save data — sorting/coloring by type requires a separate master data source.
-- Upgraded card display (e.g. `"Strike+"`) depends on `upgrade_count` in save data; not yet confirmed present in early-game saves.
+`StS2Shared` は全アプリが `ProjectReference` で参照する。埋め込みリソースとして以下を保持する：
+
+**`Resources/*.json`（手動管理 or card-type-extractor 生成）**
+- `card_database.json` — 手動管理の EN/JP 名前オーバーライド
+- `card_types.json`, `card_costs.json`, `card_rarities.json`, `card_characters.json` — ゲーム DLL から抽出
+- `card_star_costs.json` — スターコストを持つカードの ID リスト（`get_CanonicalStarCost > 0` または `get_HasStarCostX` が true のもの）
+- `card_stats.json` — カードのキャノニカル変数（ダメージ・ブロック値など）
+
+**ローカライゼーション JSON（`tools/extracted/` から埋め込み）**
+- `localization/{eng,jpn}/{cards,relics,enchantments,encounters,acts}.json`
+
+**主要サービス**
+
+| ファイル | 役割 |
+|---|---|
+| `Services/CardDatabaseService.cs` | カード名・説明・コスト・タイプ・シナジー判定。`_regentStarSpend` 等の HashSet はクラス初期化時に一括計算される |
+| `Services/EncounterDatabaseService.cs` | エンカウンター・アクト名の EN/JP ルックアップ |
+| `Services/DescriptionFormatter.cs` | `[gold]...[/gold]` 等の BBタグと `{Var:format}` テンプレートを除去・解決 |
+| `CharacterMechanics.cs` | キャラクター × メカニクスのフィルタ定義（`Func<string, bool>` の配列）。CardBrowser のサイドバー構造と 1:1 対応 |
+
+### データの流れ（共通パターン）
+
+ローカライゼーションデータの読み込みは全サービスで同じパターン：
+1. `Assembly.GetExecutingAssembly().GetManifestResourceNames()` でリソース名を検索
+2. `GetManifestResourceStream()` でストリームを取得して `JsonDocument.Parse()`
+3. `key.EndsWith(suffix)` によるマッチングを使用（LogicalName 付き埋め込みを含む）
+
+### card-type-extractor — メタデータ生成ツール
+
+ゲームの `sts2.dll` の IL を `System.Reflection.Metadata` で直接解析する。
+
+検出対象：
+- カードコンストラクタの `ldc.i4` シーケンス → コスト・タイプ・レアリティ
+- `get_HasStarCostX` が `ldc.i4.1 + ret`（2バイト）→ X スターコスト
+- `get_CanonicalStarCost` が正の整数を返す → 固定スターコスト（1★・2★ 等）
+- `get_CanonicalVars` → ダメージ・ブロックのデフォルト値
+
+出力先はすべて `StS2Shared/Resources/`。extractor 実行後に `StS2Shared` を再ビルドすることで埋め込みリソースが更新される。
+
+### StS2CardBrowser — カードブラウザ
+
+- `CardBrowserForm.cs` が `CharacterMechanics.All` を読み込んでサイドバーボタンを動的生成
+- キャラクター選択時はキャラクター帰属フィルタ、メカニクス選択時はメカニクスフィルタに切り替わる（キャラクターフィルタを置換する）
+- サムネイル画像は `tools/extracted/images/card_portraits_png/{character}/{id}.png` から読み込み
+- コスト表示は `GetCardCost()` が返す文字列（"0"〜"3+"・"X"・"-"）。スターコストは現在エネルギーコストと同じ数値で表示される（区別なし）
+
+### StS2EventBrowser — イベントブラウザ
+
+- `events.json` を `{EVENTID}.{subkey}` 形式でパースし、`pages.INITIAL.description` と `pages.INITIAL.options.*` から初期ページを構築
+- イベント画像は `tools/extracted/images/events/{id}.png.import` → `.ctex` パス解決 → BC7 デコードまたは WebP デコードで PNG 変換してキャッシュ
+- 画像キャッシュ先: `tools/extracted/images/events_png/`
+
+### ローカライゼーションの構造（ancients.json）
+
+Ancient NPC のデータは `tools/extracted/localization/{eng,jpn}/ancients.json` に格納され、キー構造は：
+```
+{ANCIENT_ID}.talk.{CHARACTER}.{PAGE}.{MODE}  — 会話テキスト
+{ANCIENT_ID}.pages.{PAGE}.description        — ページ説明
+{ANCIENT_ID}.pages.{PAGE}.options.{OPT}.title/description  — 選択肢
+```
+
+カード授与は `OPTION_POOL_*` 系のキーで表現される（例: `OROBAS.pages.INITIAL.options.OPTION_POOL_3_LOCKED`）。
