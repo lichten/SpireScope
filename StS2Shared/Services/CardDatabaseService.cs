@@ -291,7 +291,7 @@ public static class CardDatabaseService
     public static bool IsDefectFocus(string id)    => _defectFocus.Contains(ToRawId(id));
     public static bool IsRegentForge(string id)    => _regentForge.Contains(ToRawId(id));
     public static bool IsRegentBlade(string id)    => _regentBlade.Contains(ToRawId(id));
-    static readonly HashSet<string> _regentCreateExtra = new(StringComparer.OrdinalIgnoreCase) { "METAMORPHOSIS" };
+    static readonly HashSet<string> _regentCreateExtra = new(StringComparer.OrdinalIgnoreCase) { "METAMORPHOSIS", "SPECTRUM_SHIFT" };
     public static bool IsRegentCreate(string id)   => _regentCreate.Contains(ToRawId(id))
                                                     || _regentStatusGen.Contains(ToRawId(id))
                                                     || _regentTransform.Contains(ToRawId(id))
