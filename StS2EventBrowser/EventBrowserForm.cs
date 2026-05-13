@@ -1,6 +1,7 @@
 using BCnEncoder.Decoder;
 using BCnEncoder.Shared;
 using SixLabors.ImageSharp.Formats.Png;
+using StS2Shared.Services;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -537,6 +538,48 @@ public partial class EventBrowserForm : Form
             tb.AppendText("\n");
         }
 
+        // ── Possible rewards (from ancient_options.json / DLL extraction) ──
+
+        if (!AncientOptionService.IsDataAvailable)
+        {
+            AppendSectionHeader(tb, _isJp ? "報酬候補" : "Possible Rewards");
+            using var warnFont = new Font("Segoe UI", 9f, FontStyle.Italic);
+            tb.SelectionFont = warnFont;
+            tb.SelectionColor = WinColor.Gray;
+            tb.AppendText(_isJp
+                ? "データ未生成: card-type-extractor を実行してください。\n\n"
+                : "Data unavailable: run card-type-extractor to generate.\n\n");
+        }
+        else
+        {
+            var groups = AncientOptionService.GetGroups(a.Id);
+            if (groups != null && groups.Count > 0)
+            {
+                AppendSectionHeader(tb, _isJp ? "報酬候補" : "Possible Rewards");
+                using var groupFont  = new Font("Segoe UI", 9f, FontStyle.Bold);
+                using var normalFont = new Font("Segoe UI", 9f, FontStyle.Regular);
+                foreach (var (groupName, items) in groups.OrderBy(g => g.Key))
+                {
+                    // グループ名表示 (複数アイテムのみ)
+                    if (items.Count > 1)
+                    {
+                        tb.SelectionFont = groupFont;
+                        tb.SelectionColor = ColorSection;
+                        tb.AppendText("  " + FormatGroupName(groupName) + "\n");
+                    }
+
+                    foreach (var itemId in items)
+                    {
+                        var name = GetAncientItemName(itemId);
+                        tb.SelectionFont = normalFont;
+                        tb.SelectionColor = SystemColors.ControlText;
+                        tb.AppendText(items.Count > 1 ? $"    · {name}\n" : $"  · {name}\n");
+                    }
+                }
+                tb.AppendText("\n");
+            }
+        }
+
         // ── Dialogue sections ─────────────────────────────────────────
 
         var talkLines = ParseTalkLines(a.Keys);
@@ -768,6 +811,23 @@ public partial class EventBrowserForm : Form
     }
 
     // ── Utilities ─────────────────────────────────────────────────────
+
+    // "OptionPool1" → "Pool 1"、"BaseOptionPool" → "Base Option Pool" 等に整形
+    static string FormatGroupName(string raw)
+    {
+        // キャメルケースをスペース区切りに変換
+        var spaced = Regex.Replace(raw, @"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", " ");
+        spaced = Regex.Replace(spaced, @"(?<=[a-zA-Z])(?=\d)", " ");
+        return spaced;
+    }
+
+    // アイテム ID（CARD.XXX or リレックス ID）をローカライズ名に変換
+    string GetAncientItemName(string itemId)
+    {
+        if (itemId.StartsWith("CARD.", StringComparison.OrdinalIgnoreCase))
+            return CardDatabaseService.GetName(itemId, _isJp);
+        return CardDatabaseService.GetRelicTitle(itemId, _isJp);
+    }
 
     static string StripTags(string text)
     {

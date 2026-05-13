@@ -289,6 +289,70 @@ if (args.Length > 0 && args[0] == "--dump-token")
     return;
 }
 
+// --- 調査: Ancient 関連クラスを検索 ---
+if (args.Length > 0 && args[0] == "--investigate-ancients")
+{
+    var ancientNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        { "Tanx", "Orobas", "Darv", "Neow", "Pael", "Nonupeipe", "Tezcatara", "TheArchitect", "Vakuu",
+          "Ancient" };
+    foreach (var typeHandle in mr.TypeDefinitions)
+    {
+        var typeDef = mr.GetTypeDefinition(typeHandle);
+        var name = mr.GetString(typeDef.Name);
+        var ns = mr.GetString(typeDef.Namespace);
+        bool match = ancientNames.Any(a => name.Contains(a, StringComparison.OrdinalIgnoreCase));
+        if (!match) continue;
+        Console.WriteLine($"CLASS: {ns}.{name}");
+        foreach (var mh in typeDef.GetMethods())
+        {
+            var method = mr.GetMethodDefinition(mh);
+            Console.WriteLine($"  method: {mr.GetString(method.Name)}");
+        }
+    }
+    return;
+}
+
+// --- 調査: MethodSpec の型引数を解決 ---
+if (args.Length > 0 && args[0] == "--resolve-methodspec")
+{
+    int token = Convert.ToInt32(args[1], 16);
+    var h = MetadataTokens.EntityHandle(token);
+    if (h.Kind == HandleKind.MethodSpecification)
+    {
+        var spec = mr.GetMethodSpecification((MethodSpecificationHandle)h);
+        var sig = mr.GetBlobReader(spec.Signature);
+        sig.ReadByte(); // 0x0A generic
+        int count = sig.ReadCompressedInteger();
+        Console.Write($"MethodSpec 0x{token:X8} generic args ({count}): ");
+        for (int i = 0; i < count; i++)
+        {
+            byte code = sig.ReadByte();
+            if (code is 0x11 or 0x12) // VALUETYPE or CLASS
+            {
+                int typeToken = sig.ReadCompressedInteger();
+                int tag = typeToken & 3;
+                int row = typeToken >> 2;
+                string typeName = tag switch
+                {
+                    0 => mr.GetString(mr.GetTypeDefinition(MetadataTokens.TypeDefinitionHandle(row)).Name),
+                    1 => mr.GetString(mr.GetTypeReference(MetadataTokens.TypeReferenceHandle(row)).Name),
+                    _ => $"TypeSpec(tag={tag})"
+                };
+                Console.Write(typeName + " ");
+            }
+        }
+        Console.WriteLine();
+        // Also resolve the method name
+        var methodHandle = spec.Method;
+        if (methodHandle.Kind == HandleKind.MemberReference)
+        {
+            var memberRef = mr.GetMemberReference((MemberReferenceHandle)methodHandle);
+            Console.WriteLine($"  Method name: {mr.GetString(memberRef.Name)}");
+        }
+    }
+    return;
+}
+
 // --- 調査: CardPool クラス名一覧を表示 ---
 if (args.Length > 0 && args[0] == "--list-cardpools")
 {
@@ -821,6 +885,111 @@ Console.Error.WriteLine($"Extracted {starCostCards.Count} star-cost card mapping
 var starCostLines = starCostCards.OrderBy(id => id).Select(id => $"  \"{id}\"");
 File.WriteAllText(starCostsOutPath, "[\n" + string.Join(",\n", starCostLines) + "\n]\n");
 Console.WriteLine(starCostsOutPath);
+
+// ancient_options.json 出力
+// Ancient イベントクラスのオプションプールを IL から抽出する
+{
+    const string ancientNs = "MegaCrit.Sts2.Core.Models.Events";
+    var ancientClassList = new HashSet<string>(StringComparer.Ordinal)
+        { "Darv", "Neow", "Nonupeipe", "Orobas", "Pael", "Tanx", "Tezcatara", "TheArchitect", "Vakuu" };
+
+    // フレームワーク・インフラ型（アイテムではない）を除外
+    var noiseTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "EVENT_OPTION", "RELIC_MODEL", "CARD_MODEL", "I_HOVER_TIP", "LOC_STRING",
+        "CHARACTER_MODEL", "VALID_RELIC_SET", "CURSED_PEARL"
+    };
+    // 集約メソッド（個別プールに委譲するだけ）は出力しない
+    var skipMethods = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        { "AllPossibleOptions", "GenerateInitialOptions", "GenerateInitialOptionsWrapper" };
+
+    var ancientOptions = new Dictionary<string, Dictionary<string, List<string>>>(StringComparer.Ordinal);
+
+    foreach (var typeHandle in mr.TypeDefinitions)
+    {
+        var typeDef = mr.GetTypeDefinition(typeHandle);
+        var className = mr.GetString(typeDef.Name);
+        var ns = mr.GetString(typeDef.Namespace);
+        if (ns != ancientNs || !ancientClassList.Contains(className)) continue;
+
+        var ancientId = CamelToUpperSnake(className);
+        var methodGroups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var mhx in typeDef.GetMethods())
+        {
+            var method = mr.GetMethodDefinition(mhx);
+            var methodName = mr.GetString(method.Name);
+
+            // コンパイラ生成メソッドをスキップ
+            if (methodName.StartsWith('<')) continue;
+
+            // オプション関連メソッドのみ対象（.cctor は static 初期化でプールを持つ場合があるため含める）
+            if (!methodName.Contains("Option", StringComparison.OrdinalIgnoreCase) &&
+                !methodName.Contains("Pool", StringComparison.OrdinalIgnoreCase) &&
+                !methodName.Contains("Generate", StringComparison.OrdinalIgnoreCase) &&
+                !methodName.Contains("Discovery", StringComparison.OrdinalIgnoreCase) &&
+                !methodName.Contains("Weapon", StringComparison.OrdinalIgnoreCase) &&
+                methodName != ".cctor")
+                continue;
+
+            if (method.RelativeVirtualAddress == 0) continue;
+            var body = peReader.GetMethodBody(method.RelativeVirtualAddress);
+            if (body == null) continue;
+            var il = body.GetILBytes();
+
+            var typeNames = new List<string>();
+            for (int i = 0; i + 4 < il.Length; i++)
+            {
+                byte op = il[i];
+                if (op is 0x28 or 0x6F) // call, callvirt
+                {
+                    int token = il[i+1]|(il[i+2]<<8)|(il[i+3]<<16)|(il[i+4]<<24);
+                    var tname = ResolveMethodSpecFirstArg(mr, token);
+                    if (!string.IsNullOrEmpty(tname) && tname.Length > 2 && !tname.Contains('<'))
+                    {
+                        var snakeId = CamelToUpperSnake(tname);
+                        if (!noiseTypes.Contains(snakeId))
+                            typeNames.Add(tname);
+                    }
+                    i += 4;
+                }
+            }
+
+            if (typeNames.Count == 0) continue;
+            var key = methodName == ".cctor" ? "RelicPool"
+                    : methodName.StartsWith("get_") ? methodName[4..]
+                    : methodName;
+            if (skipMethods.Contains(key)) continue;
+            if (!methodGroups.TryGetValue(key, out var lst))
+                methodGroups[key] = lst = new List<string>();
+            lst.AddRange(typeNames);
+        }
+
+        if (methodGroups.Count > 0)
+            ancientOptions[ancientId] = methodGroups;
+    }
+
+    // cardClasses の UPPER_SNAKE 形式セット（カード判定用）
+    var cardClassesSnake = new HashSet<string>(cardClasses.Select(CamelToUpperSnake), StringComparer.OrdinalIgnoreCase);
+
+    var optionsOutPath = Path.Combine(Path.GetDirectoryName(outPath)!, "ancient_options.json");
+    var ancientEntries = ancientOptions.OrderBy(kv => kv.Key).Select(kv =>
+    {
+        var methodEntries = kv.Value.OrderBy(m => m.Key).Select(m =>
+        {
+            var itemStrs = m.Value
+                .Select(t => CamelToUpperSnake(t))
+                .Distinct()
+                .OrderBy(t => t)
+                .Select(id => cardClassesSnake.Contains(id) ? $"      \"CARD.{id}\"" : $"      \"{id}\"");
+            return $"    \"{m.Key}\": [\n{string.Join(",\n", itemStrs)}\n    ]";
+        });
+        return $"  \"{kv.Key}\": {{\n{string.Join(",\n", methodEntries)}\n  }}";
+    });
+    File.WriteAllText(optionsOutPath, "{\n" + string.Join(",\n", ancientEntries) + "\n}\n");
+    Console.Error.WriteLine($"Extracted Ancient options for {ancientOptions.Count} Ancients.");
+    Console.WriteLine(optionsOutPath);
+}
 
 // ---- helpers ----
 

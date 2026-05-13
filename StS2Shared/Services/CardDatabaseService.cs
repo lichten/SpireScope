@@ -102,6 +102,19 @@ public static class CardDatabaseService
         return ToTitleCase(raw.Replace('_', ' '));
     }
 
+    /// <summary>
+    /// レリック ID のローカライズタイトルを返す。
+    /// 見つからない場合はタイトルケースにフォールバック。
+    /// </summary>
+    public static string GetRelicTitle(string id, bool japanese = false)
+    {
+        var loc = japanese ? _loc.JpnRelics : _loc.EngRelics;
+        var key = id + ".title";
+        if (loc.TryGetValue(key, out var title) && !string.IsNullOrWhiteSpace(title))
+            return title;
+        return ToTitleCase(id.Replace('_', ' '));
+    }
+
     static string ToTitleCase(string s) =>
         string.Join(' ', s.Split(' ')
             .Select(w => w.Length == 0 ? w : char.ToUpper(w[0]) + w[1..].ToLower()));
