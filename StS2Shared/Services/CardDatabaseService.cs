@@ -246,13 +246,13 @@ public static class CardDatabaseService
 
     static HashSet<string> ComputeByNameContaining(string substring)
     {
-        const string nameSuffix = ".name";
+        const string titleSuffix = ".title";
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var (key, value) in _loc.EngCards)
         {
-            if (!key.EndsWith(nameSuffix, StringComparison.Ordinal)) continue;
+            if (!key.EndsWith(titleSuffix, StringComparison.Ordinal)) continue;
             if (value.Contains(substring, StringComparison.OrdinalIgnoreCase))
-                result.Add(key[..^nameSuffix.Length]);
+                result.Add(key[..^titleSuffix.Length]);
         }
         return result;
     }
