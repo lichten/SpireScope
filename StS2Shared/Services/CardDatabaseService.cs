@@ -438,7 +438,7 @@ public static class CardDatabaseService
         var dict = japanese ? _enchantJpn : _enchantEng;
         if (!dict.TryGetValue($"{raw}.description", out var desc) || string.IsNullOrEmpty(desc))
             return "";
-        return DescriptionFormatter.CleanWithAmount(desc, amount);
+        return DescriptionFormatter.CleanWithAmount(desc, amount, japanese);
     }
 
     public static (string En, string Ja) GetDescription(string id)
@@ -461,6 +461,6 @@ public static class CardDatabaseService
         var enClean = DescriptionFormatter.Clean(en);
         if (enClean.Contains("revealed", StringComparison.OrdinalIgnoreCase)) return null;
         var ja = _loc.JpnRelics.TryGetValue(key, out var jv) ? jv : en;
-        return (enClean, DescriptionFormatter.Clean(ja));
+        return (enClean, DescriptionFormatter.Clean(ja, japanese: true));
     }
 }

@@ -460,7 +460,7 @@ public class CardBrowserForm : Form
         var (descEn, descJa) = CardDatabaseService.GetDescription(card.Id);
         var stats = CardDatabaseService.GetCardStats(card.Id);
         var descEnClean = DescriptionFormatter.Resolve(descEn, stats);
-        var descJaClean = DescriptionFormatter.Resolve(descJa, stats);
+        var descJaClean = DescriptionFormatter.Resolve(descJa, stats, japanese: true);
 
         var rtb = _detailBox;
         rtb.SuspendLayout();

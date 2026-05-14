@@ -20,7 +20,7 @@ public partial class CardDetailForm : Form
         var (descEn, descJa) = CardDatabaseService.GetDescription(id);
         var stats = isRelic ? null : CardDatabaseService.GetCardStats(id);
         rtbDescEn.Text = DescriptionFormatter.Resolve(descEn, stats);
-        rtbDescJa.Text = DescriptionFormatter.Resolve(descJa, stats);
+        rtbDescJa.Text = DescriptionFormatter.Resolve(descJa, stats, japanese: true);
 
         // エンチャント（カードのみ対象。レリックには付かない）
         bool hasEnchant = !isRelic && !string.IsNullOrEmpty(enchantmentId);

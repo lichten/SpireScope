@@ -11,23 +11,36 @@ public static class DescriptionFormatter
         new(@"\{Amount[^}]*\}", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     // 引数なし版: card_stats.json が未整備の変数は [VarName] で表示（案C）
-    public static string Clean(string raw) => Resolve(raw, null);
+    public static string Clean(string raw, bool japanese = false) => Resolve(raw, null, japanese);
 
     // card_stats.json の値を渡すと実際の数値で置換する（案A）
-    public static string Resolve(string raw, IReadOnlyDictionary<string, int>? stats)
+    public static string Resolve(string raw, IReadOnlyDictionary<string, int>? stats, bool japanese = false)
     {
         if (string.IsNullOrEmpty(raw)) return raw;
         raw = StripInCombat(raw);
         var s = TagRegex.Replace(raw, "");
-        s = TemplateRegex.Replace(s, m => ResolveTemplate(m.Groups[1].Value, stats));
+        s = TemplateRegex.Replace(s, m =>
+        {
+            var r = ResolveTemplate(m.Groups[1].Value, stats, japanese);
+            if (IsEnergyWord(r, japanese))
+            {
+                if (m.Index > 0 && s[m.Index - 1] != ' ') r = " " + r;
+                var end = m.Index + m.Length;
+                if (end < s.Length && s[end] != ' ') r += " ";
+            }
+            return r;
+        });
         return s.Trim();
     }
 
+    static bool IsEnergyWord(string text, bool japanese) =>
+        japanese ? text.EndsWith("エナジー") : text.EndsWith("Energy");
+
     // エンチャント説明文用（Amount テンプレートのみ数値置換、残りは Clean）
-    public static string CleanWithAmount(string raw, int amount)
+    public static string CleanWithAmount(string raw, int amount, bool japanese = false)
     {
         var replaced = AmountTemplate.Replace(raw, amount.ToString());
-        return Clean(replaced);
+        return Clean(replaced, japanese);
     }
 
     // {InCombat:...|} ブロックをネスト深度で正確に除去
@@ -45,7 +58,7 @@ public static class DescriptionFormatter
         return s[..start] + StripInCombat(s[pos..]);
     }
 
-    static string ResolveTemplate(string content, IReadOnlyDictionary<string, int>? stats)
+    static string ResolveTemplate(string content, IReadOnlyDictionary<string, int>? stats, bool japanese)
     {
         int colonIdx = content.IndexOf(':');
         var varName  = colonIdx >= 0 ? content[..colonIdx] : content;
@@ -73,9 +86,15 @@ public static class DescriptionFormatter
             return pipe >= 0 ? afterPlural[..pipe] : afterPlural;
         }
 
-        // {prefix:energyIcons(N)} → N（コスト表示リテラル）
+        // {prefix:energyIcons(N)} → "Energy" / "エナジー"（N=1）or "N Energy" / "Nエナジー"（N>1）
+        // N をそのまま返すと "0{...energyIcons(1)}" が "01" になるため
         var energyMatch = EnergyArgRegex.Match(rest);
-        if (energyMatch.Success) return energyMatch.Groups[1].Value;
+        if (energyMatch.Success)
+        {
+            var n = int.Parse(energyMatch.Groups[1].Value);
+            if (japanese) return n <= 1 ? "エナジー" : $"{n}エナジー";
+            return n <= 1 ? "Energy" : $"{n} Energy";
+        }
 
         // {VarName:diff()} など — stats を参照
         var (baseVal, upgVal) = FindStatPair(stats, varName);
