@@ -70,9 +70,12 @@ static string BuildCharPage(CharData ch, CharData[] chars, string[] mecs)
 
     return Layout(ch.EnName, ch.Id, ch.Accent, chars, $"""
         <div class="char-header" style="border-left:5px solid {ch.Accent};background:{ch.LightBg}">
-          <h1 class="char-title-en" style="color:{ch.Accent}">{ch.EnName}</h1>
-          <div class="char-title-ja">{ch.JaName}</div>
-          <p class="char-desc-full">{ch.Desc}</p>
+          <div class="char-header-body">
+            <h1 class="char-title-en" style="color:{ch.Accent}">{ch.EnName}</h1>
+            <div class="char-title-ja">{ch.JaName}</div>
+            <p class="char-desc-full">{ch.Desc}</p>
+          </div>
+          <img src="images/characters/{ch.Id}.jpg" class="char-hero-img" alt="{ch.EnName}">
         </div>
         <section class="section">
           <h2 class="section-title">メカニクス / シナジー</h2>
@@ -193,7 +196,12 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
           border-radius: 10px;
           padding: 28px 32px;
           margin-bottom: 24px;
+          display: flex;
+          align-items: center;
+          gap: 28px;
+          overflow: hidden;
         }
+        .char-header-body { flex: 1; min-width: 0; }
         .char-title-en { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
         .char-title-ja { font-size: 13px; color: #777; margin-top: 5px; }
         .char-desc-full {
@@ -202,6 +210,15 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
           margin-top: 14px;
           max-width: 560px;
           line-height: 1.75;
+        }
+        .char-hero-img {
+          width: 132px;
+          height: 195px;
+          object-fit: cover;
+          border-radius: 8px;
+          flex-shrink: 0;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+          image-rendering: auto;
         }
 
         /* ── Sections ── */

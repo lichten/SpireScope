@@ -16,7 +16,29 @@ const int JpegWidth   = 300;
 const int JpegHeight  = 420;
 const int JpegQuality = 40;
 
-// JPEG mode: convert specified card IDs to web-sized JPEG for git tracking
+// Character mode: convert character select art to JPEG for website
+// Usage: dotnet run --project ctex-to-png -- characters
+if (args.Length == 1 && args[0] == "characters")
+{
+    var charIds   = new[] { "ironclad", "silent", "defect", "necrobinder", "regent" };
+    var outDir    = Path.GetFullPath(Path.Combine(toolsRoot, "..", "..", "StS2SiteBuilder", "dist", "images", "characters"));
+    Directory.CreateDirectory(outDir);
+
+    var charSelectDir = Path.Combine(toolsRoot, "images", "packed", "character_select");
+    foreach (var id in charIds)
+    {
+        var importPath = Path.Combine(charSelectDir, $"char_select_{id}.png.import");
+        var ctexRel    = ParseImportCtexPath(importPath);
+        if (ctexRel is null) { Console.WriteLine($"  not found: char_select_{id}"); continue; }
+        var ctexFull = Path.Combine(toolsRoot, ctexRel.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        var outPath  = Path.Combine(outDir, $"{id}.jpg");
+        ConvertCtexToJpeg(ctexFull, outPath, maxWidth: 0, quality: 85);
+        Console.WriteLine($"  characters/{id}.jpg");
+    }
+    return;
+}
+
+// Card JPEG mode: convert specified card IDs to web-sized JPEG for git tracking
 // Usage: dotnet run --project ctex-to-png -- <id1> <id2> ...
 // Example: dotnet run --project ctex-to-png -- bash defend_ironclad
 if (args.Length > 0)
@@ -107,7 +129,7 @@ Console.WriteLine("\nAll done.");
 //   [16..35] unknown
 //   [36] data_format: 0 = raw BC-data, 2 = WebP
 //   [40..47] unknown
-//   [48] Image::Format enum (22 = FORMAT_BPTC_RGBA / BC7)
+//   [48] Image::Format enum (19 = FORMAT_DXT5/BC3, 22 = FORMAT_BPTC_RGBA/BC7)
 //   [52] raw BC data -OR- uint32 data_size followed by WebP RIFF
 static void ConvertCtex(string srcPath, string outPath, bool verbose = true)
 {
@@ -120,6 +142,7 @@ static void ConvertCtex(string srcPath, string outPath, bool verbose = true)
     var width      = (int)BitConverter.ToUInt32(data, 8);
     var height     = (int)BitConverter.ToUInt32(data, 12);
     var dataFormat = BitConverter.ToUInt32(data, 36); // 0=BC raw, 2=WebP
+    var imgFormat  = BitConverter.ToUInt32(data, 48);
 
     if (verbose)
         Console.Write($"  {Path.GetFileName(outPath)} {width}x{height} fmt={dataFormat} ... ");
@@ -128,13 +151,40 @@ static void ConvertCtex(string srcPath, string outPath, bool verbose = true)
     using Image<Rgba32> image =
         dataFormat == 2
             ? LoadWebP(data, HEADER_SIZE)
-            : DecodeBc7(data, HEADER_SIZE, width, height);
+            : DecodeBc(data, HEADER_SIZE, width, height, BcFormat(imgFormat));
 
     image.SaveAsPng(outPath);
 
     if (verbose)
         Console.WriteLine("ok");
 }
+
+static void ConvertCtexToJpeg(string srcPath, string outPath, int maxWidth, int quality)
+{
+    var data       = File.ReadAllBytes(srcPath);
+    var width      = (int)BitConverter.ToUInt32(data, 8);
+    var height     = (int)BitConverter.ToUInt32(data, 12);
+    var dataFormat = BitConverter.ToUInt32(data, 36);
+    var imgFormat  = BitConverter.ToUInt32(data, 48);
+
+    const int HEADER_SIZE = 52;
+    using var image =
+        dataFormat == 2
+            ? LoadWebP(data, HEADER_SIZE)
+            : DecodeBc(data, HEADER_SIZE, width, height, BcFormat(imgFormat));
+
+    if (maxWidth > 0 && image.Width > maxWidth)
+        image.Mutate(x => x.Resize(maxWidth, 0));
+
+    image.Mutate(x => x.BackgroundColor(Color.White));
+    image.SaveAsJpeg(outPath, new JpegEncoder { Quality = quality });
+}
+
+static CompressionFormat BcFormat(uint imgFormat) => imgFormat switch
+{
+    19 => CompressionFormat.Bc3,  // FORMAT_DXT5
+    _  => CompressionFormat.Bc7,  // FORMAT_BPTC_RGBA (default)
+};
 
 static Image<Rgba32> LoadWebP(byte[] data, int headerSize)
 {
@@ -145,11 +195,11 @@ static Image<Rgba32> LoadWebP(byte[] data, int headerSize)
     return Image.Load<Rgba32>(ms);
 }
 
-static Image<Rgba32> DecodeBc7(byte[] data, int headerSize, int width, int height)
+static Image<Rgba32> DecodeBc(byte[] data, int headerSize, int width, int height, CompressionFormat format)
 {
-    var bc7Data   = new ReadOnlyMemory<byte>(data, headerSize, data.Length - headerSize);
+    var bcData    = new ReadOnlyMemory<byte>(data, headerSize, data.Length - headerSize);
     var decoder   = new BcDecoder();
-    var pixels    = decoder.DecodeRaw(bc7Data.ToArray(), width, height, CompressionFormat.Bc7);
+    var pixels    = decoder.DecodeRaw(bcData.ToArray(), width, height, format);
     var rgbaBytes = MemoryMarshal.AsBytes(pixels.AsSpan()).ToArray();
     return Image.LoadPixelData<Rgba32>(rgbaBytes, width, height);
 }
