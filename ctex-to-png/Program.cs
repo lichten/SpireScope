@@ -1,12 +1,48 @@
 using BCnEncoder.Decoder;
 using BCnEncoder.Shared;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
-var toolsRoot  = @"C:\work\develop\StS2Toys\tools\extracted";
-var ctexImport = Path.Combine(toolsRoot, ".godot", "imported");
+var toolsRoot       = @"C:\work\develop\StS2Toys\tools\extracted";
+var portraitPngRoot = Path.Combine(toolsRoot, "images", "card_portraits_png");
+var jpegOutRoot     = Path.GetFullPath(Path.Combine(toolsRoot, "..", "..", "card-images"));
+var ctexImport      = Path.Combine(toolsRoot, ".godot", "imported");
+
+const int JpegWidth   = 300;
+const int JpegHeight  = 420;
+const int JpegQuality = 40;
+
+// JPEG mode: convert specified card IDs to web-sized JPEG for git tracking
+// Usage: dotnet run --project ctex-to-png -- <id1> <id2> ...
+// Example: dotnet run --project ctex-to-png -- bash defend_ironclad
+if (args.Length > 0)
+{
+    Directory.CreateDirectory(jpegOutRoot);
+    foreach (var id in args)
+    {
+        var matches = Directory.GetFiles(portraitPngRoot, $"{id}.png", SearchOption.AllDirectories);
+        if (matches.Length == 0)
+        {
+            Console.WriteLine($"  not found: {id}.png  (run without args first to generate source PNGs)");
+            continue;
+        }
+        foreach (var srcPath in matches)
+        {
+            var relDir  = Path.GetRelativePath(portraitPngRoot, Path.GetDirectoryName(srcPath)!);
+            var outDir  = relDir == "." ? jpegOutRoot : Path.Combine(jpegOutRoot, relDir);
+            Directory.CreateDirectory(outDir);
+            var outPath = Path.Combine(outDir, id + ".jpg");
+            ConvertToJpeg(srcPath, outPath);
+            var label = relDir == "." ? id : $"{relDir}/{id}";
+            Console.WriteLine($"  {label}.jpg");
+        }
+    }
+    return;
+}
 
 // --- 1. Card atlases (card_atlas_N.png) ---
 Console.WriteLine("=== Card atlases ===");
@@ -123,4 +159,13 @@ static string? ParseImportCtexPath(string importPath)
     var content = File.ReadAllText(importPath);
     var m = Regex.Match(content, @"^path=""res://(.+\.ctex)""", RegexOptions.Multiline);
     return m.Success ? m.Groups[1].Value : null;
+}
+
+static void ConvertToJpeg(string srcPath, string outPath)
+{
+    using var image = Image.Load<Rgba32>(srcPath);
+    image.Mutate(x => x
+        .Resize(JpegWidth, JpegHeight)
+        .BackgroundColor(Color.White));
+    image.SaveAsJpeg(outPath, new JpegEncoder { Quality = JpegQuality });
 }
