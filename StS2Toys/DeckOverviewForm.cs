@@ -19,6 +19,8 @@ public partial class DeckOverviewForm : Form
     readonly ToolTip _hoverTip = new() { InitialDelay = 400, ReshowDelay = 100, AutoPopDelay = 8000, ShowAlways = true };
     List<HitEntry> _hitMap = [];
     string? _hoveredId;
+    IReadOnlyList<(string Label, Func<DeckCard, bool> Filter)>? _suffixGroups;
+    IReadOnlyList<DeckCard> _suffixSource = [];
 
     public DeckOverviewForm()
     {
@@ -72,6 +74,21 @@ public partial class DeckOverviewForm : Form
     {
         _statsLabel.Text = text;
         _statsPanel.Visible = !string.IsNullOrEmpty(text);
+    }
+
+    public void SetSuffixGroups(IReadOnlyList<DeckCard> source,
+        IReadOnlyList<(string Label, Func<DeckCard, bool> Filter)> groups)
+    {
+        _suffixSource = source;
+        _suffixGroups = groups;
+        if (Visible) RecomposeIfNeeded();
+    }
+
+    public void ClearSuffixGroups()
+    {
+        _suffixSource = [];
+        _suffixGroups = null;
+        if (Visible) RecomposeIfNeeded();
     }
 
     public void SetDrawStats(int drawCount, int totalCount, int relicCount)
@@ -132,6 +149,16 @@ public partial class DeckOverviewForm : Form
             int relicRows = relics.Count > 0 ? (relics.Count + cardsPerRow - 1) / cardsPerRow : 1;
             totalHeight += HeaderH + relicRows * (RelicH + Gap) + SectionGap;
         }
+        if (_suffixGroups is not null)
+        {
+            foreach (var (_, filter) in _suffixGroups)
+            {
+                int count = _suffixSource.Count(c => filter(c));
+                if (count == 0) continue;
+                int rows = (count + cardsPerRow - 1) / cardsPerRow;
+                totalHeight += HeaderH + rows * (CardH + Gap) + SectionGap;
+            }
+        }
         totalHeight += PadY;
 
         _hitMap.Clear();
@@ -188,6 +215,32 @@ public partial class DeckOverviewForm : Form
                 using var fgNone = new SolidBrush(SystemColors.GrayText);
                 using var fontNone = new Font("Segoe UI", 8.5f);
                 g.DrawString("なし", fontNone, fgNone, new PointF(PadX + 4, y + 8));
+            }
+        }
+
+        if (_suffixGroups is not null)
+        {
+            foreach (var (label, filter) in _suffixGroups)
+            {
+                var groupCards = _suffixSource.Where(c => filter(c)).OrderBy(c => c.NameJa).ToList();
+                if (groupCards.Count == 0) continue;
+                DrawSectionHeader(g, label, $"{groupCards.Sum(c => c.Count)}枚",
+                    new Rectangle(PadX, y, availableWidth - 2 * PadX, HeaderH));
+                y += HeaderH;
+                for (int i = 0; i < groupCards.Count; i++)
+                {
+                    int col = i % cardsPerRow;
+                    int row = i / cardsPerRow;
+                    var cardRect = new Rectangle(
+                        PadX + col * (CardW + Gap),
+                        y + row * (CardH + Gap),
+                        CardW, CardH);
+                    _hitMap.Add(new HitEntry(cardRect, groupCards[i].Id, false,
+                        groupCards[i].EnchantmentId, groupCards[i].EnchantmentAmount));
+                    DrawCard(g, groupCards[i], cardRect);
+                }
+                int totalRows = (groupCards.Count + cardsPerRow - 1) / cardsPerRow;
+                y += totalRows * (CardH + Gap) + SectionGap;
             }
         }
 

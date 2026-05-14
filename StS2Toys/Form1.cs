@@ -430,6 +430,13 @@ namespace StS2Toys
             _blockOverview.UpdateDeck(blockCards);
             _blockOverview.UpdateRelics(blockRelics);
             _blockOverview.SetBlockStats(blockCards.Sum(c => c.Count), total, blockRelics.Count);
+
+            var charId = _lastRunData?.Players.FirstOrDefault()?.CharacterId ?? "";
+            if (charId.Contains("NECRO", StringComparison.OrdinalIgnoreCase))
+                _blockOverview.SetSuffixGroups(_lastDeckCards,
+                    [("召喚 (Summon)", c => CardDatabaseService.IsNecroSummon(c.Id))]);
+            else
+                _blockOverview.ClearSuffixGroups();
         }
 
         void RefreshDrawOverview()

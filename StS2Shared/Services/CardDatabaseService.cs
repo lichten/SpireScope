@@ -135,6 +135,7 @@ public static class CardDatabaseService
     static readonly HashSet<string> _necroOsty     = ComputeByTag("[gold]Osty[/gold]", "[gold]Osty's[/gold]");
     static readonly HashSet<string> _necroSoul     = ComputeByTag("[gold]Soul[/gold]");
     static readonly HashSet<string> _necroDoom     = ComputeByTag("[gold]Doom[/gold]");
+    static readonly HashSet<string> _necroSummon   = ComputeByTag("[gold]Summon[/gold]");
     static readonly HashSet<string> _ironcladStr    = ComputeByTag("[gold]Strength[/gold]");
     static readonly HashSet<string> _ironcladEx    = ComputeByTag("[gold]Exhaust[/gold]", "[gold]Exhausted[/gold]", "[gold]Exhaust Pile[/gold]");
     static readonly HashSet<string> _ironcladStrike = ComputeByNameContaining("Strike");
@@ -349,6 +350,7 @@ public static class CardDatabaseService
     public static bool IsNecroOsty(string id)      => _necroOsty.Contains(ToRawId(id));
     public static bool IsNecroSoul(string id)      => _necroSoul.Contains(ToRawId(id));
     public static bool IsNecroDoom(string id)      => _necroDoom.Contains(ToRawId(id));
+    public static bool IsNecroSummon(string id)    => _necroSummon.Contains(ToRawId(id));
     public static bool IsIroncladStrength(string id) => _ironcladStr.Contains(ToRawId(id));
     public static bool IsIroncladExhaust(string id)  => _ironcladEx.Contains(ToRawId(id));
     public static bool IsIroncladStrike(string id)   => _ironcladStrike.Contains(ToRawId(id));
