@@ -6,6 +6,7 @@ namespace StS2Toys;
 
 public record DeckCard(string Id, string NameEn, string NameJa, string Cost, string Type, int Count, bool IsUpgraded = false, string EnchantmentId = "", int EnchantmentAmount = 0);
 public record RelicEntry(string Id, string NameEn, string NameJa);
+record HitEntry(Rectangle Rect, string Id, bool IsRelic, string EnchantmentId = "", int EnchantmentAmount = 0);
 
 public partial class DeckOverviewForm : Form
 {
@@ -15,12 +16,17 @@ public partial class DeckOverviewForm : Form
     private IReadOnlyList<RelicEntry>? _relics;
     private IReadOnlyList<(string Label, Func<DeckCard, bool> Filter)>? _keywordGroups;
     private readonly Dictionary<string, Bitmap?> _imageCache = new();
+    readonly ToolTip _hoverTip = new() { InitialDelay = 400, ReshowDelay = 100, AutoPopDelay = 8000, ShowAlways = true };
+    List<HitEntry> _hitMap = [];
+    string? _hoveredId;
 
     public DeckOverviewForm()
     {
         InitializeComponent();
         VisibleChanged += (_, _) => { if (Visible) RecomposeIfNeeded(); };
         ResizeEnd += (_, _) => RecomposeIfNeeded();
+        _pictureBox.MouseMove  += OnPictureBoxMouseMove;
+        _pictureBox.MouseLeave += (_, _) => { _hoverTip.Hide(_pictureBox); _hoveredId = null; };
     }
 
     protected override void Dispose(bool disposing)
@@ -29,6 +35,7 @@ public partial class DeckOverviewForm : Form
         {
             foreach (var bmp in _imageCache.Values) bmp?.Dispose();
             _pictureBox.Image?.Dispose();
+            _hoverTip.Dispose();
             components?.Dispose();
         }
         base.Dispose(disposing);
@@ -127,6 +134,7 @@ public partial class DeckOverviewForm : Form
         }
         totalHeight += PadY;
 
+        _hitMap.Clear();
         var bmp = new Bitmap(availableWidth, Math.Max(totalHeight, 1));
         using var g = Graphics.FromImage(bmp);
         g.Clear(SystemColors.Control);
@@ -148,6 +156,7 @@ public partial class DeckOverviewForm : Form
                     PadX + col * (CardW + Gap),
                     y + row * (CardH + Gap),
                     CardW, CardH);
+                _hitMap.Add(new HitEntry(cardRect, cards[i].Id, false, cards[i].EnchantmentId, cards[i].EnchantmentAmount));
                 DrawCard(g, cards[i], cardRect);
             }
 
@@ -166,10 +175,12 @@ public partial class DeckOverviewForm : Form
                 {
                     int col = i % cardsPerRow;
                     int row = i / cardsPerRow;
-                    DrawRelicTile(g, relics[i], new Rectangle(
+                    var relicRect = new Rectangle(
                         PadX + col * (CardW + Gap),
                         y + row * (RelicH + Gap),
-                        CardW, RelicH));
+                        CardW, RelicH);
+                    _hitMap.Add(new HitEntry(relicRect, relics[i].Id, true));
+                    DrawRelicTile(g, relics[i], relicRect);
                 }
             }
             else
@@ -403,6 +414,40 @@ public partial class DeckOverviewForm : Form
         tg.DrawImage(source, 0, 0, CardW, CardH);
         _imageCache[cacheKey] = thumb;
         return thumb;
+    }
+
+    void OnPictureBoxMouseMove(object? sender, MouseEventArgs e)
+    {
+        var hit = _hitMap.FirstOrDefault(h => h.Rect.Contains(e.Location));
+        if (hit?.Id == _hoveredId) return;
+        _hoveredId = hit?.Id;
+        if (hit is null) { _hoverTip.Hide(_pictureBox); return; }
+        _hoverTip.Show(BuildTooltipText(hit), _pictureBox, e.X + 16, e.Y + 16);
+    }
+
+    static string BuildTooltipText(HitEntry hit)
+    {
+        var nameJa = CardDatabaseService.GetName(hit.Id, japanese: true);
+        var nameEn = CardDatabaseService.GetName(hit.Id, japanese: false);
+        var (descEn, descJa) = CardDatabaseService.GetDescription(hit.Id);
+        var stats = hit.IsRelic ? null : CardDatabaseService.GetCardStats(hit.Id);
+        var jaText = DescriptionFormatter.Resolve(descJa, stats, japanese: true);
+        var enText = DescriptionFormatter.Resolve(descEn, stats);
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"{nameJa}  /  {nameEn}");
+        if (!string.IsNullOrWhiteSpace(jaText)) sb.AppendLine(jaText);
+        if (!string.IsNullOrWhiteSpace(enText)) sb.AppendLine(enText);
+
+        if (!hit.IsRelic && !string.IsNullOrEmpty(hit.EnchantmentId))
+        {
+            var enchJa = CardDatabaseService.FormatEnchantmentLabel(hit.EnchantmentId, hit.EnchantmentAmount, japanese: true);
+            var enchEn = CardDatabaseService.FormatEnchantmentLabel(hit.EnchantmentId, hit.EnchantmentAmount, japanese: false);
+            sb.AppendLine();
+            sb.Append($"[{enchJa} / {enchEn}]");
+        }
+
+        return sb.ToString().Trim();
     }
 
     static int TypeOrder(string type) => type switch
