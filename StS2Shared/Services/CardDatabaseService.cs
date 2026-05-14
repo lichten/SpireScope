@@ -152,6 +152,7 @@ public static class CardDatabaseService
     static readonly HashSet<string> _regentTransform  = ComputeByTag("[gold]Transform[/gold]");
     static readonly HashSet<string> _regentStarGain   = ComputeRegentStarGain();
     static readonly HashSet<string> _regentStarSpend  = ComputeRegentStarSpend();
+    static readonly HashSet<string> _defectZeroEnergy = BuildDefectZeroEnergy();
 
     static HashSet<string> ComputeBlockGivers()
     {
@@ -309,6 +310,19 @@ public static class CardDatabaseService
         }
     }
 
+    static HashSet<string> BuildDefectZeroEnergy()
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            // コスト0ではないがシナジーカード
+            "SCRAPE", "ALL_FOR_ONE", "FERAL", "ADAPTIVE_STRIKE", "MOMENTUM_STRIKE"
+        };
+        foreach (var (key, cost) in _costs)
+            if (cost == 0 && _characters.TryGetValue(key, out var ch) && ch == "Defect")
+                set.Add(ToRawId(key));
+        return set;
+    }
+
     static HashSet<string> ComputeStatusGenerators()
     {
         // card_types.json の Status 型カード名から [gold]{Name}[/gold] タグを構築
@@ -340,9 +354,10 @@ public static class CardDatabaseService
     public static bool IsIroncladStrike(string id)   => _ironcladStrike.Contains(ToRawId(id));
     public static bool IsSilentPoison(string id)   => _silentPoison.Contains(ToRawId(id));
     public static bool IsSilentShiv(string id)     => _silentShiv.Contains(ToRawId(id));
-    public static bool IsDefectChannel(string id)  => _defectChannel.Contains(ToRawId(id));
-    public static bool IsDefectEvoke(string id)    => _defectEvoke.Contains(ToRawId(id));
-    public static bool IsDefectFocus(string id)    => _defectFocus.Contains(ToRawId(id));
+    public static bool IsDefectChannel(string id)     => _defectChannel.Contains(ToRawId(id));
+    public static bool IsDefectEvoke(string id)       => _defectEvoke.Contains(ToRawId(id));
+    public static bool IsDefectFocus(string id)       => _defectFocus.Contains(ToRawId(id));
+    public static bool IsDefectZeroEnergy(string id)  => _defectZeroEnergy.Contains(ToRawId(id));
     public static bool IsRegentForge(string id)     => _regentForge.Contains(ToRawId(id));
     public static bool IsRegentBlade(string id)     => _regentBlade.Contains(ToRawId(id));
     public static bool IsRegentStarGain(string id)  => _regentStarGain.Contains(ToRawId(id));

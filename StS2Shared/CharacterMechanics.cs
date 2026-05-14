@@ -23,9 +23,10 @@ public static class CharacterMechanics
         ]),
         ("Defect",
         [
-            ("Channel", CardDatabaseService.IsDefectChannel),
-            ("Evoke",   CardDatabaseService.IsDefectEvoke),
-            ("Focus",   CardDatabaseService.IsDefectFocus),
+            ("Channel",                      CardDatabaseService.IsDefectChannel),
+            ("Evoke",                        CardDatabaseService.IsDefectEvoke),
+            ("Focus",                        CardDatabaseService.IsDefectFocus),
+            ("0 Energy (Scrape / All for One)", CardDatabaseService.IsDefectZeroEnergy),
         ]),
         ("Regent",
         [
