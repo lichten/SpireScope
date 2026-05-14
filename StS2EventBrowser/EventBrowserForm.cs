@@ -18,11 +18,14 @@ record EventInfo(string Id, string Title, string Description, List<EventOption> 
 record AncientInfo(string Id, string Title, string Epithet, Dictionary<string, string> Keys);
 record TalkLine(string Char, int Visit, int Line, bool IsRandom, string Speaker, string Text);
 
+// ListBox の各行を表す。IsHeader == true の行はグループ見出し（選択不可）
+sealed record EventListItem(bool IsHeader, string Label, EventInfo? Event = null);
+
 public partial class EventBrowserForm : Form
 {
     readonly string _toolsRoot;
     List<EventInfo> _allEvents = [];
-    List<EventInfo> _filtered = [];
+    List<EventListItem> _listItems = [];
     List<AncientInfo> _allAncients = [];
     bool _isJp = true;
     string? _selectedEventId;
@@ -88,7 +91,9 @@ public partial class EventBrowserForm : Form
             Dock = DockStyle.Fill,
             Font = new Font("Segoe UI", 9.5f),
             IntegralHeight = false,
+            DrawMode = DrawMode.OwnerDrawFixed,
         };
+        _eventList.DrawItem += DrawEventListItem;
         mainSplit.Panel1.Controls.Add(_eventList);
 
         var detailSplit = new SplitContainer
@@ -320,34 +325,108 @@ public partial class EventBrowserForm : Form
     void PopulateList()
     {
         var filter = _filterBox.Text.Trim();
-        _filtered = string.IsNullOrEmpty(filter)
-            ? [.._allEvents]
-            : [.._allEvents.Where(e => e.Title.Contains(filter, StringComparison.CurrentCultureIgnoreCase)
-                                    || e.Id.Contains(filter, StringComparison.OrdinalIgnoreCase))];
+        var matched = string.IsNullOrEmpty(filter)
+            ? _allEvents
+            : _allEvents.Where(e => e.Title.Contains(filter, StringComparison.CurrentCultureIgnoreCase)
+                                 || e.Id.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        var groups = StS2Shared.Services.EventActService.Groups;
+        _listItems = BuildListItems(matched, groups);
 
         _eventList.BeginUpdate();
         _eventList.Items.Clear();
-        foreach (var e in _filtered)
-            _eventList.Items.Add(e.Title);
+        foreach (var item in _listItems)
+            _eventList.Items.Add(item.Label);
         _eventList.EndUpdate();
 
         if (Controls.Find("countLabel", true).FirstOrDefault() is Label lbl)
-            lbl.Text = $"{_filtered.Count} / {_allEvents.Count} イベント";
+            lbl.Text = $"{matched.Count} / {_allEvents.Count} イベント";
 
         if (_selectedEventId != null)
         {
-            var idx = _filtered.FindIndex(e => e.Id == _selectedEventId);
+            var idx = _listItems.FindIndex(item => item.Event?.Id == _selectedEventId);
             if (idx >= 0) _eventList.SelectedIndex = idx;
         }
+    }
+
+    List<EventListItem> BuildListItems(
+        IEnumerable<EventInfo> events,
+        IReadOnlyList<StS2Shared.Services.EventActService.ActGroup> groups)
+    {
+        var eventList = events.ToList();
+        var result = new List<EventListItem>();
+
+        if (groups.Count == 0)
+        {
+            // event_acts.json が空の場合はグループなしでフラット表示
+            foreach (var ev in eventList)
+                result.Add(new EventListItem(false, ev.Title, ev));
+            return result;
+        }
+
+        var remaining = eventList.ToDictionary(e => e.Id, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var group in groups)
+        {
+            var inGroup = eventList
+                .Where(e => group.Events.Contains(e.Id))
+                .ToList();
+            if (inGroup.Count == 0) continue;
+
+            result.Add(new EventListItem(true, _isJp ? group.NameJp : group.NameEn));
+            foreach (var ev in inGroup)
+            {
+                result.Add(new EventListItem(false, ev.Title, ev));
+                remaining.Remove(ev.Id);
+            }
+        }
+
+        // event_acts.json に未登録のイベントは末尾に追加（元の並び順を維持）
+        var uncategorized = eventList.Where(e => remaining.ContainsKey(e.Id)).ToList();
+        if (uncategorized.Count > 0)
+        {
+            result.Add(new EventListItem(true, _isJp ? "未分類" : "Uncategorized"));
+            foreach (var ev in uncategorized)
+                result.Add(new EventListItem(false, ev.Title, ev));
+        }
+
+        return result;
     }
 
     void ShowSelected()
     {
         var idx = _eventList.SelectedIndex;
-        if (idx < 0 || idx >= _filtered.Count) return;
-        var ev = _filtered[idx];
-        _selectedEventId = ev.Id;
-        ShowEvent(ev);
+        if (idx < 0 || idx >= _listItems.Count) return;
+        var item = _listItems[idx];
+        if (item.IsHeader) return;
+        _selectedEventId = item.Event!.Id;
+        ShowEvent(item.Event);
+    }
+
+    static readonly Color HeaderBg = Color.FromArgb(60, 70, 90);
+    static readonly Color HeaderFg = Color.FromArgb(210, 220, 235);
+
+    void DrawEventListItem(object? sender, DrawItemEventArgs e)
+    {
+        if (e.Index < 0 || e.Index >= _listItems.Count) return;
+        var item = _listItems[e.Index];
+
+        if (item.IsHeader)
+        {
+            using var bg = new SolidBrush(HeaderBg);
+            e.Graphics.FillRectangle(bg, e.Bounds);
+            using var font = new Font(e.Font!, FontStyle.Bold);
+            TextRenderer.DrawText(e.Graphics, item.Label, font, e.Bounds, HeaderFg,
+                TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPadding);
+        }
+        else
+        {
+            e.DrawBackground();
+            var indent = new Rectangle(e.Bounds.X + 6, e.Bounds.Y, e.Bounds.Width - 6, e.Bounds.Height);
+            TextRenderer.DrawText(e.Graphics, item.Label, e.Font, indent, e.ForeColor,
+                TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPadding);
+            e.DrawFocusRectangle();
+        }
     }
 
     // ── Ancient list UI ───────────────────────────────────────────────
