@@ -26,11 +26,13 @@ var mechanicsMap = CharacterMechanics.All
 PageEntry[] pages =
 [
     ..chars.Select(ch => new PageEntry("キャラクター", $"{ch.Id}.html", ch.EnName, ch.JaName, ch.Desc, ch.Accent)),
-    // 将来追加: new PageEntry("カード", ...), new PageEntry("レリック", ...) 等
+    new PageEntry("カード", "cards.html", "Card List", "カード一覧",
+        "全カードをタイプ・レアリティ・フラグ付きで一覧表示。", "#2c3e50"),
 ];
 
-File.WriteAllText(Path.Combine(distDir, "index.html"), BuildIndex(chars),          System.Text.Encoding.UTF8);
+File.WriteAllText(Path.Combine(distDir, "index.html"), BuildIndex(chars),           System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "pages.html"), BuildPageList(pages, chars), System.Text.Encoding.UTF8);
+File.WriteAllText(Path.Combine(distDir, "cards.html"), BuildCardListPage(chars),    System.Text.Encoding.UTF8);
 foreach (var ch in chars)
 {
     mechanicsMap.TryGetValue(ch.EnName, out var mecs);
@@ -38,7 +40,7 @@ foreach (var ch in chars)
         BuildCharPage(ch, chars, mecs ?? []), System.Text.Encoding.UTF8);
 }
 
-Console.WriteLine($"Generated {2 + chars.Length} files -> {distDir}");
+Console.WriteLine($"Generated {3 + chars.Length} files -> {distDir}");
 
 // ── page builders ─────────────────────────────────────────────────────────────
 
@@ -84,7 +86,7 @@ static string BuildPageList(PageEntry[] pages, CharData[] chars)
         }
         else
         {
-            var cards = string.Concat(catPages.Select(p => $"""
+            var cardHtml = string.Concat(catPages.Select(p => $"""
                       <a href="{p.Path}" class="char-card">
                         <div class="char-card-header" style="background:{p.Color}">
                           <div class="char-name-en">{p.TitleEn}</div>
@@ -96,11 +98,11 @@ static string BuildPageList(PageEntry[] pages, CharData[] chars)
                         <div class="char-card-footer">ページへ &rarr;</div>
                       </a>
                 """));
-            content = $"""<div class="char-grid">{cards}</div>""";
+            content = $"""<div class="char-grid">{cardHtml}</div>""";
         }
 
-        var pendingBadge  = catPages.Length == 0 ? """ <span class="pending-badge">準備中</span>""" : "";
-        var sectionClass  = catPages.Length == 0 ? " section-pending" : "";
+        var pendingBadge = catPages.Length == 0 ? """ <span class="pending-badge">準備中</span>""" : "";
+        var sectionClass = catPages.Length == 0 ? " section-pending" : "";
 
         return $"""
             <section class="section{sectionClass}">
@@ -118,6 +120,121 @@ static string BuildPageList(PageEntry[] pages, CharData[] chars)
         {sections}
         """);
 }
+
+static string BuildCardListPage(CharData[] chars)
+{
+    var allIds    = CardDatabaseService.GetAllCardIds().ToArray();
+    var charNames = new HashSet<string>(chars.Select(c => c.EnName), StringComparer.OrdinalIgnoreCase);
+
+    // 5キャラクター + 共有・特殊（Status / Curse / Ancient 等）
+    var groups = chars
+        .Select(ch => (
+            Label:   ch.EnName,
+            LabelJa: ch.JaName,
+            Accent:  ch.Accent,
+            Ids: allIds
+                .Where(id => CardDatabaseService.GetCardCharacter(id)
+                    .Equals(ch.EnName, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(id => TypeOrder(CardDatabaseService.GetCardType(id)))
+                .ThenBy(id => RarityOrder(CardDatabaseService.GetCardRarity(id)))
+                .ThenBy(id => CardDatabaseService.GetName(id))
+                .ToArray()
+        ))
+        .Append((
+            Label:   "共有・特殊",
+            LabelJa: "",
+            Accent:  "#888",
+            Ids: allIds
+                .Where(id => !charNames.Contains(CardDatabaseService.GetCardCharacter(id)))
+                .OrderBy(id => TypeOrder(CardDatabaseService.GetCardType(id)))
+                .ThenBy(id => RarityOrder(CardDatabaseService.GetCardRarity(id)))
+                .ThenBy(id => CardDatabaseService.GetName(id))
+                .ToArray()
+        ))
+        .Where(g => g.Ids.Length > 0)
+        .ToArray();
+
+    var sections = string.Concat(groups.Select(g =>
+    {
+        var metaText = g.LabelJa != "" ? $"{g.LabelJa} · {g.Ids.Length}件" : $"{g.Ids.Length}件";
+
+        var rows = string.Concat(g.Ids.Select(id =>
+        {
+            var nameEn  = CardDatabaseService.GetName(id);
+            var nameJa  = CardDatabaseService.GetName(id, japanese: true);
+            var type    = CardDatabaseService.GetCardType(id);
+            var rarity  = CardDatabaseService.GetCardRarity(id);
+            var flags   = ComputeFlags(id);
+
+            var typeBadge   = type   != "" ? $"""<span class="badge type-{type.ToLower()}">{type}</span>""" : "";
+            var rarityBadge = rarity != "" ? $"""<span class="badge rarity-{rarity.ToLower()}">{rarity}</span>""" : "";
+            var flagBadges  = string.Concat(
+                CardFlags.AllDefs
+                    .Where(f => flags.Contains(f.Key))
+                    .Select(f => $"""<span class="badge flag-badge">{f.Label}</span>"""));
+            var jaSpan = nameJa != nameEn ? $"""<span class="card-name-ja">{nameJa}</span>""" : "";
+
+            return $"""
+                      <tr>
+                        <td class="col-name"><span class="card-name-en">{nameEn}</span>{jaSpan}</td>
+                        <td class="col-type">{typeBadge}</td>
+                        <td class="col-rarity">{rarityBadge}</td>
+                        <td class="col-flags"><div class="flag-cell">{flagBadges}</div></td>
+                      </tr>
+                """;
+        }));
+
+        return $"""
+            <section class="section">
+              <h2 class="section-title">
+                <span class="section-dot" style="background:{g.Accent}"></span>
+                {g.Label}
+                <span class="section-meta">{metaText}</span>
+              </h2>
+              <table class="card-table">
+                <thead>
+                  <tr>
+                    <th>カード名</th><th>タイプ</th><th>レアリティ</th><th>特性</th>
+                  </tr>
+                </thead>
+                <tbody>{rows}</tbody>
+              </table>
+            </section>
+            """;
+    }));
+
+    return Layout("カード一覧", "cards", "#2c3e50", chars, $"""
+        <div class="page-hero">
+          <h1 class="hero-title">カード一覧</h1>
+          <p class="hero-sub">全{allIds.Length}件</p>
+        </div>
+        {sections}
+        """);
+}
+
+static HashSet<string> ComputeFlags(string id)
+{
+    var type   = CardDatabaseService.GetCardType(id);
+    var rarity = CardDatabaseService.GetCardRarity(id);
+    var flags  = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    if (rarity == "Ancient")         flags.Add(CardFlags.IsAncient);
+    if (type is "Status" or "Curse") flags.Add(CardFlags.IsGeneratedInCombat);
+    return flags;
+}
+
+static int TypeOrder(string type) => type switch
+{
+    "Attack" => 0, "Skill" => 1, "Power" => 2,
+    "Status" => 3, "Curse" => 4, "Quest" => 5,
+    _ => 99,
+};
+
+static int RarityOrder(string rarity) => rarity switch
+{
+    "Starter" => 0, "Common" => 1, "Uncommon" => 2, "Rare" => 3,
+    "Ancient" => 4, "Event"  => 5, "Shop"     => 6,
+    _ => 99,
+};
 
 static string BuildCharPage(CharData ch, CharData[] chars, string[] mecs)
 {
@@ -161,62 +278,47 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
 
         /* ── Sidebar ── */
         .sidebar {
-          width: 240px;
-          min-width: 240px;
+          width: 240px; min-width: 240px;
           background: #fff;
           border-right: 1px solid #e8e8e8;
-          display: flex;
-          flex-direction: column;
-          position: sticky;
-          top: 0;
-          height: 100vh;
-          overflow-y: auto;
+          display: flex; flex-direction: column;
+          position: sticky; top: 0; height: 100vh; overflow-y: auto;
         }
         .sidebar-brand {
           padding: 18px 20px 16px;
           background: #1e2128;
           border-bottom: 1px solid #2c3040;
         }
-        .brand-game { font-size: 13px; font-weight: 700; color: #f0f0f0; letter-spacing: 0.3px; }
+        .brand-game  { font-size: 13px; font-weight: 700; color: #f0f0f0; letter-spacing: 0.3px; }
         .brand-label { font-size: 11px; color: #8899aa; margin-top: 3px; }
         .nav-section { padding: 14px 0 6px; }
         .nav-group-label {
-          font-size: 10px;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          color: #c0c0c0;
-          padding: 0 20px 8px;
+          font-size: 10px; font-weight: 600; text-transform: uppercase;
+          letter-spacing: 1px; color: #c0c0c0; padding: 0 20px 8px;
         }
         .nav-link {
-          display: flex;
-          align-items: center;
-          gap: 9px;
-          padding: 8px 20px;
-          font-size: 13.5px;
-          color: #555;
-          border-left: 3px solid transparent;
-          transition: background 0.1s;
+          display: flex; align-items: center; gap: 9px;
+          padding: 8px 20px; font-size: 13.5px; color: #555;
+          border-left: 3px solid transparent; transition: background 0.1s;
         }
-        .nav-link:hover { background: #f7f8fa; color: #222; }
+        .nav-link:hover  { background: #f7f8fa; color: #222; }
         .nav-link.active { background: #f3f4f6; color: #111; font-weight: 600; }
-        .nav-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-        .nav-home-icon { font-size: 15px; line-height: 1; }
-        .nav-name-ja { font-size: 11px; color: #aaa; margin-left: auto; }
+        .nav-dot       { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+        .nav-icon      { font-size: 15px; line-height: 1; }
+        .nav-name-ja   { font-size: 11px; color: #aaa; margin-left: auto; }
         .nav-link.active .nav-name-ja { color: #888; }
 
         /* ── Main ── */
         .main { flex: 1; padding: 40px 48px; min-width: 0; }
 
-        /* ── Hero (index / pages) ── */
+        /* ── Hero ── */
         .page-hero {
-          margin-bottom: 32px;
-          padding-bottom: 24px;
+          margin-bottom: 32px; padding-bottom: 24px;
           border-bottom: 1px solid #e8e8e8;
         }
         .hero-title { font-size: 28px; font-weight: 800; color: #1a1a2e; letter-spacing: -0.5px; }
-        .hero-sub { font-size: 15px; color: #666; margin-top: 4px; }
-        .hero-desc { font-size: 13.5px; color: #999; margin-top: 10px; }
+        .hero-sub   { font-size: 15px; color: #666; margin-top: 4px; }
+        .hero-desc  { font-size: 13.5px; color: #999; margin-top: 10px; }
 
         /* ── Character grid (index / pages) ── */
         .char-grid {
@@ -225,102 +327,105 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
           gap: 16px;
         }
         .char-card {
-          display: flex;
-          flex-direction: column;
-          background: #fff;
-          border-radius: 10px;
-          overflow: hidden;
+          display: flex; flex-direction: column;
+          background: #fff; border-radius: 10px; overflow: hidden;
           box-shadow: 0 1px 4px rgba(0,0,0,0.08);
           transition: box-shadow 0.15s, transform 0.15s;
         }
         .char-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.13); transform: translateY(-3px); }
-        .char-card-header { padding: 20px 18px 14px; color: #fff; }
-        .char-name-en { font-size: 19px; font-weight: 800; letter-spacing: -0.3px; }
-        .char-name-ja { font-size: 11px; opacity: 0.82; margin-top: 3px; }
-        .char-card-body { padding: 14px 18px; flex: 1; }
-        .char-desc { font-size: 12.5px; color: #666; line-height: 1.65; }
-        .char-card-footer {
-          padding: 9px 18px 11px;
-          font-size: 12px;
-          color: #aaa;
-          border-top: 1px solid #f0f0f0;
-          font-weight: 500;
+        .char-card-header  { padding: 20px 18px 14px; color: #fff; }
+        .char-name-en      { font-size: 19px; font-weight: 800; letter-spacing: -0.3px; }
+        .char-name-ja      { font-size: 11px; opacity: 0.82; margin-top: 3px; }
+        .char-card-body    { padding: 14px 18px; flex: 1; }
+        .char-desc         { font-size: 12.5px; color: #666; line-height: 1.65; }
+        .char-card-footer  {
+          padding: 9px 18px 11px; font-size: 12px; color: #aaa;
+          border-top: 1px solid #f0f0f0; font-weight: 500;
         }
         .char-card:hover .char-card-footer { color: #666; }
 
         /* ── Character page header ── */
         .char-header {
-          border-radius: 10px;
-          padding: 28px 32px;
-          margin-bottom: 24px;
-          display: flex;
-          align-items: center;
-          gap: 28px;
-          overflow: hidden;
+          border-radius: 10px; padding: 28px 32px; margin-bottom: 24px;
+          display: flex; align-items: center; gap: 28px; overflow: hidden;
         }
         .char-header-body { flex: 1; min-width: 0; }
-        .char-title-en { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
-        .char-title-ja { font-size: 13px; color: #777; margin-top: 5px; }
-        .char-desc-full {
-          font-size: 14px;
-          color: #555;
-          margin-top: 14px;
-          max-width: 560px;
-          line-height: 1.75;
-        }
-        .char-hero-img {
-          width: 132px;
-          height: 195px;
-          object-fit: cover;
-          border-radius: 8px;
-          flex-shrink: 0;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-          image-rendering: auto;
+        .char-title-en    { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
+        .char-title-ja    { font-size: 13px; color: #777; margin-top: 5px; }
+        .char-desc-full   { font-size: 14px; color: #555; margin-top: 14px; max-width: 560px; line-height: 1.75; }
+        .char-hero-img    {
+          width: 132px; height: 195px; object-fit: cover;
+          border-radius: 8px; flex-shrink: 0;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15); image-rendering: auto;
         }
 
         /* ── Sections ── */
         .section {
-          background: #fff;
-          border-radius: 10px;
-          padding: 24px 28px;
-          margin-bottom: 20px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+          background: #fff; border-radius: 10px; padding: 24px 28px;
+          margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }
         .section-title {
-          font-size: 14px;
-          font-weight: 700;
-          color: #333;
-          margin-bottom: 16px;
-          padding-bottom: 10px;
-          border-bottom: 1px solid #f0f0f0;
-          letter-spacing: 0.2px;
+          display: flex; align-items: center;
+          font-size: 14px; font-weight: 700; color: #333;
+          margin-bottom: 16px; padding-bottom: 10px;
+          border-bottom: 1px solid #f0f0f0; letter-spacing: 0.2px;
         }
+        .section-dot  { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
+        .section-meta { font-size: 12px; font-weight: 400; color: #bbb; margin-left: 8px; }
         .mec-tags { display: flex; flex-wrap: wrap; gap: 8px; }
-        .mec-tag {
-          padding: 5px 13px;
-          background: #f5f6f8;
-          border: 1px solid #e4e6ea;
-          border-radius: 20px;
-          font-size: 13px;
-          color: #444;
+        .mec-tag  {
+          padding: 5px 13px; background: #f5f6f8; border: 1px solid #e4e6ea;
+          border-radius: 20px; font-size: 13px; color: #444;
         }
         .placeholder { font-size: 13.5px; color: #bbb; font-style: italic; }
 
-        /* ── Page list ── */
+        /* ── Page list (pages.html) ── */
         .section-pending { opacity: 0.55; }
         .pending-badge {
-          display: inline-block;
-          font-size: 10px;
-          font-weight: 600;
-          background: #f0f0f0;
-          color: #aaa;
-          border-radius: 10px;
-          padding: 2px 8px;
-          margin-left: 8px;
-          vertical-align: middle;
-          letter-spacing: 0.5px;
-          font-style: normal;
+          display: inline-block; font-size: 10px; font-weight: 600;
+          background: #f0f0f0; color: #aaa; border-radius: 10px;
+          padding: 2px 8px; margin-left: 8px; vertical-align: middle;
+          letter-spacing: 0.5px; font-style: normal;
         }
+
+        /* ── Card table (cards.html) ── */
+        .card-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .card-table th {
+          text-align: left; font-size: 10.5px; font-weight: 600;
+          text-transform: uppercase; letter-spacing: 0.5px; color: #bbb;
+          padding: 0 16px 8px 0; border-bottom: 1px solid #f0f0f0;
+        }
+        .card-table td {
+          padding: 5px 16px 5px 0; border-bottom: 1px solid #f8f8f8;
+          vertical-align: middle;
+        }
+        .card-table tr:last-child td { border-bottom: none; }
+        .col-name    { min-width: 180px; }
+        .col-type    { white-space: nowrap; }
+        .col-rarity  { white-space: nowrap; }
+        .card-name-en { display: block; font-size: 13.5px; color: #222; }
+        .card-name-ja { font-size: 11px; color: #bbb; }
+        .flag-cell    { display: flex; gap: 4px; flex-wrap: wrap; }
+
+        /* ── Badges ── */
+        .badge {
+          display: inline-block; padding: 2px 7px;
+          border-radius: 4px; font-size: 11px; font-weight: 600; white-space: nowrap;
+        }
+        .type-attack    { background: #fde8e8; color: #c0392b; }
+        .type-skill     { background: #e8f0fc; color: #1a5799; }
+        .type-power     { background: #fdf8e8; color: #7d6608; }
+        .type-status    { background: #f0f0f0; color: #777; }
+        .type-curse     { background: #f4ecf7; color: #6c3483; }
+        .type-quest     { background: #e8f8f0; color: #1a7a4a; }
+        .rarity-starter  { background: #efefef;  color: #999; }
+        .rarity-common   { background: #e8eaed;  color: #555; }
+        .rarity-uncommon { background: #dde8f5;  color: #1a5799; }
+        .rarity-rare     { background: #fde8e8;  color: #c0392b; }
+        .rarity-ancient  { background: #fff0d8;  color: #a0600c; }
+        .rarity-event    { background: #e8f8f0;  color: #1a7a4a; }
+        .rarity-shop     { background: #fdf0fc;  color: #7d1a7d; }
+        .flag-badge      { background: #e8eaf0;  color: #445566; }
         """;
 
     var homeActive  = activeId == "index";
@@ -329,6 +434,9 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
     var pagesActive = activeId == "pages";
     var pagesStyle  = pagesActive ? " style=\"border-left-color:#4a90d9\"" : "";
     var pagesClass  = pagesActive ? " active" : "";
+    var cardsActive = activeId == "cards";
+    var cardsStyle  = cardsActive ? " style=\"border-left-color:#4a90d9\"" : "";
+    var cardsClass  = cardsActive ? " active" : "";
 
     var navItems = string.Concat(chars.Select(ch => {
         var isActive    = ch.Id == activeId;
@@ -364,12 +472,13 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
               <div class="nav-section">
                 <div class="nav-group-label">ページ</div>
                 <a href="index.html" class="nav-link{homeClass}"{homeStyle}>
-                  <span class="nav-home-icon">&#8962;</span>
-                  トップ
+                  <span class="nav-icon">&#8962;</span>トップ
                 </a>
                 <a href="pages.html" class="nav-link{pagesClass}"{pagesStyle}>
-                  <span class="nav-home-icon">&#9776;</span>
-                  ページ一覧
+                  <span class="nav-icon">&#9776;</span>ページ一覧
+                </a>
+                <a href="cards.html" class="nav-link{cardsClass}"{cardsStyle}>
+                  <span class="nav-icon">&#9670;</span>カード一覧
                 </a>
               </div>
               <div class="nav-section">
@@ -386,5 +495,23 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
         """;
 }
 
+// ── records & flag definitions ────────────────────────────────────────────────
+
 record CharData(string Id, string EnName, string JaName, string Accent, string LightBg, string Desc);
 record PageEntry(string Category, string Path, string TitleEn, string TitleJa, string Desc, string Color);
+record FlagDef(string Key, string Label);
+
+static class CardFlags
+{
+    // ── フラグキー定数 ────────────────────────────────────────────────────────
+    // 新フラグを追加するときはここに定数を追加し、AllDefs と ComputeFlags() にも反映する
+    public const string IsAncient           = "IsAncient";
+    public const string IsGeneratedInCombat = "IsGeneratedInCombat";
+
+    // ── フラグ表示定義（key → ラベル）────────────────────────────────────────
+    public static readonly FlagDef[] AllDefs =
+    [
+        new(IsAncient,           "エンシェント"),
+        new(IsGeneratedInCombat, "戦闘中に生成"),
+    ];
+}
