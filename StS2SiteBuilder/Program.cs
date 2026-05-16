@@ -23,7 +23,14 @@ var mechanicsMap = CharacterMechanics.All
                   c => c.Mechanics.Select(m => m.MecLabel).ToArray(),
                   StringComparer.OrdinalIgnoreCase);
 
-File.WriteAllText(Path.Combine(distDir, "index.html"), BuildIndex(chars), System.Text.Encoding.UTF8);
+PageEntry[] pages =
+[
+    ..chars.Select(ch => new PageEntry("キャラクター", $"{ch.Id}.html", ch.EnName, ch.JaName, ch.Desc, ch.Accent)),
+    // 将来追加: new PageEntry("カード", ...), new PageEntry("レリック", ...) 等
+];
+
+File.WriteAllText(Path.Combine(distDir, "index.html"), BuildIndex(chars),          System.Text.Encoding.UTF8);
+File.WriteAllText(Path.Combine(distDir, "pages.html"), BuildPageList(pages, chars), System.Text.Encoding.UTF8);
 foreach (var ch in chars)
 {
     mechanicsMap.TryGetValue(ch.EnName, out var mecs);
@@ -31,7 +38,7 @@ foreach (var ch in chars)
         BuildCharPage(ch, chars, mecs ?? []), System.Text.Encoding.UTF8);
 }
 
-Console.WriteLine($"Generated {1 + chars.Length} files -> {distDir}");
+Console.WriteLine($"Generated {2 + chars.Length} files -> {distDir}");
 
 // ── page builders ─────────────────────────────────────────────────────────────
 
@@ -59,6 +66,56 @@ static string BuildIndex(CharData[] chars)
         <div class="char-grid">
           {cards}
         </div>
+        """);
+}
+
+static string BuildPageList(PageEntry[] pages, CharData[] chars)
+{
+    string[] allCategories = ["キャラクター", "カード", "レリック", "イベント", "エンカウンター"];
+
+    var sections = string.Concat(allCategories.Select(cat =>
+    {
+        var catPages = pages.Where(p => p.Category == cat).ToArray();
+
+        string content;
+        if (catPages.Length == 0)
+        {
+            content = """<p class="placeholder">ページはまだ追加されていません。</p>""";
+        }
+        else
+        {
+            var cards = string.Concat(catPages.Select(p => $"""
+                      <a href="{p.Path}" class="char-card">
+                        <div class="char-card-header" style="background:{p.Color}">
+                          <div class="char-name-en">{p.TitleEn}</div>
+                          <div class="char-name-ja">{p.TitleJa}</div>
+                        </div>
+                        <div class="char-card-body">
+                          <p class="char-desc">{p.Desc}</p>
+                        </div>
+                        <div class="char-card-footer">ページへ &rarr;</div>
+                      </a>
+                """));
+            content = $"""<div class="char-grid">{cards}</div>""";
+        }
+
+        var pendingBadge  = catPages.Length == 0 ? """ <span class="pending-badge">準備中</span>""" : "";
+        var sectionClass  = catPages.Length == 0 ? " section-pending" : "";
+
+        return $"""
+            <section class="section{sectionClass}">
+              <h2 class="section-title">{cat}{pendingBadge}</h2>
+              {content}
+            </section>
+            """;
+    }));
+
+    return Layout("ページ一覧", "pages", "#4a90d9", chars, $"""
+        <div class="page-hero">
+          <h1 class="hero-title">ページ一覧</h1>
+          <p class="hero-sub">全ページの一覧</p>
+        </div>
+        {sections}
         """);
 }
 
@@ -151,7 +208,7 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
         /* ── Main ── */
         .main { flex: 1; padding: 40px 48px; min-width: 0; }
 
-        /* ── Hero (index) ── */
+        /* ── Hero (index / pages) ── */
         .page-hero {
           margin-bottom: 32px;
           padding-bottom: 24px;
@@ -161,7 +218,7 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
         .hero-sub { font-size: 15px; color: #666; margin-top: 4px; }
         .hero-desc { font-size: 13.5px; color: #999; margin-top: 10px; }
 
-        /* ── Character grid (index) ── */
+        /* ── Character grid (index / pages) ── */
         .char-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
@@ -248,11 +305,30 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
           color: #444;
         }
         .placeholder { font-size: 13.5px; color: #bbb; font-style: italic; }
+
+        /* ── Page list ── */
+        .section-pending { opacity: 0.55; }
+        .pending-badge {
+          display: inline-block;
+          font-size: 10px;
+          font-weight: 600;
+          background: #f0f0f0;
+          color: #aaa;
+          border-radius: 10px;
+          padding: 2px 8px;
+          margin-left: 8px;
+          vertical-align: middle;
+          letter-spacing: 0.5px;
+          font-style: normal;
+        }
         """;
 
     var homeActive  = activeId == "index";
-    var homeStyle   = homeActive ? $" style=\"border-left-color:#4a90d9\"" : "";
-    var homeClass   = homeActive ? " active" : "";
+    var homeStyle   = homeActive  ? " style=\"border-left-color:#4a90d9\"" : "";
+    var homeClass   = homeActive  ? " active" : "";
+    var pagesActive = activeId == "pages";
+    var pagesStyle  = pagesActive ? " style=\"border-left-color:#4a90d9\"" : "";
+    var pagesClass  = pagesActive ? " active" : "";
 
     var navItems = string.Concat(chars.Select(ch => {
         var isActive    = ch.Id == activeId;
@@ -291,6 +367,10 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
                   <span class="nav-home-icon">&#8962;</span>
                   トップ
                 </a>
+                <a href="pages.html" class="nav-link{pagesClass}"{pagesStyle}>
+                  <span class="nav-home-icon">&#9776;</span>
+                  ページ一覧
+                </a>
               </div>
               <div class="nav-section">
                 <div class="nav-group-label">キャラクター</div>
@@ -307,3 +387,4 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
 }
 
 record CharData(string Id, string EnName, string JaName, string Accent, string LightBg, string Desc);
+record PageEntry(string Category, string Path, string TitleEn, string TitleJa, string Desc, string Color);
