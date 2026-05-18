@@ -1,4 +1,11 @@
+using BCnEncoder.Decoder;
+using BCnEncoder.Shared;
+using SixLabors.ImageSharp.Formats.Png;
 using StS2Shared.Services;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+using ISImage  = SixLabors.ImageSharp.Image;
+using ISRgba32 = SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>;
 
 var projectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
 var distDir    = Path.Combine(projectDir, "dist");
@@ -25,6 +32,14 @@ var mechanicsMap = CharacterMechanics.All
 
 var allCardIds   = CardDatabaseService.GetAllCardIds().ToArray();
 var allRelicIds  = CardDatabaseService.GetAllRelicIds().ToArray();
+
+// レリック画像を dist/images/relics/ に変換・コピー
+var toolsRoot      = FindToolsRoot(projectDir);
+var relicImgDstDir = Path.Combine(distDir, "images", "relics");
+Directory.CreateDirectory(relicImgDstDir);
+var relicsWithImg  = toolsRoot is not null
+    ? ConvertRelicImages(toolsRoot, relicImgDstDir, allRelicIds)
+    : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 PageEntry[] pages =
 [
@@ -72,7 +87,7 @@ foreach (var relicId in allRelicIds)
     var outPath = Path.Combine(relicOutDir, $"{relicId}.html");
     var review  = ExtractReview(outPath);
     File.WriteAllText(outPath,
-        BuildRelicPage(relicId, chars, review: review),
+        BuildRelicPage(relicId, chars, relicsWithImg.Contains(relicId), review: review),
         System.Text.Encoding.UTF8);
 }
 
@@ -624,7 +639,7 @@ static string BuildRelicListPage(string[] allRelicIds, CharData[] chars)
         """, extraHead: RELIC_FILTER_CSS, extraFoot: RELIC_FILTER_JS);
 }
 
-static string BuildRelicPage(string relicId, CharData[] chars, string review = "")
+static string BuildRelicPage(string relicId, CharData[] chars, bool hasImage = false, string review = "")
 {
     const string basePath = "../";
     var nameEn  = CardDatabaseService.GetRelicTitle(relicId);
@@ -682,15 +697,22 @@ static string BuildRelicPage(string relicId, CharData[] chars, string review = "
 
     var rarityBadge = rarity != "" ? $"""<span class="badge rarity-{rarity.ToLower()}">{rarity}</span>""" : "";
 
+    var imgHtml = hasImage
+        ? $"""<img src="../images/relics/{relicId.ToLowerInvariant()}.png" class="relic-icon" alt="{nameEn}">"""
+        : "";
+
     var content = $"""
         <div class="card-detail-header" style="border-left:5px solid {accent};background:{lightBg}">
-          <div>
-            <div class="card-breadcrumb">
-              <a href="{basePath}relics.html" class="char-back-link" style="color:{accent}">レリック一覧</a>
+          <div class="relic-header-inner">
+            {imgHtml}
+            <div>
+              <div class="card-breadcrumb">
+                <a href="{basePath}relics.html" class="char-back-link" style="color:{accent}">レリック一覧</a>
+              </div>
+              <h1 class="card-title-en" style="color:{accent}">{nameEn}</h1>
+              {(nameJa != nameEn ? $"""<div class="card-title-ja">{nameJa}</div>""" : "")}
+              {(rarityBadge != "" ? $"""<div class="card-badges">{rarityBadge}</div>""" : "")}
             </div>
-            <h1 class="card-title-en" style="color:{accent}">{nameEn}</h1>
-            {(nameJa != nameEn ? $"""<div class="card-title-ja">{nameJa}</div>""" : "")}
-            {(rarityBadge != "" ? $"""<div class="card-badges">{rarityBadge}</div>""" : "")}
           </div>
         </div>
         {descSection}
@@ -1009,6 +1031,13 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
           flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.15); image-rendering: auto;
         }
 
+        /* ── Relic detail header ── */
+        .relic-header-inner { display: flex; align-items: center; gap: 20px; }
+        .relic-icon {
+          width: 80px; height: 80px; object-fit: contain;
+          border-radius: 6px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        }
+
         /* ── Card detail header ── */
         .card-detail-header {
           border-radius: 10px; padding: 28px 32px; margin-bottom: 24px; overflow: hidden;
@@ -1182,6 +1211,95 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
         </body>
         </html>
         """;
+}
+
+static string? FindToolsRoot(string startDir)
+{
+    var dir = startDir;
+    while (dir != null)
+    {
+        var candidate = Path.Combine(dir, "tools", "extracted");
+        if (Directory.Exists(candidate)) return candidate;
+        dir = Path.GetDirectoryName(dir);
+    }
+    return null;
+}
+
+static HashSet<string> ConvertRelicImages(string toolsRoot, string dstDir, string[] relicIds)
+{
+    var converted  = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    var srcDir     = Path.Combine(toolsRoot, "images", "relics");
+    if (!Directory.Exists(srcDir)) return converted;
+
+    var total = 0;
+    Console.Write("レリック画像を変換中...");
+    foreach (var id in relicIds)
+    {
+        var importPath = Path.Combine(srcDir, id.ToLowerInvariant() + ".png.import");
+        if (!File.Exists(importPath)) continue;
+
+        var ctexRel = ParseCtexPath(importPath);
+        if (ctexRel is null) continue;
+
+        var ctexFull = Path.Combine(toolsRoot, ctexRel.Replace('/', Path.DirectorySeparatorChar));
+        if (!File.Exists(ctexFull)) continue;
+
+        var dstPng = Path.Combine(dstDir, id.ToLowerInvariant() + ".png");
+        if (!File.Exists(dstPng))
+        {
+            try { ConvertCtex(ctexFull, dstPng); total++; }
+            catch { continue; }
+        }
+        else
+        {
+            total++;
+        }
+        converted.Add(id);
+    }
+    Console.WriteLine($" {converted.Count}件 ({total}件変換) -> dist/images/relics/");
+    return converted;
+}
+
+static string? ParseCtexPath(string importPath)
+{
+    var content = File.ReadAllText(importPath);
+    var m = Regex.Match(content, @"^path(?:\.\w+)?=""res://(.+?\.ctex)""",
+        RegexOptions.Multiline);
+    return m.Success ? m.Groups[1].Value : null;
+}
+
+static void ConvertCtex(string srcPath, string outPath)
+{
+    var data = File.ReadAllBytes(srcPath);
+    if (System.Text.Encoding.ASCII.GetString(data, 0, 4) != "GST2")
+        throw new InvalidDataException("Not a GST2 ctex file");
+
+    var width      = (int)BitConverter.ToUInt32(data, 8);
+    var height     = (int)BitConverter.ToUInt32(data, 12);
+    var dataFormat = BitConverter.ToUInt32(data, 36);
+
+    const int Hdr = 52;
+    using var img = dataFormat == 2
+        ? LoadWebP(data, Hdr)
+        : DecodeBc7(data, Hdr, width, height);
+    using var outStream = File.OpenWrite(outPath);
+    img.Save(outStream, new PngEncoder());
+}
+
+static ISRgba32 LoadWebP(byte[] data, int hdr)
+{
+    var size = (int)BitConverter.ToUInt32(data, hdr);
+    using var ms = new MemoryStream(data, hdr + 4, size);
+    return ISImage.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(ms);
+}
+
+static ISRgba32 DecodeBc7(byte[] data, int hdr, int w, int h)
+{
+    var bc7Data = new ReadOnlyMemory<byte>(data, hdr, data.Length - hdr);
+    var decoder = new BcDecoder();
+    var pixels  = decoder.DecodeRaw(bc7Data.ToArray(), w, h, CompressionFormat.Bc7);
+    var bytes   = MemoryMarshal.AsBytes(pixels.AsSpan()).ToArray();
+    return ISImage.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Rgba32>(bytes, w, h);
 }
 
 static string ExtractReview(string filePath)
