@@ -32,7 +32,8 @@ var mechanicsMap = CharacterMechanics.All
 
 var allCardIds   = CardDatabaseService.GetAllCardIds().ToArray();
 var allRelicIds  = CardDatabaseService.GetAllRelicIds().ToArray();
-var allEventIds  = CardDatabaseService.GetAllEventIds().ToArray();
+var allEventIds     = CardDatabaseService.GetAllEventIds().ToArray();
+var allEncounterIds = EncounterDatabaseService.GetAllEncounterIds().ToArray();
 
 // レリック画像を dist/images/relics/ に変換・コピー
 var toolsRoot      = FindToolsRoot(projectDir);
@@ -58,6 +59,8 @@ PageEntry[] pages =
         $"全{allRelicIds.Length}件のレリックを一覧表示。", "#a0600c"),
     new PageEntry("イベント", "events.html", "Event List", "イベント一覧",
         $"全{allEventIds.Length}件のイベントをテキスト・選択肢付きで一覧表示。", "#1a6678"),
+    new PageEntry("エンカウンター", "encounters.html", "Encounter List", "エンカウンター一覧",
+        $"全{allEncounterIds.Length}件のエンカウンターをタイプ別に一覧表示。", "#8b2222"),
 ];
 
 // favicon を assets/ から dist/ にコピー
@@ -69,7 +72,8 @@ File.WriteAllText(Path.Combine(distDir, "index.html"),  BuildIndex(chars),      
 File.WriteAllText(Path.Combine(distDir, "pages.html"),  BuildPageList(pages, chars),            System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "cards.html"),  BuildCardListPage(allCardIds, chars),   System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "relics.html"), BuildRelicListPage(allRelicIds, chars), System.Text.Encoding.UTF8);
-File.WriteAllText(Path.Combine(distDir, "events.html"), BuildEventListPage(allEventIds, chars, eventsWithImg), System.Text.Encoding.UTF8);
+File.WriteAllText(Path.Combine(distDir, "events.html"),     BuildEventListPage(allEventIds, chars, eventsWithImg), System.Text.Encoding.UTF8);
+File.WriteAllText(Path.Combine(distDir, "encounters.html"), BuildEncounterListPage(allEncounterIds, chars),        System.Text.Encoding.UTF8);
 foreach (var ch in chars)
 {
     mechanicsMap.TryGetValue(ch.EnName, out var mecs);
@@ -114,7 +118,19 @@ foreach (var eventId in allEventIds)
         System.Text.Encoding.UTF8);
 }
 
-Console.WriteLine($"Generated {5 + chars.Length + allCardIds.Length + allRelicIds.Length + allEventIds.Length} files -> {distDir}");
+// 個別エンカウンターページ（dist/encounters/{ENCOUNTER_ID}.html）
+var encounterOutDir = Path.Combine(distDir, "encounters");
+Directory.CreateDirectory(encounterOutDir);
+foreach (var encId in allEncounterIds)
+{
+    var outPath = Path.Combine(encounterOutDir, $"{encId}.html");
+    var review  = ExtractReview(outPath);
+    File.WriteAllText(outPath,
+        BuildEncounterPage(encId, chars, review: review),
+        System.Text.Encoding.UTF8);
+}
+
+Console.WriteLine($"Generated {6 + chars.Length + allCardIds.Length + allRelicIds.Length + allEventIds.Length + allEncounterIds.Length} files -> {distDir}");
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -880,6 +896,246 @@ static string BuildEventPage(string eventId, CharData[] chars, bool hasImage = f
     return Layout(nameEn, "events", accent, chars, content, basePath);
 }
 
+static string BuildEncounterListPage(string[] allEncounterIds, CharData[] chars)
+{
+    var rows = string.Concat(allEncounterIds.Select(id =>
+    {
+        var nameEn    = EncounterDatabaseService.GetEncounterName(id);
+        var nameJa    = EncounterDatabaseService.GetEncounterName(id, japanese: true);
+        var type      = EncounterDatabaseService.GetEncounterType(id);
+        var href      = $"encounters/{id}.html";
+        var jaSpan    = nameJa != nameEn ? $"""<span class="card-name-ja">{nameJa}</span>""" : "";
+        var typeCls   = type != "" ? $"enc-{type.ToLower()}" : "enc-other";
+        var typeLabel = type != "" ? type : "Other";
+        var typeBadge = $"""<span class="badge {typeCls}">{typeLabel}</span>""";
+        var dataType  = type != "" ? type.ToLower() : "other";
+        return $"""
+                  <tr data-etype="{dataType}">
+                    <td class="col-name">
+                      <a href="{href}" class="card-name-link">{nameEn}</a>{jaSpan}
+                    </td>
+                    <td class="col-type">{typeBadge}</td>
+                  </tr>
+            """;
+    }));
+
+    const string ENC_FILTER_CSS = """
+        <style>
+        .enc-filter-panel {
+          background: #fff; border-radius: 10px; padding: 16px 20px;
+          margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .enc-filter-section { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .enc-filter-section + .enc-filter-section { margin-top: 10px; padding-top: 10px; border-top: 1px solid #f2f2f2; }
+        .enc-filter-label {
+          font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+          letter-spacing: 0.7px; color: #bbb; min-width: 66px; flex-shrink: 0;
+        }
+        .enc-search-input {
+          flex: 1; min-width: 200px; max-width: 380px; padding: 5px 13px;
+          border: 1.5px solid #ddd; border-radius: 20px; font-size: 13px;
+          color: #333; background: #fff; font-family: inherit;
+          outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .enc-search-input:focus { border-color: #8b2222; box-shadow: 0 0 0 3px rgba(139,34,34,0.12); }
+        .enc-search-input::placeholder { color: #bbb; }
+        .enc-count { font-size: 12px; color: #bbb; margin-left: 8px; }
+        .enc-filter-bar { display: flex; gap: 7px; flex-wrap: wrap; }
+        .efbtn {
+          padding: 5px 13px; border: 1.5px solid transparent; border-radius: 20px;
+          font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+          background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.07); font-family: inherit;
+        }
+        .efbtn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.13); }
+        .efbtn[data-t="all"]    { color: #555;    border-color: #ccc; }
+        .efbtn[data-t="all"].active    { background: #555;    color: #fff; border-color: #555; }
+        .efbtn[data-t="boss"]   { color: #b03030; border-color: #b03030; }
+        .efbtn[data-t="boss"].active   { background: #b03030; color: #fff; }
+        .efbtn[data-t="elite"]  { color: #6c3483; border-color: #6c3483; }
+        .efbtn[data-t="elite"].active  { background: #6c3483; color: #fff; }
+        .efbtn[data-t="normal"] { color: #1a5799; border-color: #1a5799; }
+        .efbtn[data-t="normal"].active { background: #1a5799; color: #fff; }
+        .efbtn[data-t="weak"]   { color: #555;    border-color: #999; }
+        .efbtn[data-t="weak"].active   { background: #666;    color: #fff; border-color: #666; }
+        .efbtn[data-t="event"]  { color: #1a6678; border-color: #1a6678; }
+        .efbtn[data-t="event"].active  { background: #1a6678; color: #fff; }
+        .efbtn[data-t="other"]  { color: #888;    border-color: #bbb; }
+        .efbtn[data-t="other"].active  { background: #888;    color: #fff; border-color: #888; }
+        </style>
+        """;
+
+    const string ENC_FILTER_JS = """
+        <script>
+        (function () {
+          var input   = document.getElementById('enc-search');
+          var countEl = document.getElementById('enc-count');
+          var allRows = document.querySelectorAll('#enc-table tbody tr');
+          function getActiveType() {
+            var b = document.querySelector('.efbtn.active');
+            return b ? b.getAttribute('data-t') : 'all';
+          }
+          function update() {
+            var q = input.value.trim().toLowerCase();
+            var t = getActiveType();
+            var n = 0;
+            allRows.forEach(function (row) {
+              var lnk     = row.querySelector('.card-name-link');
+              var ja      = row.querySelector('.card-name-ja');
+              var rowType = row.getAttribute('data-etype') || '';
+              var nameOk  = q === '' || (lnk && lnk.textContent.toLowerCase().includes(q))
+                                     || (ja  && ja.textContent.toLowerCase().includes(q));
+              var typeOk  = t === 'all' || rowType === t;
+              var ok = nameOk && typeOk;
+              row.style.display = ok ? '' : 'none';
+              if (ok) n++;
+            });
+            countEl.textContent = n + '件';
+          }
+          input.addEventListener('input', update);
+          document.querySelectorAll('.efbtn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              document.querySelectorAll('.efbtn').forEach(function (b) { b.classList.remove('active'); });
+              this.classList.add('active');
+              update();
+            });
+          });
+        })();
+        </script>
+        """;
+
+    var filterPanel = $"""
+        <div class="enc-filter-panel">
+          <div class="enc-filter-section">
+            <span class="enc-filter-label">エンカウンター名</span>
+            <input type="text" id="enc-search" class="enc-search-input" placeholder="名前で検索…" autocomplete="off">
+            <span class="enc-count" id="enc-count">{allEncounterIds.Length}件</span>
+          </div>
+          <div class="enc-filter-section">
+            <span class="enc-filter-label">タイプ</span>
+            <div class="enc-filter-bar">
+              <button class="efbtn active" data-t="all">すべて</button>
+              <button class="efbtn" data-t="boss">Boss</button>
+              <button class="efbtn" data-t="elite">Elite</button>
+              <button class="efbtn" data-t="normal">Normal</button>
+              <button class="efbtn" data-t="weak">Weak</button>
+              <button class="efbtn" data-t="event">Event</button>
+              <button class="efbtn" data-t="other">その他</button>
+            </div>
+          </div>
+        </div>
+        """;
+
+    return Layout("エンカウンター一覧", "encounters", "#8b2222", chars, $"""
+        <div class="page-hero">
+          <h1 class="hero-title">エンカウンター一覧</h1>
+          <p class="hero-sub">全{allEncounterIds.Length}件</p>
+        </div>
+        {filterPanel}
+        <section class="section">
+          <table class="card-table" id="enc-table">
+            <thead>
+              <tr><th>エンカウンター名</th><th>タイプ</th></tr>
+            </thead>
+            <tbody>{rows}</tbody>
+          </table>
+        </section>
+        """, extraHead: ENC_FILTER_CSS, extraFoot: ENC_FILTER_JS);
+}
+
+static string BuildEncounterPage(string encId, CharData[] chars, string review = "")
+{
+    const string basePath = "../";
+
+    var nameEn = EncounterDatabaseService.GetEncounterName(encId);
+    var nameJa = EncounterDatabaseService.GetEncounterName(encId, japanese: true);
+    var type   = EncounterDatabaseService.GetEncounterType(encId);
+
+    var (accent, lightBg) = type switch
+    {
+        "Boss"  => ("#b03030", "#fef8f8"),
+        "Elite" => ("#6c3483", "#f9f4fc"),
+        "Event" => ("#1a6678", "#eef6f8"),
+        "Normal"=> ("#1a5799", "#f0f4fc"),
+        "Weak"  => ("#555555", "#f5f5f5"),
+        _       => ("#888888", "#f8f8f8"),
+    };
+
+    var typeCls   = type != "" ? $"enc-{type.ToLower()}" : "enc-other";
+    var typeLabel = type != "" ? type : "Other";
+    var typeBadge = $"""<span class="badge {typeCls}">{typeLabel}</span>""";
+
+    var lossEn = FormatLoss(EncounterDatabaseService.GetLossText(encId),              nameEn);
+    var lossJa = FormatLoss(EncounterDatabaseService.GetLossText(encId, japanese: true), nameJa, japanese: true);
+
+    var lossSection = lossEn != "" ? $"""
+        <section class="section">
+          <h2 class="section-title">敗北テキスト</h2>
+          <p class="card-desc-en" style="font-style:italic;color:#666">{lossEn}</p>
+          {(lossJa != "" && lossJa != lossEn ? $"""<p class="card-desc-ja" style="font-style:italic">{lossJa}</p>""" : "")}
+        </section>
+        """ : "";
+
+    var rewardEn = DescriptionFormatter.Clean(EncounterDatabaseService.GetCustomRewardDescription(encId));
+    var rewardJa = DescriptionFormatter.Clean(EncounterDatabaseService.GetCustomRewardDescription(encId, japanese: true), japanese: true);
+
+    var rewardSection = rewardEn != "" ? $"""
+        <section class="section">
+          <h2 class="section-title">特別報酬</h2>
+          <p class="card-desc-en">{rewardEn}</p>
+          {(rewardJa != "" && rewardJa != rewardEn ? $"""<p class="card-desc-ja">{rewardJa}</p>""" : "")}
+        </section>
+        """ : "";
+
+    const string REVIEW_GUIDE = """
+
+        <!-- REVIEW_START -->
+        <!--
+          【評価・メモ】
+          このコメントブロック全体を削除し、かわりにHTMLを書いてください。
+          ビルド（dotnet run --project StS2SiteBuilder）後も上書きされません。
+
+          ▼ テンプレート（コピーして使ってください） ▼
+
+          <section class="section">
+            <h2 class="section-title">評価・メモ</h2>
+            <p>ここに感想や評価を書く。</p>
+          </section>
+        -->
+        <!-- REVIEW_END -->
+        """;
+
+    var reviewZone = review == ""
+        ? REVIEW_GUIDE
+        : $"""
+
+        <!-- REVIEW_START -->{review}<!-- REVIEW_END -->
+        """;
+
+    var content = $"""
+        <div class="card-detail-header" style="border-left:5px solid {accent};background:{lightBg}">
+          <div class="card-breadcrumb">
+            <a href="{basePath}encounters.html" class="char-back-link" style="color:{accent}">エンカウンター一覧</a>
+          </div>
+          <h1 class="card-title-en" style="color:{accent}">{nameEn}</h1>
+          {(nameJa != nameEn ? $"""<div class="card-title-ja">{nameJa}</div>""" : "")}
+          <div class="card-badges">{typeBadge}</div>
+        </div>
+        {lossSection}
+        {reviewZone}
+        {rewardSection}
+        """;
+
+    return Layout(nameEn, "encounters", accent, chars, content, basePath);
+}
+
+static string FormatLoss(string raw, string encName, bool japanese = false)
+{
+    if (string.IsNullOrEmpty(raw)) return "";
+    var hero = japanese ? "主人公" : "the hero";
+    var s = raw.Replace("{character}", hero).Replace("{encounter}", encName);
+    return DescriptionFormatter.Clean(s, japanese);
+}
+
 static string BuildRelicPage(string relicId, CharData[] chars, bool hasImage = false, string review = "")
 {
     const string basePath = "../";
@@ -1379,6 +1635,12 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
         .rarity-shop     { background: #fdf0fc;  color: #7d1a7d; }
         .cost-badge      { background: #e8eaed;  color: #333; }
         .flag-badge      { background: #e8eaf0;  color: #445566; }
+        .enc-boss   { background: #fde8e8; color: #b03030; }
+        .enc-elite  { background: #f4ecf7; color: #6c3483; }
+        .enc-normal { background: #dde8f5; color: #1a5799; }
+        .enc-weak   { background: #e8eaed; color: #555; }
+        .enc-event  { background: #eef6f8; color: #1a6678; }
+        .enc-other  { background: #f0f0f0; color: #777; }
         .wiki-link { display: inline-block; margin-top: 12px; font-size: 12.5px; color: #1a5799; }
         .wiki-link:hover { text-decoration: underline; }
 
@@ -1405,9 +1667,12 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
     var relicsActive = activeId == "relics";
     var relicsStyle  = relicsActive ? " style=\"border-left-color:#a0600c\"" : "";
     var relicsClass  = relicsActive ? " active" : "";
-    var eventsActive = activeId == "events";
-    var eventsStyle  = eventsActive ? " style=\"border-left-color:#1a6678\"" : "";
-    var eventsClass  = eventsActive ? " active" : "";
+    var eventsActive     = activeId == "events";
+    var eventsStyle      = eventsActive     ? " style=\"border-left-color:#1a6678\"" : "";
+    var eventsClass      = eventsActive     ? " active" : "";
+    var encountersActive = activeId == "encounters";
+    var encountersStyle  = encountersActive ? " style=\"border-left-color:#8b2222\"" : "";
+    var encountersClass  = encountersActive ? " active" : "";
 
     var navItems = string.Concat(chars.Select(ch => {
         var isActive    = ch.Id == activeId;
@@ -1458,6 +1723,9 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
                 </a>
                 <a href="{basePath}events.html" class="nav-link{eventsClass}"{eventsStyle}>
                   <span class="nav-icon">&#9830;</span>イベント一覧
+                </a>
+                <a href="{basePath}encounters.html" class="nav-link{encountersClass}"{encountersStyle}>
+                  <span class="nav-icon">&#9876;</span>エンカウンター一覧
                 </a>
               </div>
               <div class="nav-section">

@@ -45,4 +45,33 @@ public static class EncounterDatabaseService
         var dict = japanese ? _jpnActs : _engActs;
         return dict.TryGetValue($"{raw}.title", out var v) ? v : ToTitleCase(raw);
     }
+
+    public static IReadOnlyList<string> GetAllEncounterIds() =>
+        _engEncounters.Keys
+            .Where(k => k.EndsWith(".title", StringComparison.OrdinalIgnoreCase))
+            .Select(k => k[..^6])
+            .OrderBy(id => id)
+            .ToList();
+
+    public static string GetLossText(string id, bool japanese = false)
+    {
+        var dict = japanese ? _jpnEncounters : _engEncounters;
+        return dict.TryGetValue($"{id}.loss", out var v) ? v : "";
+    }
+
+    public static string GetCustomRewardDescription(string id, bool japanese = false)
+    {
+        var dict = japanese ? _jpnEncounters : _engEncounters;
+        return dict.TryGetValue($"{id}.customRewardDescription", out var v) ? v : "";
+    }
+
+    public static string GetEncounterType(string id)
+    {
+        if (id.EndsWith("_BOSS",            StringComparison.OrdinalIgnoreCase)) return "Boss";
+        if (id.EndsWith("_ELITE",           StringComparison.OrdinalIgnoreCase)) return "Elite";
+        if (id.EndsWith("_EVENT_ENCOUNTER", StringComparison.OrdinalIgnoreCase)) return "Event";
+        if (id.EndsWith("_NORMAL",          StringComparison.OrdinalIgnoreCase)) return "Normal";
+        if (id.EndsWith("_WEAK",            StringComparison.OrdinalIgnoreCase)) return "Weak";
+        return "";
+    }
 }
