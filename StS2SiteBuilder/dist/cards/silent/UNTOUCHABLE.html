@@ -170,6 +170,16 @@ a { color: inherit; text-decoration: none; }
 .flag-badge      { background: #e8eaf0;  color: #445566; }
 .wiki-link { display: inline-block; margin-top: 12px; font-size: 12.5px; color: #1a5799; }
 .wiki-link:hover { text-decoration: underline; }
+
+/* ── Upgrade tabs ── */
+.tab-bar { display: flex; gap: 6px; margin-bottom: 14px; }
+.tab-btn {
+  padding: 4px 14px; border: 1.5px solid #ddd; border-radius: 16px;
+  font-size: 12px; font-weight: 600; cursor: pointer; background: #fff;
+  color: #999; font-family: inherit; transition: all 0.15s;
+}
+.tab-btn.active { border-color: #4a90d9; color: #1a5799; background: #eef3fc; }
+.tab-panel.hidden { display: none; }
   </style>
   
 </head>
@@ -228,8 +238,18 @@ a { color: inherit; text-decoration: none; }
 </div>
 <section class="section">
   <h2 class="section-title">効果テキスト</h2>
-  <p class="card-desc-en">Gain 6 Block.</p>
-  <p class="card-desc-ja">6ブロックを得る。</p>
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="base">通常</button>
+    <button class="tab-btn" data-tab="upgraded">アップグレード後</button>
+  </div>
+  <div class="tab-panel" data-panel="base">
+    <p class="card-desc-en">Gain 6(8) Block.</p>
+    <p class="card-desc-ja">6(8)ブロックを得る。</p>
+  </div>
+  <div class="tab-panel hidden" data-panel="upgraded">
+    <p class="card-desc-en">Gain 8 Block.</p>
+    <p class="card-desc-ja">8ブロックを得る。</p>
+  </div>
 </section>
 
 <!-- REVIEW_START -->
@@ -263,12 +283,29 @@ a { color: inherit; text-decoration: none; }
 <!-- REVIEW_END -->
 <section class="section">
   <h2 class="section-title">基本値</h2>
-  <table class="stat-table"><tbody><tr><td class="stat-key">Block</td><td class="stat-val">6</td></tr></tbody></table>
+  <table class="stat-table"><tbody><tr><td class="stat-key">Block</td><td class="stat-val">6</td></tr><tr><td class="stat-key">UpgradedBlock</td><td class="stat-val">8</td></tr></tbody></table>
 </section>
 
     </main>
   </div>
   <script src="../../wiki-link.js"></script>
-  
+  <script>
+(function() {
+  document.querySelectorAll('.tab-bar').forEach(function(bar) {
+    bar.querySelectorAll('.tab-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var section = bar.closest('.section');
+        var tab = btn.dataset.tab;
+        bar.querySelectorAll('.tab-btn').forEach(function(b) {
+          b.classList.toggle('active', b === btn);
+        });
+        section.querySelectorAll('.tab-panel').forEach(function(p) {
+          p.classList.toggle('hidden', p.dataset.panel !== tab);
+        });
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>
