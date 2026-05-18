@@ -1,0 +1,580 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>イベント一覧 | StS2 カードリファレンス</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial,
+               'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  background: #f5f7fa; color: #2c2c2c; line-height: 1.6;
+}
+a { color: inherit; text-decoration: none; }
+.layout { display: flex; min-height: 100vh; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 240px; min-width: 240px; background: #fff;
+  border-right: 1px solid #e8e8e8; display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+.sidebar-brand { padding: 18px 20px 16px; background: #1e2128; border-bottom: 1px solid #2c3040; }
+.brand-game  { font-size: 13px; font-weight: 700; color: #f0f0f0; letter-spacing: 0.3px; }
+.brand-label { font-size: 11px; color: #8899aa; margin-top: 3px; }
+.nav-section { padding: 14px 0 6px; }
+.nav-group-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 1px; color: #c0c0c0; padding: 0 20px 8px;
+}
+.nav-link {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 20px; font-size: 13.5px; color: #555;
+  border-left: 3px solid transparent; transition: background 0.1s;
+}
+.nav-link:hover  { background: #f7f8fa; color: #222; }
+.nav-link.active { background: #f3f4f6; color: #111; font-weight: 600; }
+.nav-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.nav-icon { font-size: 15px; line-height: 1; }
+.nav-name-ja { font-size: 11px; color: #aaa; margin-left: auto; }
+.nav-link.active .nav-name-ja { color: #888; }
+
+/* ── Main ── */
+.main { flex: 1; padding: 40px 48px; min-width: 0; }
+
+/* ── Hero ── */
+.page-hero { margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #e8e8e8; }
+.hero-title { font-size: 28px; font-weight: 800; color: #1a1a2e; letter-spacing: -0.5px; }
+.hero-sub   { font-size: 15px; color: #666; margin-top: 4px; }
+.hero-desc  { font-size: 13.5px; color: #999; margin-top: 10px; }
+
+/* ── Character grid ── */
+.char-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px;
+}
+.char-card {
+  display: flex; flex-direction: column; background: #fff;
+  border-radius: 10px; overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08); transition: box-shadow 0.15s, transform 0.15s;
+}
+.char-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.13); transform: translateY(-3px); }
+.char-card-header { padding: 20px 18px 14px; color: #fff; }
+.char-name-en     { font-size: 19px; font-weight: 800; letter-spacing: -0.3px; }
+.char-name-ja     { font-size: 11px; opacity: 0.82; margin-top: 3px; }
+.char-card-body   { padding: 14px 18px; flex: 1; }
+.char-desc        { font-size: 12.5px; color: #666; line-height: 1.65; }
+.char-card-footer {
+  padding: 9px 18px 11px; font-size: 12px; color: #aaa;
+  border-top: 1px solid #f0f0f0; font-weight: 500;
+}
+.char-card:hover .char-card-footer { color: #666; }
+
+/* ── Character page header ── */
+.char-header {
+  border-radius: 10px; padding: 28px 32px; margin-bottom: 24px;
+  display: flex; align-items: center; gap: 28px; overflow: hidden;
+}
+.char-header-body { flex: 1; min-width: 0; }
+.char-title-en  { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
+.char-title-ja  { font-size: 13px; color: #777; margin-top: 5px; }
+.char-desc-full { font-size: 14px; color: #555; margin-top: 14px; max-width: 560px; line-height: 1.75; }
+.char-hero-img  {
+  width: 132px; height: 195px; object-fit: cover; border-radius: 8px;
+  flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.15); image-rendering: auto;
+}
+
+/* ── Relic detail header ── */
+.relic-header-inner { display: flex; align-items: center; gap: 20px; }
+.relic-icon {
+  width: 80px; height: 80px; object-fit: contain;
+  border-radius: 6px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+/* ── Event detail ── */
+.event-image-wrap {
+  margin-bottom: 20px; border-radius: 10px; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.event-image { width: 100%; max-height: 360px; object-fit: cover; display: block; }
+.event-options { display: flex; flex-direction: column; gap: 12px; }
+.event-option {
+  border: 1.5px solid #e8e8e8; border-radius: 8px; padding: 14px 18px;
+  background: #fafafa;
+}
+.event-option-title { font-weight: 700; font-size: 14px; color: #222; }
+.event-option-title-ja { font-size: 11px; color: #999; margin-left: 6px; font-weight: 400; }
+.event-option-desc { font-size: 13px; color: #444; line-height: 1.75; margin-top: 6px; }
+.event-option-desc-ja { font-size: 12px; color: #888; line-height: 1.75; margin-top: 4px; }
+
+/* ── Card detail header ── */
+.card-detail-header {
+  border-radius: 10px; padding: 28px 32px; margin-bottom: 24px; overflow: hidden;
+}
+.card-breadcrumb  { font-size: 12px; margin-bottom: 10px; }
+.char-back-link   { font-weight: 600; }
+.char-back-link:hover { text-decoration: underline; }
+.char-back-ja     { font-weight: 400; opacity: 0.8; }
+.char-back-neutral { color: #888; }
+.card-title-en  { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
+.card-title-ja  { font-size: 13px; color: #777; margin-top: 5px; }
+.card-badges    { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.card-desc-en   { font-size: 14px; color: #333; line-height: 1.75; }
+.card-desc-ja   { font-size: 13px; color: #777; line-height: 1.75; margin-top: 12px; }
+.stat-table     { border-collapse: collapse; }
+.stat-key { font-size: 13px; color: #666; padding: 3px 20px 3px 0; }
+.stat-val { font-size: 13px; font-weight: 600; color: #222; }
+
+/* ── Sections ── */
+.section {
+  background: #fff; border-radius: 10px; padding: 24px 28px;
+  margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.section-title {
+  display: flex; align-items: center;
+  font-size: 14px; font-weight: 700; color: #333;
+  margin-bottom: 16px; padding-bottom: 10px;
+  border-bottom: 1px solid #f0f0f0; letter-spacing: 0.2px;
+}
+.section-dot  { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
+.section-meta { font-size: 12px; font-weight: 400; color: #bbb; margin-left: 8px; }
+.mec-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.mec-tag  {
+  padding: 5px 13px; background: #f5f6f8; border: 1px solid #e4e6ea;
+  border-radius: 20px; font-size: 13px; color: #444;
+}
+.placeholder { font-size: 13.5px; color: #bbb; font-style: italic; }
+
+/* ── Page list ── */
+.section-pending { opacity: 0.55; }
+.pending-badge {
+  display: inline-block; font-size: 10px; font-weight: 600;
+  background: #f0f0f0; color: #aaa; border-radius: 10px;
+  padding: 2px 8px; margin-left: 8px; vertical-align: middle;
+  letter-spacing: 0.5px; font-style: normal;
+}
+
+/* ── Card table ── */
+.card-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.card-table th {
+  text-align: left; font-size: 10.5px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px; color: #bbb;
+  padding: 0 16px 8px 0; border-bottom: 1px solid #f0f0f0;
+}
+.card-table td { padding: 5px 16px 5px 0; border-bottom: 1px solid #f8f8f8; vertical-align: middle; }
+.card-table tr:last-child td { border-bottom: none; }
+.col-name   { min-width: 180px; }
+.col-type   { white-space: nowrap; }
+.col-rarity { white-space: nowrap; }
+.card-name-link { color: #1a5799; }
+.card-name-link:hover { text-decoration: underline; }
+.card-name-ja   { font-size: 11px; color: #bbb; margin-left: 6px; }
+.flag-cell  { display: flex; gap: 4px; flex-wrap: wrap; }
+
+/* ── Badges ── */
+.badge {
+  display: inline-block; padding: 2px 7px;
+  border-radius: 4px; font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.type-attack    { background: #fde8e8; color: #c0392b; }
+.type-skill     { background: #e8f0fc; color: #1a5799; }
+.type-power     { background: #fdf8e8; color: #7d6608; }
+.type-status    { background: #f0f0f0; color: #777; }
+.type-curse     { background: #f4ecf7; color: #6c3483; }
+.type-quest     { background: #e8f8f0; color: #1a7a4a; }
+.rarity-starter  { background: #efefef;  color: #999; }
+.rarity-common   { background: #e8eaed;  color: #555; }
+.rarity-uncommon { background: #dde8f5;  color: #1a5799; }
+.rarity-rare     { background: #fde8e8;  color: #c0392b; }
+.rarity-ancient  { background: #fff0d8;  color: #a0600c; }
+.rarity-event    { background: #e8f8f0;  color: #1a7a4a; }
+.rarity-shop     { background: #fdf0fc;  color: #7d1a7d; }
+.cost-badge      { background: #e8eaed;  color: #333; }
+.flag-badge      { background: #e8eaf0;  color: #445566; }
+.wiki-link { display: inline-block; margin-top: 12px; font-size: 12.5px; color: #1a5799; }
+.wiki-link:hover { text-decoration: underline; }
+
+/* ── Upgrade tabs ── */
+.tab-bar { display: flex; gap: 6px; margin-bottom: 14px; }
+.tab-btn {
+  padding: 4px 14px; border: 1.5px solid #ddd; border-radius: 16px;
+  font-size: 12px; font-weight: 600; cursor: pointer; background: #fff;
+  color: #999; font-family: inherit; transition: all 0.15s;
+}
+.tab-btn.active { border-color: #4a90d9; color: #1a5799; background: #eef3fc; }
+.tab-panel.hidden { display: none; }
+  </style>
+  <style>
+.event-filter-panel {
+  background: #fff; border-radius: 10px; padding: 16px 20px;
+  margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.event-filter-section { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.event-search-input {
+  flex: 1; min-width: 200px; max-width: 400px; padding: 5px 13px;
+  border: 1.5px solid #ddd; border-radius: 20px; font-size: 13px;
+  color: #333; background: #fff; font-family: inherit;
+  outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+}
+.event-search-input:focus { border-color: #1a6678; box-shadow: 0 0 0 3px rgba(26,102,120,0.12); }
+.event-search-input::placeholder { color: #bbb; }
+.event-count { font-size: 12px; color: #bbb; margin-left: 8px; }
+.event-thumb {
+  width: 56px; height: 36px; object-fit: cover; border-radius: 3px;
+  vertical-align: middle; margin-right: 8px; display: inline-block;
+  background: #f0f0f0;
+}
+</style>
+</head>
+<body>
+  <div class="layout">
+    <nav class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-game">Slay the Spire 2</div>
+        <div class="brand-label">カードリファレンス</div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-group-label">ページ</div>
+        <a href="index.html" class="nav-link">
+          <span class="nav-icon">&#8962;</span>トップ
+        </a>
+        <a href="pages.html" class="nav-link">
+          <span class="nav-icon">&#9776;</span>ページ一覧
+        </a>
+        <a href="cards.html" class="nav-link">
+          <span class="nav-icon">&#9670;</span>カード一覧
+        </a>
+        <a href="relics.html" class="nav-link">
+          <span class="nav-icon">&#9671;</span>レリック一覧
+        </a>
+        <a href="events.html" class="nav-link active" style="border-left-color:#1a6678">
+          <span class="nav-icon">&#9830;</span>イベント一覧
+        </a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-group-label">キャラクター</div>
+              <a href="ironclad.html" class="nav-link">
+        <span class="nav-dot" style="background:#c0392b"></span>
+        Ironclad
+        <span class="nav-name-ja">アイアンクラッド</span>
+      </a>      <a href="silent.html" class="nav-link">
+        <span class="nav-dot" style="background:#1a7a4a"></span>
+        Silent
+        <span class="nav-name-ja">サイレント</span>
+      </a>      <a href="defect.html" class="nav-link">
+        <span class="nav-dot" style="background:#1a5799"></span>
+        Defect
+        <span class="nav-name-ja">ディフェクト</span>
+      </a>      <a href="necrobinder.html" class="nav-link">
+        <span class="nav-dot" style="background:#6c3483"></span>
+        Necrobinder
+        <span class="nav-name-ja">ネクロバインダー</span>
+      </a>      <a href="regent.html" class="nav-link">
+        <span class="nav-dot" style="background:#7d6608"></span>
+        Regent
+        <span class="nav-name-ja">リージェント</span>
+      </a>
+      </div>
+    </nav>
+    <main class="main">
+      <div class="page-hero">
+  <h1 class="hero-title">イベント一覧</h1>
+  <p class="hero-sub">全57件</p>
+</div>
+<div class="event-filter-panel">
+  <div class="event-filter-section">
+    <span class="relic-filter-label">イベント名</span>
+    <input type="text" id="event-search" class="event-search-input" placeholder="名前で検索…" autocomplete="off">
+    <span class="event-count" id="event-count">57件</span>
+    <button class="filter-btn" id="event-thumb-toggle" style="margin-left:4px">サムネイル表示</button>
+  </div>
+</div>
+<section class="section">
+  <table class="card-table" id="event-table">
+    <thead>
+      <tr><th>イベント名</th></tr>
+    </thead>
+    <tbody>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/ABYSSAL_BATHS.html" class="card-name-link">Abyssal Baths</a><span class="card-name-ja">深淵の浴場</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/AMALGAMATOR.html" class="card-name-link">Amalgamator</a><span class="card-name-ja">アマルガメーター</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/AROMA_OF_CHAOS.html" class="card-name-link">Aroma of Chaos</a><span class="card-name-ja">混沌の香り</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/BATTLEWORN_DUMMY.html" class="card-name-link">Battleworn Dummy</a><span class="card-name-ja">歴戦の訓練人形</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/BRAIN_LEECH.html" class="card-name-link">Brain Leech</a><span class="card-name-ja">脳ヒル</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/BUGSLAYER.html" class="card-name-link">Bugslayer</a><span class="card-name-ja">虫殺し</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/BYRDONIS_NEST.html" class="card-name-link">Byrdonis Nest</a><span class="card-name-ja">ビャードニスの巣</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/COLORFUL_PHILOSOPHERS.html" class="card-name-link">Colorful Philosophers</a><span class="card-name-ja">色とりどりの哲学者たち</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/COLOSSAL_FLOWER.html" class="card-name-link">Colossal Flower</a><span class="card-name-ja">巨大な花</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/CRYSTAL_SPHERE.html" class="card-name-link">Crystal Sphere</a><span class="card-name-ja">水晶玉</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/DENSE_VEGETATION.html" class="card-name-link">Dense Vegetation</a><span class="card-name-ja">密林</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/DOLL_ROOM.html" class="card-name-link">Doll Room</a><span class="card-name-ja">ドール・ルーム</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/DOORS_OF_LIGHT_AND_DARK.html" class="card-name-link">Doors of Light and Dark</a><span class="card-name-ja">光と闇の扉</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/DROWNING_BEACON.html" class="card-name-link">Drowning Beacon</a><span class="card-name-ja">沈みゆく灯台</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/ENDLESS_CONVEYOR.html" class="card-name-link">Endless Conveyor</a><span class="card-name-ja">無限コンベア</span>
+        </td>
+      </tr>      <tr data-has-img="false">
+        <td class="col-name">
+          <a href="events/FAKE_MERCHANT.html" class="card-name-link">The Merchant???</a><span class="card-name-ja">商人（？ ）</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/FIELD_OF_MAN_SIZED_HOLES.html" class="card-name-link">Field of Man-Sized Holes</a><span class="card-name-ja">人型の穴</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/GRAVE_OF_THE_FORGOTTEN.html" class="card-name-link">Grave of the Forgotten</a><span class="card-name-ja">忘れられた者の墓</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/HUNGRY_FOR_MUSHROOMS.html" class="card-name-link">Hungry for Mushrooms</a><span class="card-name-ja">キノコに夢中</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/INFESTED_AUTOMATON.html" class="card-name-link">Infested Automaton</a><span class="card-name-ja">寄生されたオートマトン</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/JUNGLE_MAZE_ADVENTURE.html" class="card-name-link">Jungle Maze Adventure</a><span class="card-name-ja">ジャングル大迷宮のクエスト</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/LOST_WISP.html" class="card-name-link">The Lost Wisp</a><span class="card-name-ja">迷子のウィスプ</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/LUMINOUS_CHOIR.html" class="card-name-link">Luminous Choir</a><span class="card-name-ja">輝く合唱団</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/MORPHIC_GROVE.html" class="card-name-link">Morphic Grove</a><span class="card-name-ja">モーフィックの木立</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/POTION_COURIER.html" class="card-name-link">Potion Courier</a><span class="card-name-ja">ポーションの運び屋</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/PUNCH_OFF.html" class="card-name-link">Punch Off</a><span class="card-name-ja">パンチ対決</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/RANWID_THE_ELDER.html" class="card-name-link">Ranwid the Elder</a><span class="card-name-ja">長老、ランウィッド</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/REFLECTIONS.html" class="card-name-link">Reflections snoitcelfeR</a><span class="card-name-ja">鏡の反射　射反の鏡</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/RELIC_TRADER.html" class="card-name-link">Relic Trader</a><span class="card-name-ja">レリック商人</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/ROOM_FULL_OF_CHEESE.html" class="card-name-link">Room Full of Cheese</a><span class="card-name-ja">チーズまみれの部屋</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/ROUND_TEA_PARTY.html" class="card-name-link">The Round Tea Party</a><span class="card-name-ja">円卓のティーパーティー</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/SAPPHIRE_SEED.html" class="card-name-link">Sapphire Seed</a><span class="card-name-ja">サファイアの種</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/SELF_HELP_BOOK.html" class="card-name-link">Self-Help Book</a><span class="card-name-ja">自己啓発本</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/SLIPPERY_BRIDGE.html" class="card-name-link">Slippery Bridge</a><span class="card-name-ja">滑りやすい橋</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/SPIRALING_WHIRLPOOL.html" class="card-name-link">Spiraling Whirlpool</a><span class="card-name-ja">らせんの渦巻き</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/SPIRIT_GRAFTER.html" class="card-name-link">Spirit Grafter</a><span class="card-name-ja">スピリット・グラフター</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/STONE_OF_ALL_TIME.html" class="card-name-link">Stone of All Time</a><span class="card-name-ja">悠久の石</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/SUNKEN_STATUE.html" class="card-name-link">The Sunken Statue</a><span class="card-name-ja">沈んだ像</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/SUNKEN_TREASURY.html" class="card-name-link">Sunken Treasury</a><span class="card-name-ja">水没した宝物庫</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/SYMBIOTE.html" class="card-name-link">Symbiote</a><span class="card-name-ja">シンビオート</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/TABLET_OF_TRUTH.html" class="card-name-link">Tablet of Truth</a><span class="card-name-ja">真実の石板</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/TEA_MASTER.html" class="card-name-link">Tea Master</a><span class="card-name-ja">茶人</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/THE_FUTURE_OF_POTIONS.html" class="card-name-link">The Future of Potions?</a><span class="card-name-ja">未来のポーション？</span>
+        </td>
+      </tr>      <tr data-has-img="false">
+        <td class="col-name">
+          <a href="events/THE_LANTERN_KEY.html" class="card-name-link">The Lantern Key</a><span class="card-name-ja">ランタンの鍵</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/THE_LEGENDS_WERE_TRUE.html" class="card-name-link">The Legends Were True</a><span class="card-name-ja">伝説は本当だった</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/THIS_OR_THAT.html" class="card-name-link">This or That?</a><span class="card-name-ja">こっちか、そっちか？</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/TINKER_TIME.html" class="card-name-link">Tinker Time</a><span class="card-name-ja">発明の時間だ</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/TRASH_HEAP.html" class="card-name-link">Trash Heap</a><span class="card-name-ja">ガラクタの山</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/TRIAL.html" class="card-name-link">The Trial</a><span class="card-name-ja">裁判</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/UNREST_SITE.html" class="card-name-link">Unrest Site</a><span class="card-name-ja">休まらない場所</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/WAR_HISTORIAN_REPY.html" class="card-name-link">War Historian, Repy</a><span class="card-name-ja">戦史家、レピー</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/WATERLOGGED_SCRIPTORIUM.html" class="card-name-link">Waterlogged Scriptorium</a><span class="card-name-ja">水浸しの写字室</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/WELCOME_TO_WONGOS.html" class="card-name-link">Welcome to Wongo's</a><span class="card-name-ja">ウォンゴズへようこそ</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/WELLSPRING.html" class="card-name-link">Wellspring</a><span class="card-name-ja">癒やしの泉</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/WHISPERING_HOLLOW.html" class="card-name-link">Whispering Hollow</a><span class="card-name-ja">囁きの窪地</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/WOOD_CARVINGS.html" class="card-name-link">Wood Carvings</a><span class="card-name-ja">木彫り</span>
+        </td>
+      </tr>      <tr data-has-img="true">
+        <td class="col-name">
+          <a href="events/ZEN_WEAVER.html" class="card-name-link">Zen Weaver</a><span class="card-name-ja">禅蜘蛛</span>
+        </td>
+      </tr></tbody>
+  </table>
+</section>
+    </main>
+  </div>
+  <script src="wiki-link.js"></script>
+  <script>
+(function () {
+  var input   = document.getElementById('event-search');
+  var countEl = document.getElementById('event-count');
+  var allRows = document.querySelectorAll('#event-table tbody tr');
+  function update() {
+    var q = input.value.trim().toLowerCase();
+    var n = 0;
+    allRows.forEach(function (row) {
+      var lnk = row.querySelector('.card-name-link');
+      var ja  = row.querySelector('.card-name-ja');
+      var ok = q === '' || (lnk && lnk.textContent.toLowerCase().includes(q))
+                        || (ja  && ja.textContent.toLowerCase().includes(q));
+      row.style.display = ok ? '' : 'none';
+      if (ok) n++;
+    });
+    countEl.textContent = n + '件';
+  }
+  input.addEventListener('input', update);
+
+  var BASE = 'images/events/';
+  var on = false;
+  document.getElementById('event-thumb-toggle').addEventListener('click', function () {
+    on = !on;
+    this.classList.toggle('active', on);
+    allRows.forEach(function (row) {
+      if (row.getAttribute('data-has-img') !== 'true') return;
+      var cell = row.querySelector('.col-name');
+      if (!cell) return;
+      if (on) {
+        if (!cell.querySelector('.event-thumb')) {
+          var lnk = cell.querySelector('.card-name-link');
+          if (!lnk) return;
+          var id = lnk.getAttribute('href').replace('events/', '').replace('.html', '').toLowerCase();
+          var img = document.createElement('img');
+          img.src = BASE + id + '.png'; img.className = 'event-thumb';
+          img.loading = 'lazy'; img.alt = '';
+          cell.insertBefore(img, cell.firstChild);
+        }
+      } else {
+        var e = cell.querySelector('.event-thumb');
+        if (e) e.remove();
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

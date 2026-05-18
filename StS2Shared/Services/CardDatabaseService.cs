@@ -125,7 +125,9 @@ public static class CardDatabaseService
         IReadOnlyDictionary<string, string> EngCards,
         IReadOnlyDictionary<string, string> JpnCards,
         IReadOnlyDictionary<string, string> EngRelics,
-        IReadOnlyDictionary<string, string> JpnRelics);
+        IReadOnlyDictionary<string, string> JpnRelics,
+        IReadOnlyDictionary<string, string> EngEvents,
+        IReadOnlyDictionary<string, string> JpnEvents);
 
     static readonly LocData _loc = LoadLoc();
     static readonly HashSet<string> _blockGivers = ComputeBlockGivers();
@@ -383,7 +385,9 @@ public static class CardDatabaseService
         LoadLocJson("eng.cards"),
         LoadLocJson("jpn.cards"),
         LoadLocJson("eng.relics"),
-        LoadLocJson("jpn.relics"));
+        LoadLocJson("jpn.relics"),
+        LoadLocJson("eng.events"),
+        LoadLocJson("jpn.events"));
 
     static IReadOnlyDictionary<string, string> LoadLocJson(string suffix)
     {
@@ -502,6 +506,60 @@ public static class CardDatabaseService
         return DescriptionFormatter.CleanWithAmount(desc, amount, japanese);
     }
 
+    // ---- event localization ----
+
+    static readonly HashSet<string> _excludedEvents = new(StringComparer.OrdinalIgnoreCase)
+        { "DEPRECATED_EVENT", "ERROR", "MOCK_EVENT_MODEL", "PROCEED" };
+
+    public static IEnumerable<string> GetAllEventIds()
+    {
+        const string titleSuffix = ".title";
+        return _loc.EngEvents.Keys
+            .Where(k => k.EndsWith(titleSuffix, StringComparison.Ordinal))
+            .Select(k => k[..^titleSuffix.Length])
+            .Where(id => !id.Contains('.') && !_excludedEvents.Contains(id))
+            .OrderBy(id => id, StringComparer.OrdinalIgnoreCase);
+    }
+
+    public static string GetEventTitle(string id, bool japanese = false)
+    {
+        var loc = japanese ? _loc.JpnEvents : _loc.EngEvents;
+        var key = id + ".title";
+        if (loc.TryGetValue(key, out var title) && !string.IsNullOrWhiteSpace(title))
+            return title;
+        return ToTitleCase(id.Replace('_', ' '));
+    }
+
+    public static (string En, string Ja) GetEventDescription(string id)
+    {
+        var key = $"{id}.pages.INITIAL.description";
+        var en  = _loc.EngEvents.TryGetValue(key, out var ev) ? ev : "";
+        var ja  = _loc.JpnEvents.TryGetValue(key, out var jv) ? jv : en;
+        return (en, ja);
+    }
+
+    public static IReadOnlyList<EventOption> GetEventOptions(string id)
+    {
+        var prefix = $"{id}.pages.INITIAL.options.";
+        var optIds = _loc.EngEvents.Keys
+            .Where(k => k.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                     && k.EndsWith(".title", StringComparison.Ordinal))
+            .Select(k => k[prefix.Length..^".title".Length])
+            .OrderBy(o => o, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return optIds.Select(optId =>
+        {
+            var titleKey = $"{prefix}{optId}.title";
+            var descKey  = $"{prefix}{optId}.description";
+            var titleEn  = _loc.EngEvents.TryGetValue(titleKey, out var te) ? te : "";
+            var titleJa  = _loc.JpnEvents.TryGetValue(titleKey, out var tj) ? tj : titleEn;
+            var descEn   = _loc.EngEvents.TryGetValue(descKey,  out var de) ? de : "";
+            var descJa   = _loc.JpnEvents.TryGetValue(descKey,  out var dj) ? dj : descEn;
+            return new EventOption(titleEn, titleJa, descEn, descJa);
+        }).ToList();
+    }
+
     public static (string En, string Ja) GetDescription(string id)
     {
         bool isRelic = id.StartsWith("RELIC.", StringComparison.OrdinalIgnoreCase);
@@ -525,3 +583,5 @@ public static class CardDatabaseService
         return (enClean, DescriptionFormatter.Clean(ja, japanese: true));
     }
 }
+
+public record EventOption(string TitleEn, string TitleJa, string DescEn, string DescJa);

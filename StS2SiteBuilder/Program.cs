@@ -32,13 +32,21 @@ var mechanicsMap = CharacterMechanics.All
 
 var allCardIds   = CardDatabaseService.GetAllCardIds().ToArray();
 var allRelicIds  = CardDatabaseService.GetAllRelicIds().ToArray();
+var allEventIds  = CardDatabaseService.GetAllEventIds().ToArray();
 
 // レリック画像を dist/images/relics/ に変換・コピー
 var toolsRoot      = FindToolsRoot(projectDir);
 var relicImgDstDir = Path.Combine(distDir, "images", "relics");
 Directory.CreateDirectory(relicImgDstDir);
 var relicsWithImg  = toolsRoot is not null
-    ? ConvertRelicImages(toolsRoot, relicImgDstDir, allRelicIds)
+    ? ConvertImages(toolsRoot, "relics", relicImgDstDir, allRelicIds, "レリック")
+    : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+// イベント画像を dist/images/events/ に変換・コピー
+var eventImgDstDir = Path.Combine(distDir, "images", "events");
+Directory.CreateDirectory(eventImgDstDir);
+var eventsWithImg  = toolsRoot is not null
+    ? ConvertImages(toolsRoot, "events", eventImgDstDir, allEventIds, "イベント")
     : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 PageEntry[] pages =
@@ -48,6 +56,8 @@ PageEntry[] pages =
         "全カードをタイプ・レアリティ・フラグ付きで一覧表示。", "#2c3e50"),
     new PageEntry("レリック", "relics.html", "Relic List", "レリック一覧",
         $"全{allRelicIds.Length}件のレリックを一覧表示。", "#a0600c"),
+    new PageEntry("イベント", "events.html", "Event List", "イベント一覧",
+        $"全{allEventIds.Length}件のイベントをテキスト・選択肢付きで一覧表示。", "#1a6678"),
 ];
 
 // favicon を assets/ から dist/ にコピー
@@ -55,10 +65,11 @@ var faviconSrc = Path.Combine(projectDir, "assets", "favicon.png");
 var faviconDst = Path.Combine(distDir, "favicon.png");
 if (File.Exists(faviconSrc)) File.Copy(faviconSrc, faviconDst, overwrite: true);
 
-File.WriteAllText(Path.Combine(distDir, "index.html"),  BuildIndex(chars),                    System.Text.Encoding.UTF8);
-File.WriteAllText(Path.Combine(distDir, "pages.html"),  BuildPageList(pages, chars),          System.Text.Encoding.UTF8);
-File.WriteAllText(Path.Combine(distDir, "cards.html"),  BuildCardListPage(allCardIds, chars), System.Text.Encoding.UTF8);
+File.WriteAllText(Path.Combine(distDir, "index.html"),  BuildIndex(chars),                      System.Text.Encoding.UTF8);
+File.WriteAllText(Path.Combine(distDir, "pages.html"),  BuildPageList(pages, chars),            System.Text.Encoding.UTF8);
+File.WriteAllText(Path.Combine(distDir, "cards.html"),  BuildCardListPage(allCardIds, chars),   System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "relics.html"), BuildRelicListPage(allRelicIds, chars), System.Text.Encoding.UTF8);
+File.WriteAllText(Path.Combine(distDir, "events.html"), BuildEventListPage(allEventIds, chars, eventsWithImg), System.Text.Encoding.UTF8);
 foreach (var ch in chars)
 {
     mechanicsMap.TryGetValue(ch.EnName, out var mecs);
@@ -91,7 +102,19 @@ foreach (var relicId in allRelicIds)
         System.Text.Encoding.UTF8);
 }
 
-Console.WriteLine($"Generated {4 + chars.Length + allCardIds.Length + allRelicIds.Length} files -> {distDir}");
+// 個別イベントページ（dist/events/{EVENT_ID}.html）
+var eventOutDir = Path.Combine(distDir, "events");
+Directory.CreateDirectory(eventOutDir);
+foreach (var eventId in allEventIds)
+{
+    var outPath = Path.Combine(eventOutDir, $"{eventId}.html");
+    var review  = ExtractReview(outPath);
+    File.WriteAllText(outPath,
+        BuildEventPage(eventId, chars, eventsWithImg.Contains(eventId), review: review),
+        System.Text.Encoding.UTF8);
+}
+
+Console.WriteLine($"Generated {5 + chars.Length + allCardIds.Length + allRelicIds.Length + allEventIds.Length} files -> {distDir}");
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -639,6 +662,224 @@ static string BuildRelicListPage(string[] allRelicIds, CharData[] chars)
         """, extraHead: RELIC_FILTER_CSS, extraFoot: RELIC_FILTER_JS);
 }
 
+static string BuildEventListPage(string[] allEventIds, CharData[] chars, HashSet<string> eventsWithImg)
+{
+    var rows = string.Concat(allEventIds.Select(id =>
+    {
+        var nameEn = CardDatabaseService.GetEventTitle(id);
+        var nameJa = CardDatabaseService.GetEventTitle(id, japanese: true);
+        var href   = $"events/{id}.html";
+        var jaSpan = nameJa != nameEn ? $"""<span class="card-name-ja">{nameJa}</span>""" : "";
+        var hasImg = eventsWithImg.Contains(id) ? "true" : "false";
+        return $"""
+                  <tr data-has-img="{hasImg}">
+                    <td class="col-name">
+                      <a href="{href}" class="card-name-link">{nameEn}</a>{jaSpan}
+                    </td>
+                  </tr>
+            """;
+    }));
+
+    const string EVENT_FILTER_CSS = """
+        <style>
+        .event-filter-panel {
+          background: #fff; border-radius: 10px; padding: 16px 20px;
+          margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .event-filter-section { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .event-search-input {
+          flex: 1; min-width: 200px; max-width: 400px; padding: 5px 13px;
+          border: 1.5px solid #ddd; border-radius: 20px; font-size: 13px;
+          color: #333; background: #fff; font-family: inherit;
+          outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .event-search-input:focus { border-color: #1a6678; box-shadow: 0 0 0 3px rgba(26,102,120,0.12); }
+        .event-search-input::placeholder { color: #bbb; }
+        .event-count { font-size: 12px; color: #bbb; margin-left: 8px; }
+        .event-thumb {
+          width: 56px; height: 36px; object-fit: cover; border-radius: 3px;
+          vertical-align: middle; margin-right: 8px; display: inline-block;
+          background: #f0f0f0;
+        }
+        </style>
+        """;
+
+    const string EVENT_FILTER_JS = """
+        <script>
+        (function () {
+          var input   = document.getElementById('event-search');
+          var countEl = document.getElementById('event-count');
+          var allRows = document.querySelectorAll('#event-table tbody tr');
+          function update() {
+            var q = input.value.trim().toLowerCase();
+            var n = 0;
+            allRows.forEach(function (row) {
+              var lnk = row.querySelector('.card-name-link');
+              var ja  = row.querySelector('.card-name-ja');
+              var ok = q === '' || (lnk && lnk.textContent.toLowerCase().includes(q))
+                                || (ja  && ja.textContent.toLowerCase().includes(q));
+              row.style.display = ok ? '' : 'none';
+              if (ok) n++;
+            });
+            countEl.textContent = n + '件';
+          }
+          input.addEventListener('input', update);
+
+          var BASE = 'images/events/';
+          var on = false;
+          document.getElementById('event-thumb-toggle').addEventListener('click', function () {
+            on = !on;
+            this.classList.toggle('active', on);
+            allRows.forEach(function (row) {
+              if (row.getAttribute('data-has-img') !== 'true') return;
+              var cell = row.querySelector('.col-name');
+              if (!cell) return;
+              if (on) {
+                if (!cell.querySelector('.event-thumb')) {
+                  var lnk = cell.querySelector('.card-name-link');
+                  if (!lnk) return;
+                  var id = lnk.getAttribute('href').replace('events/', '').replace('.html', '').toLowerCase();
+                  var img = document.createElement('img');
+                  img.src = BASE + id + '.png'; img.className = 'event-thumb';
+                  img.loading = 'lazy'; img.alt = '';
+                  cell.insertBefore(img, cell.firstChild);
+                }
+              } else {
+                var e = cell.querySelector('.event-thumb');
+                if (e) e.remove();
+              }
+            });
+          });
+        })();
+        </script>
+        """;
+
+    var filterPanel = $"""
+        <div class="event-filter-panel">
+          <div class="event-filter-section">
+            <span class="relic-filter-label">イベント名</span>
+            <input type="text" id="event-search" class="event-search-input" placeholder="名前で検索…" autocomplete="off">
+            <span class="event-count" id="event-count">{allEventIds.Length}件</span>
+            <button class="filter-btn" id="event-thumb-toggle" style="margin-left:4px">サムネイル表示</button>
+          </div>
+        </div>
+        """;
+
+    return Layout("イベント一覧", "events", "#1a6678", chars, $"""
+        <div class="page-hero">
+          <h1 class="hero-title">イベント一覧</h1>
+          <p class="hero-sub">全{allEventIds.Length}件</p>
+        </div>
+        {filterPanel}
+        <section class="section">
+          <table class="card-table" id="event-table">
+            <thead>
+              <tr><th>イベント名</th></tr>
+            </thead>
+            <tbody>{rows}</tbody>
+          </table>
+        </section>
+        """, extraHead: EVENT_FILTER_CSS, extraFoot: EVENT_FILTER_JS);
+}
+
+static string BuildEventPage(string eventId, CharData[] chars, bool hasImage = false, string review = "")
+{
+    const string basePath = "../";
+    const string accent   = "#1a6678";
+    const string lightBg  = "#eef6f8";
+
+    var nameEn = CardDatabaseService.GetEventTitle(eventId);
+    var nameJa = CardDatabaseService.GetEventTitle(eventId, japanese: true);
+    var (rawDescEn, rawDescJa) = CardDatabaseService.GetEventDescription(eventId);
+    var descEn = DescriptionFormatter.Clean(rawDescEn).Replace("\n", "<br>");
+    var descJa = DescriptionFormatter.Clean(rawDescJa, japanese: true).Replace("\n", "<br>");
+    var options = CardDatabaseService.GetEventOptions(eventId);
+
+    var imgSection = hasImage ? $"""
+        <div class="event-image-wrap">
+          <img src="../images/events/{eventId.ToLowerInvariant()}.png" class="event-image" alt="{nameEn}">
+        </div>
+        """ : "";
+
+    var descSection = descEn != "" ? $"""
+        <section class="section">
+          <h2 class="section-title">イベントテキスト</h2>
+          <p class="card-desc-en">{descEn}</p>
+          {(descJa != "" && descJa != descEn ? $"""<p class="card-desc-ja">{descJa}</p>""" : "")}
+        </section>
+        """ : "";
+
+    var optionCards = string.Concat(options
+        .Where(o => o.TitleEn != "")
+        .Select(o =>
+        {
+            var titleJaPart = o.TitleJa != "" && o.TitleJa != o.TitleEn
+                ? $"""<span class="event-option-title-ja">{o.TitleJa}</span>"""
+                : "";
+            var descEnClean = DescriptionFormatter.Clean(o.DescEn).Replace("\n", "<br>");
+            var descJaClean = DescriptionFormatter.Clean(o.DescJa, japanese: true).Replace("\n", "<br>");
+            var descEnPart  = descEnClean != "" ? $"""<div class="event-option-desc">{descEnClean}</div>""" : "";
+            var descJaPart  = descJaClean != "" && descJaClean != descEnClean
+                ? $"""<div class="event-option-desc-ja">{descJaClean}</div>"""
+                : "";
+            return $"""
+                      <div class="event-option">
+                        <div class="event-option-title">{o.TitleEn}{titleJaPart}</div>
+                        {descEnPart}
+                        {descJaPart}
+                      </div>
+                """;
+        }));
+
+    var optionsSection = optionCards != "" ? $"""
+        <section class="section">
+          <h2 class="section-title">選択肢</h2>
+          <div class="event-options">{optionCards}</div>
+        </section>
+        """ : "";
+
+    const string REVIEW_GUIDE = """
+
+        <!-- REVIEW_START -->
+        <!--
+          【評価・メモ】
+          このコメントブロック全体を削除し、かわりにHTMLを書いてください。
+          ビルド（dotnet run --project StS2SiteBuilder）後も上書きされません。
+
+          ▼ テンプレート（コピーして使ってください） ▼
+
+          <section class="section">
+            <h2 class="section-title">評価・メモ</h2>
+            <p>ここに感想や評価を書く。</p>
+          </section>
+        -->
+        <!-- REVIEW_END -->
+        """;
+
+    var reviewZone = review == ""
+        ? REVIEW_GUIDE
+        : $"""
+
+        <!-- REVIEW_START -->{review}<!-- REVIEW_END -->
+        """;
+
+    var content = $"""
+        <div class="card-detail-header" style="border-left:5px solid {accent};background:{lightBg}">
+          <div class="card-breadcrumb">
+            <a href="{basePath}events.html" class="char-back-link" style="color:{accent}">イベント一覧</a>
+          </div>
+          <h1 class="card-title-en" style="color:{accent}">{nameEn}</h1>
+          {(nameJa != nameEn ? $"""<div class="card-title-ja">{nameJa}</div>""" : "")}
+        </div>
+        {imgSection}
+        {descSection}
+        {reviewZone}
+        {optionsSection}
+        """;
+
+    return Layout(nameEn, "events", accent, chars, content, basePath);
+}
+
 static string BuildRelicPage(string relicId, CharData[] chars, bool hasImage = false, string review = "")
 {
     const string basePath = "../";
@@ -1038,6 +1279,22 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
           border-radius: 6px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
         }
 
+        /* ── Event detail ── */
+        .event-image-wrap {
+          margin-bottom: 20px; border-radius: 10px; overflow: hidden;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .event-image { width: 100%; max-height: 360px; object-fit: cover; display: block; }
+        .event-options { display: flex; flex-direction: column; gap: 12px; }
+        .event-option {
+          border: 1.5px solid #e8e8e8; border-radius: 8px; padding: 14px 18px;
+          background: #fafafa;
+        }
+        .event-option-title { font-weight: 700; font-size: 14px; color: #222; }
+        .event-option-title-ja { font-size: 11px; color: #999; margin-left: 6px; font-weight: 400; }
+        .event-option-desc { font-size: 13px; color: #444; line-height: 1.75; margin-top: 6px; }
+        .event-option-desc-ja { font-size: 12px; color: #888; line-height: 1.75; margin-top: 4px; }
+
         /* ── Card detail header ── */
         .card-detail-header {
           border-radius: 10px; padding: 28px 32px; margin-bottom: 24px; overflow: hidden;
@@ -1148,6 +1405,9 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
     var relicsActive = activeId == "relics";
     var relicsStyle  = relicsActive ? " style=\"border-left-color:#a0600c\"" : "";
     var relicsClass  = relicsActive ? " active" : "";
+    var eventsActive = activeId == "events";
+    var eventsStyle  = eventsActive ? " style=\"border-left-color:#1a6678\"" : "";
+    var eventsClass  = eventsActive ? " active" : "";
 
     var navItems = string.Concat(chars.Select(ch => {
         var isActive    = ch.Id == activeId;
@@ -1196,6 +1456,9 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
                 <a href="{basePath}relics.html" class="nav-link{relicsClass}"{relicsStyle}>
                   <span class="nav-icon">&#9671;</span>レリック一覧
                 </a>
+                <a href="{basePath}events.html" class="nav-link{eventsClass}"{eventsStyle}>
+                  <span class="nav-icon">&#9830;</span>イベント一覧
+                </a>
               </div>
               <div class="nav-section">
                 <div class="nav-group-label">キャラクター</div>
@@ -1225,15 +1488,15 @@ static string? FindToolsRoot(string startDir)
     return null;
 }
 
-static HashSet<string> ConvertRelicImages(string toolsRoot, string dstDir, string[] relicIds)
+static HashSet<string> ConvertImages(string toolsRoot, string imgSubdir, string dstDir, string[] ids, string label)
 {
-    var converted  = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-    var srcDir     = Path.Combine(toolsRoot, "images", "relics");
+    var converted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    var srcDir    = Path.Combine(toolsRoot, "images", imgSubdir);
     if (!Directory.Exists(srcDir)) return converted;
 
     var total = 0;
-    Console.Write("レリック画像を変換中...");
-    foreach (var id in relicIds)
+    Console.Write($"{label}画像を変換中...");
+    foreach (var id in ids)
     {
         var importPath = Path.Combine(srcDir, id.ToLowerInvariant() + ".png.import");
         if (!File.Exists(importPath)) continue;
@@ -1256,7 +1519,7 @@ static HashSet<string> ConvertRelicImages(string toolsRoot, string dstDir, strin
         }
         converted.Add(id);
     }
-    Console.WriteLine($" {converted.Count}件 ({total}件変換) -> dist/images/relics/");
+    Console.WriteLine($" {converted.Count}件 ({total}件変換) -> dist/images/{imgSubdir}/");
     return converted;
 }
 

@@ -20,6 +20,8 @@
     <EmbeddedResource Include="..\tools\extracted\localization\jpn\encounters.json" LogicalName="StS2Shared.localization.jpn.encounters.json" />
     <EmbeddedResource Include="..\tools\extracted\localization\eng\acts.json" LogicalName="StS2Shared.localization.eng.acts.json" />
     <EmbeddedResource Include="..\tools\extracted\localization\jpn\acts.json" LogicalName="StS2Shared.localization.jpn.acts.json" />
+    <EmbeddedResource Include="..\tools\extracted\localization\eng\events.json" LogicalName="StS2Shared.localization.eng.events.json" />
+    <EmbeddedResource Include="..\tools\extracted\localization\jpn\events.json" LogicalName="StS2Shared.localization.jpn.events.json" />
   </ItemGroup>
 
 </Project>
