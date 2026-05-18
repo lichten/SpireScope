@@ -14,14 +14,14 @@ public static class DescriptionFormatter
     public static string Clean(string raw, bool japanese = false) => Resolve(raw, null, japanese);
 
     // card_stats.json の値を渡すと実際の数値で置換する（案A）
-    public static string Resolve(string raw, IReadOnlyDictionary<string, int>? stats, bool japanese = false)
+    public static string Resolve(string raw, IReadOnlyDictionary<string, int>? stats, bool japanese = false, bool upgraded = false)
     {
         if (string.IsNullOrEmpty(raw)) return raw;
         raw = StripInCombat(raw);
         var s = TagRegex.Replace(raw, "");
         s = TemplateRegex.Replace(s, m =>
         {
-            var r = ResolveTemplate(m.Groups[1].Value, stats, japanese);
+            var r = ResolveTemplate(m.Groups[1].Value, stats, japanese, upgraded);
             if (IsEnergyWord(r, japanese))
             {
                 if (m.Index > 0 && s[m.Index - 1] != ' ') r = " " + r;
@@ -58,7 +58,7 @@ public static class DescriptionFormatter
         return s[..start] + StripInCombat(s[pos..]);
     }
 
-    static string ResolveTemplate(string content, IReadOnlyDictionary<string, int>? stats, bool japanese)
+    static string ResolveTemplate(string content, IReadOnlyDictionary<string, int>? stats, bool japanese, bool upgraded = false)
     {
         int colonIdx = content.IndexOf(':');
         var varName  = colonIdx >= 0 ? content[..colonIdx] : content;
@@ -67,11 +67,12 @@ public static class DescriptionFormatter
         // {InCombat:...} — 除去済みのはずだが念のため
         if (varName == "InCombat") return "";
 
-        // {IfUpgraded:show:UpgradedText|BaseText} → BaseText
+        // {IfUpgraded:show:UpgradedText|BaseText}
         if (varName == "IfUpgraded" && rest.StartsWith("show:", StringComparison.Ordinal))
         {
             var afterShow = rest[5..];
             int pipe = afterShow.IndexOf('|');
+            if (upgraded) return pipe >= 0 ? afterShow[..pipe] : afterShow;
             return pipe >= 0 ? afterShow[(pipe + 1)..] : afterShow;
         }
 
@@ -98,6 +99,7 @@ public static class DescriptionFormatter
 
         // {VarName:diff()} など — stats を参照
         var (baseVal, upgVal) = FindStatPair(stats, varName);
+        if (upgraded && upgVal.HasValue) return $"{upgVal}";
         if (baseVal.HasValue)
             return upgVal.HasValue ? $"{baseVal}({upgVal})" : $"{baseVal}";
 

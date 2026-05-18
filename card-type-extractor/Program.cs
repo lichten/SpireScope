@@ -834,6 +834,74 @@ foreach (var typeHandle in mr.TypeDefinitions)
             }
         }
     }
+
+    // パス5: OnUpgrade から UpgradedXxx 値を取得
+    // パターン: callvirt get_Xxx → ldc.i4 N → newobj Decimal.ctor → callvirt UpgradeValueBy/UpgradeValueTo
+    // UpgradeValueBy → UpgradedXxx = base + N
+    // UpgradeValueTo → UpgradedXxx = N（絶対値）
+    // ldsfld 経由の delta（非リテラル）は解決不能のためスキップ
+    foreach (var mh in typeDef.GetMethods())
+    {
+        var method = mr.GetMethodDefinition(mh);
+        if (mr.GetString(method.Name) != "OnUpgrade") continue;
+        if (method.RelativeVirtualAddress == 0) break;
+        var body = peReader.GetMethodBody(method.RelativeVirtualAddress);
+        if (body == null) break;
+        var il = body.GetILBytes();
+
+        string? upgVar = null;
+        int? pendingAmount = null;
+
+        for (int i = 0; i < il.Length; )
+        {
+            byte op = il[i];
+
+            // call / callvirt
+            if ((op == 0x28 || op == 0x6F) && i + 4 < il.Length)
+            {
+                int tok = il[i+1]|(il[i+2]<<8)|(il[i+3]<<16)|(il[i+4]<<24);
+                var name = ResolveMethodName(mr, tok);
+                if (name.StartsWith("get_", StringComparison.Ordinal) && name != "get_DynamicVars")
+                {
+                    // 対象 DynamicVar の切り替え
+                    upgVar = name[4..];
+                    pendingAmount = null;
+                }
+                else if ((name == "UpgradeValueBy" || name == "UpgradeValueTo") &&
+                         upgVar != null && pendingAmount.HasValue)
+                {
+                    if (!cardStats.TryGetValue(cardId, out var sd))
+                        cardStats[cardId] = sd = new Dictionary<string, int>();
+                    int baseVal = 0;
+                    foreach (var (k, v) in sd)
+                        if (string.Equals(k.TrimStart('_'), upgVar, StringComparison.OrdinalIgnoreCase))
+                        { baseVal = v; break; }
+                    var upgKey = "Upgraded" + upgVar;
+                    var upgVal = name == "UpgradeValueBy" ? baseVal + pendingAmount.Value : pendingAmount.Value;
+                    sd.TryAdd(upgKey, upgVal);
+                    upgVar = null;
+                    pendingAmount = null;
+                }
+                else
+                {
+                    pendingAmount = null;
+                }
+                i += 5;
+                continue;
+            }
+
+            // newobj: Decimal.ctor(int) などは pendingAmount を維持してスキップ
+            if (op == 0x73 && i + 4 < il.Length) { i += 5; continue; }
+
+            var (val, size) = ReadLdcI4(il, i);
+            if (val.HasValue)
+                pendingAmount = val;
+            else if (op is not (0x02 or 0x25)) // ldarg.0, dup は中立
+                pendingAmount = null;
+            i += size;
+        }
+        break;
+    }
 }
 
 // card_characters.json 出力

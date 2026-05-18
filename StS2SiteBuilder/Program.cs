@@ -475,8 +475,11 @@ static string BuildCardPage(string cardId, CharData[] chars, string basePath, st
     var lightBg = ch?.LightBg ?? "#f8f8f8";
 
     // テンプレート変数を stats で解決。未定義変数は [VarName] 表示
-    var descEn = DescriptionFormatter.Resolve(rawDescEn, stats).Replace("\n", "<br>");
-    var descJa = DescriptionFormatter.Resolve(rawDescJa, stats, japanese: true).Replace("\n", "<br>");
+    var descEn    = DescriptionFormatter.Resolve(rawDescEn, stats).Replace("\n", "<br>");
+    var descJa    = DescriptionFormatter.Resolve(rawDescJa, stats, japanese: true).Replace("\n", "<br>");
+    var descEnUpg = DescriptionFormatter.Resolve(rawDescEn, stats, upgraded: true).Replace("\n", "<br>");
+    var descJaUpg = DescriptionFormatter.Resolve(rawDescJa, stats, japanese: true, upgraded: true).Replace("\n", "<br>");
+    var hasUpgrade = descEn != "" && (descEnUpg != descEn || descJaUpg != descJa);
 
     var typeBadge   = type   != "" ? $"""<span class="badge type-{type.ToLower()}">{type}</span>""" : "";
     var rarityBadge = rarity != "" ? $"""<span class="badge rarity-{rarity.ToLower()}">{rarity}</span>""" : "";
@@ -490,13 +493,43 @@ static string BuildCardPage(string cardId, CharData[] chars, string basePath, st
         ? $"""<a href="{basePath}{ch.Id}.html" class="char-back-link" style="color:{accent}">{ch.EnName} <span class="char-back-ja">({ch.JaName})</span></a>"""
         : """<span class="char-back-link char-back-neutral">共有・特殊</span>""";
 
-    var descSection = (descEn != "") ? $"""
-        <section class="section">
-          <h2 class="section-title">効果テキスト</h2>
-          <p class="card-desc-en">{descEn}</p>
-          {(descJa != "" && descJa != descEn ? $"""<p class="card-desc-ja">{descJa}</p>""" : "")}
-        </section>
-        """ : "";
+    string descSection;
+    if (descEn == "")
+    {
+        descSection = "";
+    }
+    else if (hasUpgrade)
+    {
+        var jaBase = descJa != "" && descJa != descEn    ? $"""<p class="card-desc-ja">{descJa}</p>"""    : "";
+        var jaUpg  = descJaUpg != "" && descJaUpg != descEnUpg ? $"""<p class="card-desc-ja">{descJaUpg}</p>""" : "";
+        descSection = $"""
+            <section class="section">
+              <h2 class="section-title">効果テキスト</h2>
+              <div class="tab-bar">
+                <button class="tab-btn active" data-tab="base">通常</button>
+                <button class="tab-btn" data-tab="upgraded">アップグレード後</button>
+              </div>
+              <div class="tab-panel" data-panel="base">
+                <p class="card-desc-en">{descEn}</p>
+                {jaBase}
+              </div>
+              <div class="tab-panel hidden" data-panel="upgraded">
+                <p class="card-desc-en">{descEnUpg}</p>
+                {jaUpg}
+              </div>
+            </section>
+            """;
+    }
+    else
+    {
+        descSection = $"""
+            <section class="section">
+              <h2 class="section-title">効果テキスト</h2>
+              <p class="card-desc-en">{descEn}</p>
+              {(descJa != "" && descJa != descEn ? $"""<p class="card-desc-ja">{descJa}</p>""" : "")}
+            </section>
+            """;
+    }
 
     var statsSection = "";
     if (stats is { Count: > 0 })
@@ -574,7 +607,29 @@ static string BuildCardPage(string cardId, CharData[] chars, string basePath, st
         {flagsSection}
         """;
 
-    return Layout(nameEn, "cards", accent, chars, content, basePath);
+    const string UPGRADE_TAB_JS = """
+        <script>
+        (function() {
+          document.querySelectorAll('.tab-bar').forEach(function(bar) {
+            bar.querySelectorAll('.tab-btn').forEach(function(btn) {
+              btn.addEventListener('click', function() {
+                var section = bar.closest('.section');
+                var tab = btn.dataset.tab;
+                bar.querySelectorAll('.tab-btn').forEach(function(b) {
+                  b.classList.toggle('active', b === btn);
+                });
+                section.querySelectorAll('.tab-panel').forEach(function(p) {
+                  p.classList.toggle('hidden', p.dataset.panel !== tab);
+                });
+              });
+            });
+          });
+        })();
+        </script>
+        """;
+
+    var extraFoot = hasUpgrade ? UPGRADE_TAB_JS : "";
+    return Layout(nameEn, "cards", accent, chars, content, basePath, extraFoot: extraFoot);
 }
 
 static string BuildCharPage(CharData ch, CharData[] chars, string[] mecs)
@@ -796,6 +851,16 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
         .flag-badge      { background: #e8eaf0;  color: #445566; }
         .wiki-link { display: inline-block; margin-top: 12px; font-size: 12.5px; color: #1a5799; }
         .wiki-link:hover { text-decoration: underline; }
+
+        /* ── Upgrade tabs ── */
+        .tab-bar { display: flex; gap: 6px; margin-bottom: 14px; }
+        .tab-btn {
+          padding: 4px 14px; border: 1.5px solid #ddd; border-radius: 16px;
+          font-size: 12px; font-weight: 600; cursor: pointer; background: #fff;
+          color: #999; font-family: inherit; transition: all 0.15s;
+        }
+        .tab-btn.active { border-color: #4a90d9; color: #1a5799; background: #eef3fc; }
+        .tab-panel.hidden { display: none; }
         """;
 
     var homeActive  = activeId == "index";

@@ -39,7 +39,8 @@ public class CardBrowserForm : Form
     ImageList _imageList = null!;
     readonly Dictionary<string, Bitmap> _thumbCache = new(StringComparer.OrdinalIgnoreCase);
     bool _populatingList;
-    RichTextBox _detailBox = null!;
+    RichTextBox _baseDetailBox = null!;
+    RichTextBox _upgDetailBox = null!;
     Label _countLabel = null!;
     SplitContainer _outerSplit = null!;
     SplitContainer _split = null!;
@@ -232,17 +233,22 @@ public class CardBrowserForm : Form
         _cardList.SelectedIndexChanged += OnCardSelected;
         _split.Panel1.Controls.Add(_cardList);
 
-        // 説明テキスト（先に追加 → Dock=Fill で残りを埋める）
-        _detailBox = new RichTextBox
+        // 説明テキスト: 通常 / アップグレード後 の2列並列（先に追加 → Dock=Fill で残りを埋める）
+        var detailLayout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ReadOnly = true,
-            BackColor = SystemColors.Window,
-            Font = new Font("Meiryo", 9.5f),
-            ScrollBars = RichTextBoxScrollBars.Vertical,
-            WordWrap = true,
+            ColumnCount = 2,
+            RowCount = 1,
+            Padding = new Padding(0),
+            Margin = new Padding(0),
+            CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
         };
-        _split.Panel2.Controls.Add(_detailBox);
+        detailLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        detailLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        detailLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        _baseDetailBox = MakeDetailColumn(detailLayout, "通常", 0);
+        _upgDetailBox  = MakeDetailColumn(detailLayout, "アップグレード後", 1);
+        _split.Panel2.Controls.Add(detailLayout);
 
         // カードポートレート（後から追加 → Dock=Top で上部に配置）
         _portraitBox = new PictureBox
@@ -255,6 +261,37 @@ public class CardBrowserForm : Form
         _portraitBox.Paint += OnPortraitPaint;
         _split.Panel2.Controls.Add(_portraitBox);
         _split.Panel2.Resize += (_, _) => UpdatePortraitHeight();
+    }
+
+    // 詳細列（ヘッダラベル + RichTextBox）を TableLayoutPanel に追加して RTB を返す
+    static RichTextBox MakeDetailColumn(TableLayoutPanel table, string header, int col)
+    {
+        var panel = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0) };
+        var rtb = new RichTextBox
+        {
+            Dock = DockStyle.Fill,
+            ReadOnly = true,
+            BackColor = SystemColors.Window,
+            Font = new Font("Meiryo", 9.5f),
+            ScrollBars = RichTextBoxScrollBars.Vertical,
+            WordWrap = true,
+            BorderStyle = BorderStyle.None,
+        };
+        var label = new Label
+        {
+            Text = header,
+            Dock = DockStyle.Top,
+            Height = 22,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Padding = new Padding(6, 0, 0, 0),
+            Font = new Font("Meiryo", 8f, FontStyle.Bold),
+            BackColor = SystemColors.ControlLight,
+            BorderStyle = BorderStyle.FixedSingle,
+        };
+        panel.Controls.Add(rtb);    // Fill: 先に追加 → 残余を埋める
+        panel.Controls.Add(label);  // Top:  後に追加 → 上部に配置
+        table.Controls.Add(panel, col, 0);
+        return rtb;
     }
 
     void UpdatePortraitHeight()
@@ -454,27 +491,36 @@ public class CardBrowserForm : Form
         _currentSynergies = card is null ? [] : CollectSynergies(card.Id);
         ShowPortrait(card);
 
-        _detailBox.Clear();
+        _baseDetailBox.Clear();
+        _upgDetailBox.Clear();
         if (card is null) return;
 
-        var (descEn, descJa) = CardDatabaseService.GetDescription(card.Id);
+        var (rawDescEn, rawDescJa) = CardDatabaseService.GetDescription(card.Id);
         var stats = CardDatabaseService.GetCardStats(card.Id);
-        var descEnClean = DescriptionFormatter.Resolve(descEn, stats);
-        var descJaClean = DescriptionFormatter.Resolve(descJa, stats, japanese: true);
 
-        var rtb = _detailBox;
+        var descEn    = DescriptionFormatter.Resolve(rawDescEn, stats);
+        var descJa    = DescriptionFormatter.Resolve(rawDescJa, stats, japanese: true);
+        var descEnUpg = DescriptionFormatter.Resolve(rawDescEn, stats, upgraded: true);
+        var descJaUpg = DescriptionFormatter.Resolve(rawDescJa, stats, japanese: true, upgraded: true);
+
+        PopulateDetailBox(_baseDetailBox, descJa, descEn);
+        PopulateDetailBox(_upgDetailBox,  descJaUpg, descEnUpg);
+    }
+
+    void PopulateDetailBox(RichTextBox rtb, string descJa, string descEn)
+    {
         rtb.SuspendLayout();
 
-        if (!string.IsNullOrEmpty(descJaClean))
+        if (!string.IsNullOrEmpty(descJa))
         {
-            AppendBold("説明 (JP)\n", 9.5f);
-            AppendNormal(descJaClean + "\n", 9.5f);
+            AppendBold(rtb, "説明 (JP)\n", 9.5f);
+            AppendNormal(rtb, descJa + "\n", 9.5f);
         }
-        if (!string.IsNullOrEmpty(descEnClean))
+        if (!string.IsNullOrEmpty(descEn))
         {
-            if (!string.IsNullOrEmpty(descJaClean)) AppendNormal("\n");
-            AppendBold("説明 (EN)\n", 9.5f);
-            AppendNormal(descEnClean + "\n", 9.5f);
+            if (!string.IsNullOrEmpty(descJa)) AppendNormal(rtb, "\n");
+            AppendBold(rtb, "説明 (EN)\n", 9.5f);
+            AppendNormal(rtb, descEn + "\n", 9.5f);
         }
 
         rtb.ResumeLayout();
@@ -749,18 +795,18 @@ public class CardBrowserForm : Form
         ClearThumbCache();
     }
 
-    void AppendBold(string text, float size, Color? color = null)
+    static void AppendBold(RichTextBox rtb, string text, float size, Color? color = null)
     {
-        _detailBox.SelectionFont = new Font("Meiryo", size, FontStyle.Bold);
-        _detailBox.SelectionColor = color ?? Color.Black;
-        _detailBox.AppendText(text);
+        rtb.SelectionFont = new Font("Meiryo", size, FontStyle.Bold);
+        rtb.SelectionColor = color ?? Color.Black;
+        rtb.AppendText(text);
     }
 
-    void AppendNormal(string text, float size = 9.5f, Color? color = null)
+    static void AppendNormal(RichTextBox rtb, string text, float size = 9.5f, Color? color = null)
     {
-        _detailBox.SelectionFont = new Font("Meiryo", size, FontStyle.Regular);
-        _detailBox.SelectionColor = color ?? Color.Black;
-        _detailBox.AppendText(text);
+        rtb.SelectionFont = new Font("Meiryo", size, FontStyle.Regular);
+        rtb.SelectionColor = color ?? Color.Black;
+        rtb.AppendText(text);
     }
 
     // ---- ボタン状態の更新 ----
