@@ -44,43 +44,61 @@ public class MonsterBrowserForm : Form
             Orientation = Orientation.Vertical,
             SplitterDistance = 220,
         };
-
         splitter.Panel1.Controls.Add(_monsterList);
 
-        var rightPanel = new TableLayoutPanel
+        // 右ペイン: ビュー(可変) + コントロール行(固定高)
+        var rightLayout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            RowCount = 2,
-            ColumnCount = 1,
+            RowCount = 2, ColumnCount = 1,
+            Margin = Padding.Empty,
         };
-        rightPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        rightPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 60));
+        rightLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        rightLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
 
-        var controls = new FlowLayoutPanel
+        // コントロール行: 列幅を固定し、スライダーだけを可変にして折り返しをなくす
+        //   [Animation:] [Combo(175px)] [Slider(可変)] [0.00s(52px)] [▶Play(82px)] [■Stop(82px)]
+        var ctrlBar = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.LeftToRight,
-            Padding = new Padding(4),
+            RowCount = 1, ColumnCount = 6,
+            Padding = new Padding(4, 2, 4, 2),
+            Margin = Padding.Empty,
         };
+        ctrlBar.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        ctrlBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));      // "Animation:" label
+        ctrlBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 175)); // anim combo
+        ctrlBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));  // time slider (可変)
+        ctrlBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 52));  // 時刻ラベル
+        ctrlBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 82));  // Play
+        ctrlBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 82));  // Stop
 
-        var animLabel = new Label { Text = "Animation:", Width = 75, TextAlign = ContentAlignment.MiddleRight };
-        var animBox = new Panel { Width = 180, Height = 26 };
-        animBox.Controls.Add(_animCombo);
-
-        var sliderBox = new Panel { Width = 300, Height = 26 };
-        sliderBox.Controls.Add(_timeSlider);
-
-        controls.Controls.AddRange(new Control[]
+        var animLabel = new Label
         {
-            animLabel, animBox,
-            _timeLbl,
-            sliderBox,
-            _playBtn, _stopBtn,
-        });
+            Text = "Animation:",
+            TextAlign = ContentAlignment.MiddleRight,
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            Margin = new Padding(0, 0, 4, 0),
+        };
+        _animCombo.Dock = DockStyle.Fill;
+        _timeSlider.Dock = DockStyle.Fill;
+        _timeLbl.Dock = DockStyle.Fill;
+        _timeLbl.TextAlign = ContentAlignment.MiddleRight;
+        _timeLbl.Width = 0;   // Dock=Fill が効くよう既定幅をリセット
+        _playBtn.Dock = DockStyle.Fill;
+        _stopBtn.Dock = DockStyle.Fill;
 
-        rightPanel.Controls.Add(_view, 0, 0);
-        rightPanel.Controls.Add(controls, 0, 1);
-        splitter.Panel2.Controls.Add(rightPanel);
+        ctrlBar.Controls.Add(animLabel, 0, 0);
+        ctrlBar.Controls.Add(_animCombo, 1, 0);
+        ctrlBar.Controls.Add(_timeSlider, 2, 0);
+        ctrlBar.Controls.Add(_timeLbl, 3, 0);
+        ctrlBar.Controls.Add(_playBtn, 4, 0);
+        ctrlBar.Controls.Add(_stopBtn, 5, 0);
+
+        rightLayout.Controls.Add(_view, 0, 0);
+        rightLayout.Controls.Add(ctrlBar, 0, 1);
+        splitter.Panel2.Controls.Add(rightLayout);
 
         Controls.Add(splitter);
 
