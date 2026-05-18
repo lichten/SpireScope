@@ -155,6 +155,7 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
             Label:   ch.EnName,
             LabelJa: ch.JaName,
             Accent:  ch.Accent,
+            CharId:  ch.Id,
             Ids: allCardIds
                 .Where(id => CardDatabaseService.GetCardCharacter(id)
                     .Equals(ch.EnName, StringComparison.OrdinalIgnoreCase))
@@ -167,6 +168,7 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
             Label:   "共有・特殊",
             LabelJa: "",
             Accent:  "#888",
+            CharId:  "shared",
             Ids: allCardIds
                 .Where(id => !charNames.Contains(CardDatabaseService.GetCardCharacter(id)))
                 .OrderBy(id => TypeOrder(CardDatabaseService.GetCardType(id)))
@@ -213,7 +215,7 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
         }));
 
         return $"""
-            <section class="section">
+            <section class="section" data-char="{g.CharId}">
               <h2 class="section-title">
                 <span class="section-dot" style="background:{g.Accent}"></span>
                 {g.Label}
@@ -231,13 +233,227 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
             """;
     }));
 
+    var charBtns = string.Concat(chars.Select(ch =>
+        $"""<button class="filter-btn" data-filter="{ch.Id}">{ch.EnName}</button>"""));
+
+    var filterPanel = $"""
+        <div class="filter-panel">
+          <div class="filter-section">
+            <span class="filter-label">カード名</span>
+            <input type="text" id="card-search" class="search-input" placeholder="名前で検索…" autocomplete="off">
+            <button class="filter-btn" id="thumb-toggle" style="margin-left:4px">サムネイル表示</button>
+          </div>
+          <div class="filter-section">
+            <span class="filter-label">キャラ</span>
+            <div class="filter-bar">
+              <button class="filter-btn active" data-filter="all">すべて</button>
+              {charBtns}
+              <button class="filter-btn" data-filter="shared">共有・特殊</button>
+            </div>
+          </div>
+          <div class="filter-section">
+            <span class="filter-label">タイプ</span>
+            <div class="filter-bar">
+              <button class="filter-btn active" data-type="all">すべて</button>
+              <button class="filter-btn" data-type="attack">Attack</button>
+              <button class="filter-btn" data-type="skill">Skill</button>
+              <button class="filter-btn" data-type="power">Power</button>
+              <button class="filter-btn" data-type="status">Status</button>
+              <button class="filter-btn" data-type="curse">Curse</button>
+              <button class="filter-btn" data-type="quest">Quest</button>
+            </div>
+          </div>
+          <div class="filter-section">
+            <span class="filter-label">レアリティ</span>
+            <div class="filter-bar">
+              <button class="filter-btn active" data-rarity="all">すべて</button>
+              <button class="filter-btn" data-rarity="starter">Starter</button>
+              <button class="filter-btn" data-rarity="common">Common</button>
+              <button class="filter-btn" data-rarity="uncommon">Uncommon</button>
+              <button class="filter-btn" data-rarity="rare">Rare</button>
+              <button class="filter-btn" data-rarity="ancient">Ancient</button>
+              <button class="filter-btn" data-rarity="event">Event</button>
+              <button class="filter-btn" data-rarity="shop">Shop</button>
+            </div>
+          </div>
+        </div>
+        """;
+
+    const string FILTER_CSS = """
+        <style>
+        .filter-panel {
+          background: #fff; border-radius: 10px; padding: 16px 20px;
+          margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .filter-section { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .filter-section + .filter-section { margin-top: 10px; padding-top: 10px; border-top: 1px solid #f2f2f2; }
+        .filter-label {
+          font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+          letter-spacing: 0.7px; color: #bbb; min-width: 66px; flex-shrink: 0;
+        }
+        .filter-bar { display: flex; gap: 7px; flex-wrap: wrap; }
+        .filter-btn {
+          padding: 5px 13px; border: 1.5px solid transparent; border-radius: 20px;
+          font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+          background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.07); font-family: inherit;
+        }
+        .filter-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.13); }
+        .filter-btn[data-filter="all"]              { color: #555; border-color: #ccc; }
+        .filter-btn[data-filter="all"].active       { background: #555; color: #fff; border-color: #555; }
+        .filter-btn[data-filter="ironclad"]         { color: #c0392b; border-color: #c0392b; }
+        .filter-btn[data-filter="ironclad"].active  { background: #c0392b; color: #fff; }
+        .filter-btn[data-filter="silent"]           { color: #1a7a4a; border-color: #1a7a4a; }
+        .filter-btn[data-filter="silent"].active    { background: #1a7a4a; color: #fff; }
+        .filter-btn[data-filter="defect"]           { color: #1a5799; border-color: #1a5799; }
+        .filter-btn[data-filter="defect"].active    { background: #1a5799; color: #fff; }
+        .filter-btn[data-filter="necrobinder"]      { color: #6c3483; border-color: #6c3483; }
+        .filter-btn[data-filter="necrobinder"].active { background: #6c3483; color: #fff; }
+        .filter-btn[data-filter="regent"]           { color: #7d6608; border-color: #7d6608; }
+        .filter-btn[data-filter="regent"].active    { background: #7d6608; color: #fff; }
+        .filter-btn[data-filter="shared"]           { color: #555; border-color: #999; }
+        .filter-btn[data-filter="shared"].active    { background: #666; color: #fff; border-color: #666; }
+        .filter-btn[data-type="all"]             { color: #555; border-color: #ccc; }
+        .filter-btn[data-type="all"].active      { background: #555; color: #fff; border-color: #555; }
+        .filter-btn[data-type="attack"]          { color: #c0392b; border-color: #c0392b; }
+        .filter-btn[data-type="attack"].active   { background: #c0392b; color: #fff; }
+        .filter-btn[data-type="skill"]           { color: #1a5799; border-color: #1a5799; }
+        .filter-btn[data-type="skill"].active    { background: #1a5799; color: #fff; }
+        .filter-btn[data-type="power"]           { color: #7d6608; border-color: #7d6608; }
+        .filter-btn[data-type="power"].active    { background: #7d6608; color: #fff; }
+        .filter-btn[data-type="status"]          { color: #666; border-color: #aaa; }
+        .filter-btn[data-type="status"].active   { background: #666; color: #fff; border-color: #666; }
+        .filter-btn[data-type="curse"]           { color: #6c3483; border-color: #6c3483; }
+        .filter-btn[data-type="curse"].active    { background: #6c3483; color: #fff; }
+        .filter-btn[data-type="quest"]           { color: #1a7a4a; border-color: #1a7a4a; }
+        .filter-btn[data-type="quest"].active    { background: #1a7a4a; color: #fff; }
+        .filter-btn[data-rarity="all"]              { color: #555; border-color: #ccc; }
+        .filter-btn[data-rarity="all"].active       { background: #555; color: #fff; border-color: #555; }
+        .filter-btn[data-rarity="starter"]          { color: #888; border-color: #bbb; }
+        .filter-btn[data-rarity="starter"].active   { background: #888; color: #fff; border-color: #888; }
+        .filter-btn[data-rarity="common"]           { color: #555; border-color: #999; }
+        .filter-btn[data-rarity="common"].active    { background: #666; color: #fff; border-color: #666; }
+        .filter-btn[data-rarity="uncommon"]         { color: #1a5799; border-color: #1a5799; }
+        .filter-btn[data-rarity="uncommon"].active  { background: #1a5799; color: #fff; }
+        .filter-btn[data-rarity="rare"]             { color: #c0392b; border-color: #c0392b; }
+        .filter-btn[data-rarity="rare"].active      { background: #c0392b; color: #fff; }
+        .filter-btn[data-rarity="ancient"]          { color: #a0600c; border-color: #a0600c; }
+        .filter-btn[data-rarity="ancient"].active   { background: #a0600c; color: #fff; }
+        .filter-btn[data-rarity="event"]            { color: #1a7a4a; border-color: #1a7a4a; }
+        .filter-btn[data-rarity="event"].active     { background: #1a7a4a; color: #fff; }
+        .filter-btn[data-rarity="shop"]             { color: #7d1a7d; border-color: #7d1a7d; }
+        .filter-btn[data-rarity="shop"].active      { background: #7d1a7d; color: #fff; }
+        .search-input {
+          flex: 1; min-width: 180px; max-width: 320px; padding: 5px 13px;
+          border: 1.5px solid #ddd; border-radius: 20px; font-size: 13px;
+          color: #333; background: #fff; font-family: inherit;
+          outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .search-input:focus { border-color: #4a90d9; box-shadow: 0 0 0 3px rgba(74,144,217,0.12); }
+        .search-input::placeholder { color: #bbb; }
+        .card-thumb {
+          width: 40px; height: 40px; object-fit: cover; border-radius: 3px;
+          vertical-align: middle; margin-right: 8px; display: inline-block; background: #f0f0f0;
+        }
+        </style>
+        """;
+
+    const string FILTER_JS = """
+        <script>
+        (function () {
+          var sections    = document.querySelectorAll('.section[data-char]');
+          var searchInput = document.getElementById('card-search');
+          function getActive(a) {
+            var b = document.querySelector('.filter-btn[data-' + a + '].active');
+            return b ? b.getAttribute('data-' + a) : 'all';
+          }
+          function applyFilters() {
+            var cf = getActive('filter'), tf = getActive('type'), rf = getActive('rarity');
+            var q  = searchInput.value.trim().toLowerCase();
+            sections.forEach(function (sec) {
+              if (cf !== 'all' && sec.dataset.char !== cf) { sec.style.display = 'none'; return; }
+              if (tf === 'all' && rf === 'all' && q === '') {
+                sec.style.display = '';
+                sec.querySelectorAll('tbody tr').forEach(function (r) { r.style.display = ''; });
+                return;
+              }
+              var n = 0;
+              sec.querySelectorAll('tbody tr').forEach(function (row) {
+                var tb = row.querySelector('.col-type .badge');
+                var rb = row.querySelector('.col-rarity .badge');
+                var nl = row.querySelector('.card-name-link');
+                var nj = row.querySelector('.card-name-ja');
+                var tc = tb ? Array.from(tb.classList).find(function(c){return c.startsWith('type-');})   : '';
+                var rc = rb ? Array.from(rb.classList).find(function(c){return c.startsWith('rarity-');}) : '';
+                var ok = (tf === 'all' || tc === 'type-' + tf)
+                      && (rf === 'all' || rc === 'rarity-' + rf)
+                      && (q  === ''   || (nl && nl.textContent.toLowerCase().includes(q))
+                                      || (nj && nj.textContent.toLowerCase().includes(q)));
+                row.style.display = ok ? '' : 'none';
+                if (ok) n++;
+              });
+              sec.style.display = n > 0 ? '' : 'none';
+            });
+          }
+          function bindGroup(sel) {
+            document.querySelectorAll(sel).forEach(function (btn) {
+              btn.addEventListener('click', function () {
+                document.querySelectorAll(sel).forEach(function (b) { b.classList.remove('active'); });
+                this.classList.add('active');
+                applyFilters();
+              });
+            });
+          }
+          searchInput.addEventListener('input', applyFilters);
+          bindGroup('.filter-btn[data-filter]');
+          bindGroup('.filter-btn[data-type]');
+          bindGroup('.filter-btn[data-rarity]');
+          var BASE = '../../tools/extracted/images/card_portraits_png/';
+          var on = false;
+          function portraitSrc(row) {
+            var lnk = row.querySelector('.card-name-link');
+            if (!lnk) return null;
+            var p = lnk.getAttribute('href').split('/');
+            if (p.length < 3) return null;
+            var dir = p[1], file = p[2].replace('.html','').toLowerCase(), folder;
+            if (dir !== 'shared') { folder = dir; } else {
+              var tb = row.querySelector('.col-type .badge');
+              var tc = tb ? Array.from(tb.classList).find(function(c){return c.startsWith('type-');}) : '';
+              folder = tc === 'type-curse' ? 'curse' : tc === 'type-quest' ? 'quest'
+                     : tc === 'type-status' ? 'status' : 'colorless';
+            }
+            return BASE + folder + '/' + file + '.png';
+          }
+          document.getElementById('thumb-toggle').addEventListener('click', function () {
+            on = !on;
+            this.classList.toggle('active', on);
+            document.querySelectorAll('.section[data-char] tbody tr').forEach(function (row) {
+              var cell = row.querySelector('.col-name');
+              if (!cell) return;
+              if (on) {
+                var src = portraitSrc(row);
+                if (src && !cell.querySelector('.card-thumb')) {
+                  var img = document.createElement('img');
+                  img.src = src; img.className = 'card-thumb'; img.loading = 'lazy'; img.alt = '';
+                  cell.insertBefore(img, cell.firstChild);
+                }
+              } else {
+                var e = cell.querySelector('.card-thumb');
+                if (e) e.remove();
+              }
+            });
+          });
+        })();
+        </script>
+        """;
+
     return Layout("カード一覧", "cards", "#2c3e50", chars, $"""
         <div class="page-hero">
           <h1 class="hero-title">カード一覧</h1>
           <p class="hero-sub">全{allCardIds.Length}件</p>
         </div>
+        {filterPanel}
         {sections}
-        """);
+        """, extraHead: FILTER_CSS, extraFoot: FILTER_JS);
 }
 
 static string BuildCardPage(string cardId, CharData[] chars, string basePath)
@@ -369,7 +585,7 @@ static int RarityOrder(string rarity) => rarity switch
 };
 
 static string Layout(string title, string activeId, string accent, CharData[] chars, string content,
-                     string basePath = "")
+                     string basePath = "", string extraHead = "", string extraFoot = "")
 {
     const string CSS = """
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -535,6 +751,8 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
         .rarity-shop     { background: #fdf0fc;  color: #7d1a7d; }
         .cost-badge      { background: #e8eaed;  color: #333; }
         .flag-badge      { background: #e8eaf0;  color: #445566; }
+        .wiki-link { display: inline-block; margin-top: 12px; font-size: 12.5px; color: #1a5799; }
+        .wiki-link:hover { text-decoration: underline; }
         """;
 
     var homeActive  = activeId == "index";
@@ -570,6 +788,7 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
           <style>
         {CSS}
           </style>
+          {extraHead}
         </head>
         <body>
           <div class="layout">
@@ -599,6 +818,8 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
               {content}
             </main>
           </div>
+          <script src="{basePath}wiki-link.js"></script>
+          {extraFoot}
         </body>
         </html>
         """;

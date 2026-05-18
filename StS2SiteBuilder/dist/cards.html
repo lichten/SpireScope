@@ -168,8 +168,10 @@ a { color: inherit; text-decoration: none; }
 .rarity-shop     { background: #fdf0fc;  color: #7d1a7d; }
 .cost-badge      { background: #e8eaed;  color: #333; }
 .flag-badge      { background: #e8eaf0;  color: #445566; }
-
-/* ── Character filter bar ── */
+.wiki-link { display: inline-block; margin-top: 12px; font-size: 12.5px; color: #1a5799; }
+.wiki-link:hover { text-decoration: underline; }
+  </style>
+  <style>
 .filter-panel {
   background: #fff; border-radius: 10px; padding: 16px 20px;
   margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
@@ -183,13 +185,10 @@ a { color: inherit; text-decoration: none; }
 .filter-bar { display: flex; gap: 7px; flex-wrap: wrap; }
 .filter-btn {
   padding: 5px 13px; border: 1.5px solid transparent; border-radius: 20px;
-  font-size: 12.5px; font-weight: 600; cursor: pointer;
-  transition: all 0.15s; background: #fff;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.07); font-family: inherit;
+  font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.07); font-family: inherit;
 }
 .filter-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.13); }
-
-/* Character */
 .filter-btn[data-filter="all"]              { color: #555; border-color: #ccc; }
 .filter-btn[data-filter="all"].active       { background: #555; color: #fff; border-color: #555; }
 .filter-btn[data-filter="ironclad"]         { color: #c0392b; border-color: #c0392b; }
@@ -204,8 +203,6 @@ a { color: inherit; text-decoration: none; }
 .filter-btn[data-filter="regent"].active    { background: #7d6608; color: #fff; }
 .filter-btn[data-filter="shared"]           { color: #555; border-color: #999; }
 .filter-btn[data-filter="shared"].active    { background: #666; color: #fff; border-color: #666; }
-
-/* Type */
 .filter-btn[data-type="all"]             { color: #555; border-color: #ccc; }
 .filter-btn[data-type="all"].active      { background: #555; color: #fff; border-color: #555; }
 .filter-btn[data-type="attack"]          { color: #c0392b; border-color: #c0392b; }
@@ -220,8 +217,6 @@ a { color: inherit; text-decoration: none; }
 .filter-btn[data-type="curse"].active    { background: #6c3483; color: #fff; }
 .filter-btn[data-type="quest"]           { color: #1a7a4a; border-color: #1a7a4a; }
 .filter-btn[data-type="quest"].active    { background: #1a7a4a; color: #fff; }
-
-/* Rarity */
 .filter-btn[data-rarity="all"]              { color: #555; border-color: #ccc; }
 .filter-btn[data-rarity="all"].active       { background: #555; color: #fff; border-color: #555; }
 .filter-btn[data-rarity="starter"]          { color: #888; border-color: #bbb; }
@@ -238,24 +233,19 @@ a { color: inherit; text-decoration: none; }
 .filter-btn[data-rarity="event"].active     { background: #1a7a4a; color: #fff; }
 .filter-btn[data-rarity="shop"]             { color: #7d1a7d; border-color: #7d1a7d; }
 .filter-btn[data-rarity="shop"].active      { background: #7d1a7d; color: #fff; }
-
-/* Search input */
 .search-input {
-  flex: 1; min-width: 180px; max-width: 320px;
-  padding: 5px 13px; border: 1.5px solid #ddd; border-radius: 20px;
-  font-size: 13px; color: #333; background: #fff; font-family: inherit;
+  flex: 1; min-width: 180px; max-width: 320px; padding: 5px 13px;
+  border: 1.5px solid #ddd; border-radius: 20px; font-size: 13px;
+  color: #333; background: #fff; font-family: inherit;
   outline: none; transition: border-color 0.15s, box-shadow 0.15s;
 }
 .search-input:focus { border-color: #4a90d9; box-shadow: 0 0 0 3px rgba(74,144,217,0.12); }
 .search-input::placeholder { color: #bbb; }
-
-/* Thumbnail toggle */
 .card-thumb {
   width: 40px; height: 40px; object-fit: cover; border-radius: 3px;
-  vertical-align: middle; margin-right: 8px; display: inline-block;
-  background: #f0f0f0;
+  vertical-align: middle; margin-right: 8px; display: inline-block; background: #f0f0f0;
 }
-  </style>
+</style>
 </head>
 <body>
   <div class="layout">
@@ -316,11 +306,7 @@ a { color: inherit; text-decoration: none; }
     <span class="filter-label">キャラ</span>
     <div class="filter-bar">
       <button class="filter-btn active" data-filter="all">すべて</button>
-      <button class="filter-btn" data-filter="ironclad">Ironclad</button>
-      <button class="filter-btn" data-filter="silent">Silent</button>
-      <button class="filter-btn" data-filter="defect">Defect</button>
-      <button class="filter-btn" data-filter="necrobinder">Necrobinder</button>
-      <button class="filter-btn" data-filter="regent">Regent</button>
+      <button class="filter-btn" data-filter="ironclad">Ironclad</button><button class="filter-btn" data-filter="silent">Silent</button><button class="filter-btn" data-filter="defect">Defect</button><button class="filter-btn" data-filter="necrobinder">Necrobinder</button><button class="filter-btn" data-filter="regent">Regent</button>
       <button class="filter-btn" data-filter="shared">共有・特殊</button>
     </div>
   </div>
@@ -4483,108 +4469,88 @@ a { color: inherit; text-decoration: none; }
 </section>
     </main>
   </div>
-<script>
+  <script src="wiki-link.js"></script>
+  <script>
 (function () {
   var sections    = document.querySelectorAll('.section[data-char]');
   var searchInput = document.getElementById('card-search');
-
-  function getActive(attrName) {
-    var btn = document.querySelector('.filter-btn[data-' + attrName + '].active');
-    return btn ? btn.getAttribute('data-' + attrName) : 'all';
+  function getActive(a) {
+    var b = document.querySelector('.filter-btn[data-' + a + '].active');
+    return b ? b.getAttribute('data-' + a) : 'all';
   }
-
   function applyFilters() {
-    var charFilter   = getActive('filter');
-    var typeFilter   = getActive('type');
-    var rarityFilter = getActive('rarity');
-    var query        = searchInput.value.trim().toLowerCase();
-
+    var cf = getActive('filter'), tf = getActive('type'), rf = getActive('rarity');
+    var q  = searchInput.value.trim().toLowerCase();
     sections.forEach(function (sec) {
-      var charMatch = charFilter === 'all' || sec.dataset.char === charFilter;
-      if (!charMatch) { sec.style.display = 'none'; return; }
-
-      if (typeFilter === 'all' && rarityFilter === 'all' && query === '') {
+      if (cf !== 'all' && sec.dataset.char !== cf) { sec.style.display = 'none'; return; }
+      if (tf === 'all' && rf === 'all' && q === '') {
         sec.style.display = '';
         sec.querySelectorAll('tbody tr').forEach(function (r) { r.style.display = ''; });
         return;
       }
-
-      var visibleCount = 0;
+      var n = 0;
       sec.querySelectorAll('tbody tr').forEach(function (row) {
-        var typeBadge   = row.querySelector('.col-type .badge');
-        var rarityBadge = row.querySelector('.col-rarity .badge');
-        var nameLink    = row.querySelector('.card-name-link');
-        var nameJa      = row.querySelector('.card-name-ja');
-        var typeClass   = typeBadge   ? Array.from(typeBadge.classList).find(function (c) { return c.startsWith('type-'); })   : '';
-        var rarityClass = rarityBadge ? Array.from(rarityBadge.classList).find(function (c) { return c.startsWith('rarity-'); }) : '';
-        var nameEn      = nameLink ? nameLink.textContent.toLowerCase() : '';
-        var nameJaText  = nameJa   ? nameJa.textContent.toLowerCase()   : '';
-        var typeMatch   = typeFilter   === 'all' || typeClass   === 'type-'   + typeFilter;
-        var rarityMatch = rarityFilter === 'all' || rarityClass === 'rarity-' + rarityFilter;
-        var nameMatch   = query === '' || nameEn.includes(query) || nameJaText.includes(query);
-        if (typeMatch && rarityMatch && nameMatch) { row.style.display = ''; visibleCount++; }
-        else { row.style.display = 'none'; }
+        var tb = row.querySelector('.col-type .badge');
+        var rb = row.querySelector('.col-rarity .badge');
+        var nl = row.querySelector('.card-name-link');
+        var nj = row.querySelector('.card-name-ja');
+        var tc = tb ? Array.from(tb.classList).find(function(c){return c.startsWith('type-');})   : '';
+        var rc = rb ? Array.from(rb.classList).find(function(c){return c.startsWith('rarity-');}) : '';
+        var ok = (tf === 'all' || tc === 'type-' + tf)
+              && (rf === 'all' || rc === 'rarity-' + rf)
+              && (q  === ''   || (nl && nl.textContent.toLowerCase().includes(q))
+                              || (nj && nj.textContent.toLowerCase().includes(q)));
+        row.style.display = ok ? '' : 'none';
+        if (ok) n++;
       });
-      sec.style.display = visibleCount > 0 ? '' : 'none';
+      sec.style.display = n > 0 ? '' : 'none';
     });
   }
-
-  function bindGroup(selector) {
-    document.querySelectorAll(selector).forEach(function (btn) {
+  function bindGroup(sel) {
+    document.querySelectorAll(sel).forEach(function (btn) {
       btn.addEventListener('click', function () {
-        document.querySelectorAll(selector).forEach(function (b) { b.classList.remove('active'); });
+        document.querySelectorAll(sel).forEach(function (b) { b.classList.remove('active'); });
         this.classList.add('active');
         applyFilters();
       });
     });
   }
-
   searchInput.addEventListener('input', applyFilters);
   bindGroup('.filter-btn[data-filter]');
   bindGroup('.filter-btn[data-type]');
   bindGroup('.filter-btn[data-rarity]');
-
-  // ── Thumbnail toggle ──────────────────────────────────────────────────────
-  var PORTRAIT_BASE = '../../tools/extracted/images/card_portraits_png/';
-  var thumbsOn = false;
-
-  function getPortraitSrc(row) {
-    var link = row.querySelector('.card-name-link');
-    if (!link) return null;
-    var parts = link.getAttribute('href').split('/'); // "cards/{dir}/{ID}.html"
-    if (parts.length < 3) return null;
-    var dir      = parts[1];
-    var filename = parts[2].replace('.html', '').toLowerCase();
-    var folder;
-    if (dir !== 'shared') {
-      folder = dir;
-    } else {
-      var typeBadge = row.querySelector('.col-type .badge');
-      var tc = typeBadge ? Array.from(typeBadge.classList).find(function (c) { return c.startsWith('type-'); }) : '';
-      if      (tc === 'type-curse')  folder = 'curse';
-      else if (tc === 'type-quest')  folder = 'quest';
-      else if (tc === 'type-status') folder = 'status';
-      else                            folder = 'colorless';
+  var BASE = '../../tools/extracted/images/card_portraits_png/';
+  var on = false;
+  function portraitSrc(row) {
+    var lnk = row.querySelector('.card-name-link');
+    if (!lnk) return null;
+    var p = lnk.getAttribute('href').split('/');
+    if (p.length < 3) return null;
+    var dir = p[1], file = p[2].replace('.html','').toLowerCase(), folder;
+    if (dir !== 'shared') { folder = dir; } else {
+      var tb = row.querySelector('.col-type .badge');
+      var tc = tb ? Array.from(tb.classList).find(function(c){return c.startsWith('type-');}) : '';
+      folder = tc === 'type-curse' ? 'curse' : tc === 'type-quest' ? 'quest'
+             : tc === 'type-status' ? 'status' : 'colorless';
     }
-    return PORTRAIT_BASE + folder + '/' + filename + '.png';
+    return BASE + folder + '/' + file + '.png';
   }
-
   document.getElementById('thumb-toggle').addEventListener('click', function () {
-    thumbsOn = !thumbsOn;
-    this.classList.toggle('active', thumbsOn);
+    on = !on;
+    this.classList.toggle('active', on);
     document.querySelectorAll('.section[data-char] tbody tr').forEach(function (row) {
       var cell = row.querySelector('.col-name');
       if (!cell) return;
-      if (thumbsOn) {
-        var src = getPortraitSrc(row);
+      if (on) {
+        var src = portraitSrc(row);
         if (src && !cell.querySelector('.card-thumb')) {
           var img = document.createElement('img');
           img.src = src; img.className = 'card-thumb'; img.loading = 'lazy'; img.alt = '';
           cell.insertBefore(img, cell.firstChild);
         }
       } else {
-        var existing = cell.querySelector('.card-thumb');
-        if (existing) existing.remove();
+        var e = cell.querySelector('.card-thumb');
+        if (e) e.remove();
       }
     });
   });
