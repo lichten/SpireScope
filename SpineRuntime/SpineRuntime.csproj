@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>SpineRuntime</AssemblyName>
+    <RootNamespace>Spine</RootNamespace>
+    <!-- spine-csharp は nullable 警告が多いため抑制 -->
+    <Nullable>disable</Nullable>
+    <NoWarn>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625;CS0649</NoWarn>
+  </PropertyGroup>
+</Project>
