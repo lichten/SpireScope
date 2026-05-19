@@ -1841,7 +1841,7 @@ static ISRgba32 DecodeBc7(byte[] data, int hdr, int w, int h)
     return ISImage.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Rgba32>(bytes, w, h);
 }
 
-public static string ExtractReview(string filePath)
+static string ExtractReview(string filePath)
 {
     const string START = "<!-- REVIEW_START -->";
     const string END   = "<!-- REVIEW_END -->";
@@ -1851,19 +1851,6 @@ public static string ExtractReview(string filePath)
     var e = content.IndexOf(END,   StringComparison.Ordinal);
     if (s < 0 || e <= s) return "";
     return content[(s + START.Length)..e];
-}
-
-public static void SaveReview(string filePath, string reviewHtml)
-{
-    const string START = "<!-- REVIEW_START -->";
-    const string END   = "<!-- REVIEW_END -->";
-    var content = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
-    var s = content.IndexOf(START, StringComparison.Ordinal);
-    var e = content.IndexOf(END,   StringComparison.Ordinal);
-    if (s < 0 || e <= s) return;
-    File.WriteAllText(filePath,
-        content[..(s + START.Length)] + reviewHtml + content[e..],
-        System.Text.Encoding.UTF8);
 }
 } // class SiteBuilderCore
 

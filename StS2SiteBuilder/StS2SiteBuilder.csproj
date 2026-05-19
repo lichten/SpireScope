@@ -5,11 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWindowsForms>true</UseWindowsForms>
-    <NoWarn>MSB3277;CS8602</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="BCnEncoder.NET" Version="2.1.0" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3967.48" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
   </ItemGroup>
   <ItemGroup>
