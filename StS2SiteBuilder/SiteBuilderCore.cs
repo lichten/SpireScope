@@ -1852,6 +1852,28 @@ static string ExtractReview(string filePath)
     if (s < 0 || e <= s) return "";
     return content[(s + START.Length)..e];
 }
+
+public static string? ExtractReviewPublic(string filePath)
+{
+    const string START = "<!-- REVIEW_START -->";
+    if (!File.Exists(filePath)) return null;
+    var content = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
+    if (!content.Contains(START, StringComparison.Ordinal)) return null;
+    return ExtractReview(filePath);
+}
+
+public static void SaveReview(string filePath, string reviewHtml)
+{
+    const string START = "<!-- REVIEW_START -->";
+    const string END   = "<!-- REVIEW_END -->";
+    if (!File.Exists(filePath)) return;
+    var content = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
+    var s = content.IndexOf(START, StringComparison.Ordinal);
+    var e = content.IndexOf(END,   StringComparison.Ordinal);
+    if (s < 0 || e <= s) return;
+    var newContent = content[..(s + START.Length)] + reviewHtml + content[e..];
+    File.WriteAllText(filePath, newContent, System.Text.Encoding.UTF8);
+}
 } // class SiteBuilderCore
 
 // ── records & flag definitions ────────────────────────────────────────────────

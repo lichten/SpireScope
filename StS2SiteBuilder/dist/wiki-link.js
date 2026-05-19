@@ -11,6 +11,6 @@
   link.className = 'wiki-link';
   link.textContent = 'wikiwiki.jp ↗';
 
-  var badges = document.querySelector('.card-badges');
-  if (badges) badges.insertAdjacentElement('afterend', link);
+  var anchor = document.querySelector('.card-badges') || jaTitle;
+  anchor.insertAdjacentElement('afterend', link);
 })();
