@@ -31,149 +31,21 @@ public partial class EventBrowserForm : Form
     string? _selectedEventId;
     string? _selectedAncientId;
 
-    TextBox _filterBox = null!;
-    Button _btnJp = null!, _btnEn = null!;
-    TabControl _tabControl = null!;
-    ListBox _eventList = null!;
-    PictureBox _pictureBox = null!;
-    RichTextBox _textBox = null!;
-    Label _statusLabel = null!;
-    ListBox _ancientList = null!;
-    PictureBox _ancientPictureBox = null!;
-    RichTextBox _ancientTextBox = null!;
-
     public EventBrowserForm()
     {
+        InitializeComponent();
         _toolsRoot = FindToolsRoot();
-        BuildUi();
+        _filterBox.TextChanged += (_, _) => PopulateList();
+        _btnJp.Click += (_, _) => SwitchLang(true);
+        _btnEn.Click += (_, _) => SwitchLang(false);
+        _eventList.DrawItem += DrawEventListItem;
+        _eventList.SelectedIndexChanged += (_, _) => ShowSelected();
+        _ancientList.SelectedIndexChanged += (_, _) => ShowSelectedAncient();
+        UpdateLangButtons();
         LoadEvents();
         LoadAncients();
         PopulateList();
         PopulateAncientList();
-    }
-
-    void BuildUi()
-    {
-        Text = "StS2 Event Browser";
-        Size = new WinSize(1200, 800);
-        MinimumSize = new WinSize(900, 600);
-        StartPosition = FormStartPosition.CenterScreen;
-
-        // Top bar
-        var topPanel = new Panel { Dock = DockStyle.Top, Height = 36 };
-        var filterLabel = new Label { Text = "検索:", AutoSize = true, Left = 8, Top = 9 };
-        _filterBox = new TextBox { Left = 48, Top = 6, Width = 260, PlaceholderText = "イベント名でフィルタ..." };
-        _btnJp = new Button { Text = "JP", Left = 318, Top = 5, Width = 40, Height = 26, FlatStyle = FlatStyle.Flat };
-        _btnEn = new Button { Text = "EN", Left = 362, Top = 5, Width = 40, Height = 26, FlatStyle = FlatStyle.Flat };
-        _statusLabel = new Label { Left = 420, Top = 9, Width = 300, AutoSize = true, ForeColor = SystemColors.GrayText };
-        topPanel.Controls.AddRange([filterLabel, _filterBox, _btnJp, _btnEn, _statusLabel]);
-
-        // Status bar
-        var statusBar = new Panel { Dock = DockStyle.Bottom, Height = 24, BackColor = SystemColors.ControlLight };
-        var countLabel = new Label { Name = "countLabel", Left = 4, Top = 4, AutoSize = true, ForeColor = SystemColors.GrayText, Font = new Font("Segoe UI", 8f) };
-        statusBar.Controls.Add(countLabel);
-
-        // Tab control
-        _tabControl = new TabControl { Dock = DockStyle.Fill };
-        var eventTab = new TabPage { Text = "イベント", Padding = new Padding(0) };
-        var ancientTab = new TabPage { Text = "Ancient", Padding = new Padding(0) };
-        _tabControl.TabPages.AddRange([eventTab, ancientTab]);
-
-        // ── Events tab ────────────────────────────────────────────────
-        var mainSplit = new SplitContainer
-        {
-            Dock = DockStyle.Fill,
-            SplitterDistance = 260,
-            FixedPanel = FixedPanel.Panel1,
-        };
-        _eventList = new ListBox
-        {
-            Dock = DockStyle.Fill,
-            Font = new Font("Segoe UI", 9.5f),
-            IntegralHeight = false,
-            DrawMode = DrawMode.OwnerDrawFixed,
-        };
-        _eventList.DrawItem += DrawEventListItem;
-        mainSplit.Panel1.Controls.Add(_eventList);
-
-        var detailSplit = new SplitContainer
-        {
-            Dock = DockStyle.Fill,
-            Orientation = Orientation.Horizontal,
-            SplitterDistance = 320,
-        };
-        _pictureBox = new PictureBox
-        {
-            Dock = DockStyle.Fill,
-            SizeMode = PictureBoxSizeMode.Zoom,
-            BackColor = WinColor.FromArgb(24, 24, 28),
-        };
-        detailSplit.Panel1.Controls.Add(_pictureBox);
-        _textBox = new RichTextBox
-        {
-            Dock = DockStyle.Fill,
-            ReadOnly = true,
-            BackColor = SystemColors.Window,
-            Font = new Font("Segoe UI", 9.5f),
-            BorderStyle = BorderStyle.None,
-            ScrollBars = RichTextBoxScrollBars.Vertical,
-        };
-        detailSplit.Panel2.Controls.Add(_textBox);
-        mainSplit.Panel2.Controls.Add(detailSplit);
-        eventTab.Controls.Add(mainSplit);
-
-        // ── Ancient tab ───────────────────────────────────────────────
-        var ancientSplit = new SplitContainer
-        {
-            Dock = DockStyle.Fill,
-            SplitterDistance = 280,
-            FixedPanel = FixedPanel.Panel1,
-        };
-        _ancientList = new ListBox
-        {
-            Dock = DockStyle.Fill,
-            Font = new Font("Segoe UI", 9.5f),
-            IntegralHeight = false,
-        };
-        ancientSplit.Panel1.Controls.Add(_ancientList);
-
-        var ancientDetailSplit = new SplitContainer
-        {
-            Dock = DockStyle.Fill,
-            Orientation = Orientation.Horizontal,
-            SplitterDistance = 320,
-        };
-        _ancientPictureBox = new PictureBox
-        {
-            Dock = DockStyle.Fill,
-            SizeMode = PictureBoxSizeMode.Zoom,
-            BackColor = WinColor.FromArgb(24, 24, 28),
-        };
-        ancientDetailSplit.Panel1.Controls.Add(_ancientPictureBox);
-        _ancientTextBox = new RichTextBox
-        {
-            Dock = DockStyle.Fill,
-            ReadOnly = true,
-            BackColor = SystemColors.Window,
-            Font = new Font("Segoe UI", 9.5f),
-            BorderStyle = BorderStyle.None,
-            ScrollBars = RichTextBoxScrollBars.Vertical,
-        };
-        ancientDetailSplit.Panel2.Controls.Add(_ancientTextBox);
-        ancientSplit.Panel2.Controls.Add(ancientDetailSplit);
-        ancientTab.Controls.Add(ancientSplit);
-
-        Controls.Add(_tabControl);
-        Controls.Add(statusBar);
-        Controls.Add(topPanel);
-
-        UpdateLangButtons();
-
-        _filterBox.TextChanged += (_, _) => PopulateList();
-        _btnJp.Click += (_, _) => SwitchLang(true);
-        _btnEn.Click += (_, _) => SwitchLang(false);
-        _eventList.SelectedIndexChanged += (_, _) => ShowSelected();
-        _ancientList.SelectedIndexChanged += (_, _) => ShowSelectedAncient();
     }
 
     void SwitchLang(bool isJp)
@@ -339,8 +211,7 @@ public partial class EventBrowserForm : Form
             _eventList.Items.Add(item.Label);
         _eventList.EndUpdate();
 
-        if (Controls.Find("countLabel", true).FirstOrDefault() is Label lbl)
-            lbl.Text = $"{matched.Count} / {_allEvents.Count} イベント";
+        _countLabel.Text = $"{matched.Count} / {_allEvents.Count} イベント";
 
         if (_selectedEventId != null)
         {

@@ -7,6 +7,18 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Update="EventBrowserForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="EventBrowserForm.Designer.cs">
+      <DependentUpon>EventBrowserForm.cs</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <EmbeddedResource Update="EventBrowserForm.resx">
+      <DependentUpon>EventBrowserForm.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="BCnEncoder.NET" Version="2.1.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
   </ItemGroup>
