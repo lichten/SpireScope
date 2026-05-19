@@ -102,7 +102,7 @@ public class MainForm : Form
 
         _backButton.Click    += (_, _) => { if (_webViewReady) _webView.GoBack();    };
         _forwardButton.Click += (_, _) => { if (_webViewReady) _webView.GoForward(); };
-        _homeButton.Click    += (_, _) => NavigateToIndex();
+        _homeButton.Click    += (_, _) => { if (_webViewReady) NavigateToIndex(); };
         _reloadButton.Click  += (_, _) => { if (_webViewReady) _webView.Reload();    };
 
         navBar.Controls.AddRange([_backButton, _forwardButton, _homeButton, _reloadButton]);
@@ -224,6 +224,7 @@ public class MainForm : Form
 
     private async Task InitWebViewAsync()
     {
+        _statusLabel.Text = "WebView2 初期化中...";
         try
         {
             await _webView.EnsureCoreWebView2Async();
