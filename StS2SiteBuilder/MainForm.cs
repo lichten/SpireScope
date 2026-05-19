@@ -31,7 +31,6 @@ public class MainForm : Form
     private string  _savedReviewContent = "";
     private bool    _isDirty;
     private bool    _webViewReady;
-    private bool    _webViewInitializing;
 
     public MainForm()
     {
@@ -210,21 +209,21 @@ public class MainForm : Form
 
     // ── Preview tab logic ─────────────────────────────────────────────────────────
 
-    private void Tabs_SelectedIndexChanged(object? sender, EventArgs e)
+    protected override void OnShown(EventArgs e)
     {
-        if (_tabs.SelectedIndex != 1) return;
-
-        // 初回タブ選択時のみ初期化（この時点でコントロールの HWND が確実に作成されている）
-        if (!_webViewReady && !_webViewInitializing)
-        {
-            _webViewInitializing = true;
-            _ = InitWebViewAsync();
-        }
+        base.OnShown(e);
+        // フォーム表示後に WebView2 HWND を強制生成してから初期化
+        // （非選択タブ内コントロールは HWND が遅延生成されるため CreateControl() が必要）
+        _ = InitWebViewAsync();
     }
+
+    private void Tabs_SelectedIndexChanged(object? sender, EventArgs e) { }
 
     private async Task InitWebViewAsync()
     {
         _statusLabel.Text = "WebView2 初期化中...";
+        if (!_webView.IsHandleCreated)
+            _webView.CreateControl();
         try
         {
             await _webView.EnsureCoreWebView2Async();
@@ -243,7 +242,6 @@ public class MainForm : Form
         }
         catch (Exception ex)
         {
-            _webViewInitializing = false;
             ShowWebViewError(ex.Message);
         }
     }
