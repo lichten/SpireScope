@@ -249,9 +249,16 @@ public class MainForm : Form
 
     private void NavigateToIndex()
     {
-        var index = Path.Combine(SiteBuilderCore.GetDistDir(), "index.html");
-        if (File.Exists(index))
-            _webView.Source = new Uri(index);
+        var distDir = SiteBuilderCore.GetDistDir();
+        var index   = Path.Combine(distDir, "index.html");
+        if (!File.Exists(index))
+        {
+            _statusLabel.Text = $"index.html が見つかりません: {index}";
+            return;
+        }
+        // Source プロパティ経由ではなく CoreWebView2.Navigate() で直接指定する
+        var fileUri = new Uri(index).AbsoluteUri;   // → "file:///C:/..."
+        _webView.CoreWebView2.Navigate(fileUri);
     }
 
     private void WebView_NewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
@@ -265,7 +272,11 @@ public class MainForm : Form
     {
         // dist 外の URL はデフォルトブラウザで開く
         if (!Uri.TryCreate(e.Uri, UriKind.Absolute, out var uri)) return;
-        if (uri.Scheme == "file") return;
+        if (uri.Scheme == "file")
+        {
+            _statusLabel.Text = $"読込中: {uri.LocalPath}";
+            return;
+        }
 
         e.Cancel = true;
         Process.Start(new ProcessStartInfo(e.Uri) { UseShellExecute = true });
@@ -273,11 +284,19 @@ public class MainForm : Form
 
     private void WebView_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
     {
+        if (!e.IsSuccess)
+        {
+            _statusLabel.Text = $"ナビゲーション失敗 (WebErrorStatus={e.WebErrorStatus})";
+            SetReviewPanel(null);
+            return;
+        }
+
         if (_isDirty && !ConfirmLeave()) return;
 
         UpdateNavButtons();
 
-        if (!Uri.TryCreate(_webView.Source?.ToString(), UriKind.Absolute, out var uri) || uri.Scheme != "file")
+        var sourceStr = _webView.CoreWebView2.Source;
+        if (!Uri.TryCreate(sourceStr, UriKind.Absolute, out var uri) || uri.Scheme != "file")
         {
             SetReviewPanel(null);
             return;
