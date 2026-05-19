@@ -14,6 +14,7 @@ public class MonsterBrowserForm : Form
     readonly TrackBar _timeSlider = new() { Dock = DockStyle.Fill, Minimum = 0, Maximum = 1000, TickFrequency = 100 };
     readonly Button _playBtn = new() { Text = "▶ Play", Width = 80 };
     readonly Button _stopBtn = new() { Text = "■ Stop", Width = 80, Enabled = false };
+    readonly Button _snapshotAllBtn = new() { Text = "全スナップショット生成", Width = 160 };
     readonly Label _timeLbl = new() { Text = "0.00s", Width = 55, TextAlign = ContentAlignment.MiddleRight };
     readonly System.Windows.Forms.Timer _timer = new() { Interval = 33 };
 
@@ -61,7 +62,7 @@ public class MonsterBrowserForm : Form
         var ctrlBar = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            RowCount = 1, ColumnCount = 6,
+            RowCount = 1, ColumnCount = 7,
             Padding = new Padding(4, 2, 4, 2),
             Margin = Padding.Empty,
         };
@@ -72,6 +73,7 @@ public class MonsterBrowserForm : Form
         ctrlBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 52));  // 時刻ラベル
         ctrlBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 82));  // Play
         ctrlBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 82));  // Stop
+        ctrlBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 164)); // Snapshot All
 
         var animLabel = new Label
         {
@@ -89,12 +91,15 @@ public class MonsterBrowserForm : Form
         _playBtn.Dock = DockStyle.Fill;
         _stopBtn.Dock = DockStyle.Fill;
 
+        _snapshotAllBtn.Dock = DockStyle.Fill;
+
         ctrlBar.Controls.Add(animLabel, 0, 0);
         ctrlBar.Controls.Add(_animCombo, 1, 0);
         ctrlBar.Controls.Add(_timeSlider, 2, 0);
         ctrlBar.Controls.Add(_timeLbl, 3, 0);
         ctrlBar.Controls.Add(_playBtn, 4, 0);
         ctrlBar.Controls.Add(_stopBtn, 5, 0);
+        ctrlBar.Controls.Add(_snapshotAllBtn, 6, 0);
 
         rightLayout.Controls.Add(_view, 0, 0);
         rightLayout.Controls.Add(ctrlBar, 0, 1);
@@ -107,6 +112,7 @@ public class MonsterBrowserForm : Form
         _timeSlider.ValueChanged += OnSliderChanged;
         _playBtn.Click += (_, _) => StartPlay();
         _stopBtn.Click += (_, _) => StopPlay();
+        _snapshotAllBtn.Click += OnSnapshotAll;
         _view.SizeChanged += (_, _) => RefreshView();
     }
 
@@ -241,6 +247,50 @@ public class MonsterBrowserForm : Form
             : 0;
         _timeLbl.Text = $"{_animTime:F2}s";
         _timeSlider.ValueChanged += OnSliderChanged;
+    }
+
+    async void OnSnapshotAll(object? sender, EventArgs e)
+    {
+        _snapshotAllBtn.Enabled = false;
+        _playBtn.Enabled = false;
+        StopPlay();
+
+        var outDir = Path.Combine(_toolsRoot, "images", "monsters");
+        Directory.CreateDirectory(outDir);
+
+        var names = Directory.GetDirectories(_monstersDir)
+            .Select(Path.GetFileName).Where(n => n != null).OrderBy(n => n).ToArray();
+
+        int done = 0;
+        await Task.Run(() =>
+        {
+            foreach (var name in names)
+            {
+                MonsterData? data = null;
+                try
+                {
+                    data = SpineLoader.Load(Path.Combine(_monstersDir, name!), _toolsRoot);
+                    var anim = data.Animations
+                        .FirstOrDefault(a => a.StartsWith("idle", StringComparison.OrdinalIgnoreCase))
+                        ?? data.Animations.FirstOrDefault() ?? "";
+
+                    using var bmp = SpineRenderer.Render(data, anim, 0f, 256, 256);
+                    using var img = SKImage.FromBitmap(bmp);
+                    using var encoded = img.Encode(SKEncodedImageFormat.Png, 100);
+                    using var fs = File.OpenWrite(Path.Combine(outDir, $"{name}.png"));
+                    encoded.SaveTo(fs);
+                }
+                catch { /* skip failed monsters */ }
+                finally { data?.Texture.Dispose(); }
+                done++;
+                Invoke(() => _snapshotAllBtn.Text = $"生成中... {done}/{names.Length}");
+            }
+        });
+
+        _snapshotAllBtn.Text = "全スナップショット生成";
+        _snapshotAllBtn.Enabled = true;
+        _playBtn.Enabled = true;
+        MessageBox.Show($"{done} 件のスナップショットを\n{outDir}\nに保存しました。", "完了");
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)

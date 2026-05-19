@@ -65,6 +65,31 @@ var eventsWithImg  = toolsRoot is not null
     ? ConvertImages(toolsRoot, "events", eventImgDstDir, allEventIds, "イベント", log)
     : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+// モンスタースナップショットを dist/images/monsters/ にコピー
+var monsterImgDstDir = Path.Combine(distDir, "images", "monsters");
+Directory.CreateDirectory(monsterImgDstDir);
+var monstersWithImg = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+if (toolsRoot is not null)
+{
+    var monsterSrcDir = Path.Combine(toolsRoot, "images", "monsters");
+    if (Directory.Exists(monsterSrcDir))
+    {
+        foreach (var src in Directory.GetFiles(monsterSrcDir, "*.png"))
+        {
+            var fname = Path.GetFileName(src);
+            var dst = Path.Combine(monsterImgDstDir, fname);
+            if (!File.Exists(dst) || File.GetLastWriteTimeUtc(src) > File.GetLastWriteTimeUtc(dst))
+                File.Copy(src, dst, overwrite: true);
+            monstersWithImg.Add(Path.GetFileNameWithoutExtension(fname));
+        }
+        log($"モンスター画像: {monstersWithImg.Count} 件コピー");
+    }
+    else
+    {
+        log("モンスター画像: tools/extracted/images/monsters/ が見つかりません（MonsterBrowserで生成してください）");
+    }
+}
+
 PageEntry[] pages =
 [
     ..chars.Select(ch => new PageEntry("キャラクター", $"{ch.Id}.html", ch.EnName, ch.JaName, ch.Desc, ch.Accent)),
@@ -143,7 +168,7 @@ foreach (var encId in allEncounterIds)
     var outPath = Path.Combine(encounterOutDir, $"{encId}.html");
     var review  = ExtractReview(outPath);
     File.WriteAllText(outPath,
-        BuildEncounterPage(encId, chars, review: review),
+        BuildEncounterPage(encId, chars, monstersWithImg, review: review),
         System.Text.Encoding.UTF8);
 }
 
@@ -1080,7 +1105,7 @@ static string BuildEncounterListPage(string[] allEncounterIds, CharData[] chars)
         """, extraHead: ENC_FILTER_CSS, extraFoot: ENC_FILTER_JS);
 }
 
-static string BuildEncounterPage(string encId, CharData[] chars, string review = "")
+static string BuildEncounterPage(string encId, CharData[] chars, HashSet<string> monstersWithImg, string review = "")
 {
     const string basePath = "../";
 
@@ -1124,6 +1149,41 @@ static string BuildEncounterPage(string encId, CharData[] chars, string review =
         </section>
         """ : "";
 
+    var monsterDirs = MonsterDatabaseService.GetEncounterMonsterDirs(encId);
+    string monsterSection;
+    if (monsterDirs == null || monsterDirs.Length == 0)
+    {
+        monsterSection = $"""
+        <section class="section">
+          <h2 class="section-title">登場モンスター</h2>
+          <p style="color:#999;font-style:italic">未設定</p>
+        </section>
+        """;
+    }
+    else
+    {
+        var cards = string.Concat(monsterDirs.Select(dir =>
+        {
+            var m   = MonsterDatabaseService.GetOrCreate(dir);
+            var img = monstersWithImg.Contains(dir)
+                ? $"""<img src="{basePath}images/monsters/{dir}.png" alt="{m.EnLabel}" class="monster-thumb">"""
+                : $"""<div class="monster-thumb monster-thumb-missing">?</div>""";
+            return $"""
+              <div class="monster-card">
+                {img}
+                <div class="monster-name-ja">{m.JaLabel}</div>
+                <div class="monster-name-en">{m.EnLabel}</div>
+              </div>
+            """;
+        }));
+        monsterSection = $"""
+        <section class="section">
+          <h2 class="section-title">登場モンスター</h2>
+          <div class="monster-grid">{cards}</div>
+        </section>
+        """;
+    }
+
     const string REVIEW_GUIDE = """
 
         <!-- REVIEW_START -->
@@ -1158,6 +1218,7 @@ static string BuildEncounterPage(string encId, CharData[] chars, string review =
           {(nameJa != nameEn ? $"""<div class="card-title-ja">{nameJa}</div>""" : "")}
           <div class="card-badges">{typeBadge}</div>
         </div>
+        {monsterSection}
         {lossSection}
         {reviewZone}
         {rewardSection}
@@ -1801,6 +1862,17 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
           padding: 2px 8px; margin-left: 8px; vertical-align: middle;
           letter-spacing: 0.5px; font-style: normal;
         }
+
+        /* ── Monster grid ── */
+        .monster-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+        .monster-card { display: flex; flex-direction: column; align-items: center; width: 120px; }
+        .monster-thumb { width: 100px; height: 100px; object-fit: contain;
+          background: #1e1e23; border-radius: 6px; border: 1px solid #ddd; }
+        .monster-thumb-missing { width: 100px; height: 100px; display: flex; align-items: center;
+          justify-content: center; background: #f0f0f0; border-radius: 6px;
+          border: 1px dashed #ccc; color: #aaa; font-size: 28px; }
+        .monster-name-ja { font-size: 12px; font-weight: 600; text-align: center; margin-top: 4px; }
+        .monster-name-en { font-size: 10px; color: #888; text-align: center; }
 
         /* ── Card table ── */
         .card-table { width: 100%; border-collapse: collapse; font-size: 13px; }
