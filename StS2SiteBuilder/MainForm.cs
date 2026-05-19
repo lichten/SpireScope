@@ -1,59 +1,16 @@
 using System.Diagnostics;
 
-public class MainForm : Form
+public partial class MainForm : Form
 {
-    private readonly Button  _buildButton;
-    private readonly Button  _openDistButton;
-    private readonly TextBox _logBox;
-
-    private readonly ToolStripStatusLabel  _statusLabel;
-    private readonly StatusStrip           _statusStrip;
-
     public MainForm()
     {
-        Text          = "StS2 Site Builder";
-        Width         = 900;
-        Height        = 600;
-        MinimumSize   = new Size(600, 400);
-        StartPosition = FormStartPosition.CenterScreen;
-
-        _statusLabel = new ToolStripStatusLabel("準備完了") { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
-        _statusStrip = new StatusStrip();
-        _statusStrip.Items.Add(_statusLabel);
-
-        var toolbar = new FlowLayoutPanel
-        {
-            Dock    = DockStyle.Top,
-            Height  = 44,
-            Padding = new Padding(8, 6, 8, 6),
-        };
-
-        _buildButton = new Button { Text = "サイト生成", AutoSize = true, Padding = new Padding(12, 4, 12, 4) };
+        InitializeComponent();
         _buildButton.Click += BuildButton_Click;
-
-        _openDistButton = new Button { Text = "dist を開く", AutoSize = true, Padding = new Padding(12, 4, 12, 4) };
         _openDistButton.Click += (_, _) =>
         {
             var d = SiteBuilderCore.GetDistDir();
             if (Directory.Exists(d)) Process.Start("explorer.exe", d);
         };
-
-        toolbar.Controls.AddRange([_buildButton, _openDistButton]);
-
-        _logBox = new TextBox
-        {
-            Dock       = DockStyle.Fill,
-            Multiline  = true,
-            ReadOnly   = true,
-            ScrollBars = ScrollBars.Vertical,
-            Font       = new Font("Consolas", 9f),
-            BackColor  = Color.FromArgb(30, 30, 30),
-            ForeColor  = Color.FromArgb(220, 220, 220),
-        };
-
-        Controls.Add(_logBox);
-        Controls.Add(toolbar);
-        Controls.Add(_statusStrip);
     }
 
     private async void BuildButton_Click(object? sender, EventArgs e)
