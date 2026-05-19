@@ -31,6 +31,7 @@ public class MainForm : Form
     private string  _savedReviewContent = "";
     private bool    _isDirty;
     private bool    _webViewReady;
+    private bool    _webViewInitializing;
 
     public MainForm()
     {
@@ -169,8 +170,6 @@ public class MainForm : Form
 
         Controls.Add(_tabs);
         Controls.Add(_statusStrip);
-
-        Load += MainForm_Load;
     }
 
     // ── Build tab logic ───────────────────────────────────────────────────────────
@@ -211,10 +210,16 @@ public class MainForm : Form
 
     // ── Preview tab logic ─────────────────────────────────────────────────────────
 
-    private void MainForm_Load(object? sender, EventArgs e)
+    private void Tabs_SelectedIndexChanged(object? sender, EventArgs e)
     {
-        // フォーム表示後に WebView2 を非同期初期化
-        _ = InitWebViewAsync();
+        if (_tabs.SelectedIndex != 1) return;
+
+        // 初回タブ選択時のみ初期化（この時点でコントロールの HWND が確実に作成されている）
+        if (!_webViewReady && !_webViewInitializing)
+        {
+            _webViewInitializing = true;
+            _ = InitWebViewAsync();
+        }
     }
 
     private async Task InitWebViewAsync()
@@ -224,10 +229,10 @@ public class MainForm : Form
             await _webView.EnsureCoreWebView2Async();
             _webViewReady = true;
 
-            _webView.CoreWebView2.NewWindowRequested      += WebView_NewWindowRequested;
-            _webView.CoreWebView2.NavigationStarting      += WebView_NavigationStarting;
-            _webView.CoreWebView2.NavigationCompleted     += WebView_NavigationCompleted;
-            _webView.CoreWebView2.SourceChanged           += (_, _) => UpdateNavButtons();
+            _webView.CoreWebView2.NewWindowRequested  += WebView_NewWindowRequested;
+            _webView.CoreWebView2.NavigationStarting  += WebView_NavigationStarting;
+            _webView.CoreWebView2.NavigationCompleted += WebView_NavigationCompleted;
+            _webView.CoreWebView2.SourceChanged       += (_, _) => UpdateNavButtons();
 
             var distDir = SiteBuilderCore.GetDistDir();
             if (Directory.Exists(distDir))
@@ -237,17 +242,9 @@ public class MainForm : Form
         }
         catch (Exception ex)
         {
+            _webViewInitializing = false;
             ShowWebViewError(ex.Message);
         }
-    }
-
-    private void Tabs_SelectedIndexChanged(object? sender, EventArgs e)
-    {
-        if (_tabs.SelectedIndex != 1 || !_webViewReady) return;
-
-        var distDir = SiteBuilderCore.GetDistDir();
-        if (Directory.Exists(distDir) && _webView.Source is null)
-            NavigateToIndex();
     }
 
     private void NavigateToIndex()
