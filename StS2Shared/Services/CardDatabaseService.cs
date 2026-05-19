@@ -142,7 +142,7 @@ public static class CardDatabaseService
     static readonly HashSet<string> _ironcladEx    = ComputeByTag("[gold]Exhaust[/gold]", "[gold]Exhausted[/gold]", "[gold]Exhaust Pile[/gold]");
     static readonly HashSet<string> _ironcladStrike = ComputeByNameContaining("Strike");
     static readonly HashSet<string> _silentPoison  = ComputeByTag("[gold]Poison[/gold]");
-    static readonly HashSet<string> _silentShiv    = ComputeByTag("[gold]Shiv[/gold]", "[gold]Shivs[/gold]");
+    static readonly HashSet<string> _silentShiv    = ComputeByGoldTagContaining("Shiv");
     static readonly HashSet<string> _defectChannel = ComputeByTag("[gold]Channel[/gold]", "[gold]Channeled[/gold]", "[gold]Channels[/gold]");
     static readonly HashSet<string> _defectEvoke   = ComputeByTag("[gold]Evoke[/gold]");
     static readonly HashSet<string> _defectFocus   = ComputeByTag("[gold]Focus[/gold]");
@@ -251,6 +251,22 @@ public static class CardDatabaseService
         {
             if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
             if (tags.Any(t => desc.Contains(t, StringComparison.Ordinal)))
+                result.Add(key[..^descSuffix.Length]);
+        }
+        return result;
+    }
+
+    // [gold]...[/gold] 内に word が含まれるカードを収集する。
+    // テンプレート形式（例: [gold]{...:plural:Shiv|Shivs}[/gold]）にも対応。
+    static HashSet<string> ComputeByGoldTagContaining(string word)
+    {
+        const string descSuffix = ".description";
+        var pattern = new Regex(@"\[gold\][^\[]*" + Regex.Escape(word) + @"[^\[]*\[/gold\]");
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, desc) in _loc.EngCards)
+        {
+            if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
+            if (pattern.IsMatch(desc))
                 result.Add(key[..^descSuffix.Length]);
         }
         return result;
