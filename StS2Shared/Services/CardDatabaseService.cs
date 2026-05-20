@@ -247,28 +247,30 @@ public static class CardDatabaseService
     {
         const string descSuffix = ".description";
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (key, desc) in _loc.EngCards)
-        {
-            if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
-            if (tags.Any(t => desc.Contains(t, StringComparison.Ordinal)))
-                result.Add(key[..^descSuffix.Length]);
-        }
+        foreach (var source in new[] { _loc.EngCards, _loc.EngRelics })
+            foreach (var (key, desc) in source)
+            {
+                if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
+                if (tags.Any(t => desc.Contains(t, StringComparison.Ordinal)))
+                    result.Add(key[..^descSuffix.Length]);
+            }
         return result;
     }
 
-    // [gold]...[/gold] 内に word が含まれるカードを収集する。
+    // [gold]...[/gold] 内に word が含まれるカード・レリックを収集する。
     // テンプレート形式（例: [gold]{...:plural:Shiv|Shivs}[/gold]）にも対応。
     static HashSet<string> ComputeByGoldTagContaining(string word)
     {
         const string descSuffix = ".description";
         var pattern = new Regex(@"\[gold\][^\[]*" + Regex.Escape(word) + @"[^\[]*\[/gold\]");
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (key, desc) in _loc.EngCards)
-        {
-            if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
-            if (pattern.IsMatch(desc))
-                result.Add(key[..^descSuffix.Length]);
-        }
+        foreach (var source in new[] { _loc.EngCards, _loc.EngRelics })
+            foreach (var (key, desc) in source)
+            {
+                if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
+                if (pattern.IsMatch(desc))
+                    result.Add(key[..^descSuffix.Length]);
+            }
         return result;
     }
 
@@ -276,12 +278,13 @@ public static class CardDatabaseService
     {
         const string descSuffix = ".description";
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (key, desc) in _loc.EngCards)
-        {
-            if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
-            if (phrases.Any(p => desc.Contains(p, StringComparison.OrdinalIgnoreCase)))
-                result.Add(key[..^descSuffix.Length]);
-        }
+        foreach (var source in new[] { _loc.EngCards, _loc.EngRelics })
+            foreach (var (key, desc) in source)
+            {
+                if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
+                if (phrases.Any(p => desc.Contains(p, StringComparison.OrdinalIgnoreCase)))
+                    result.Add(key[..^descSuffix.Length]);
+            }
         return result;
     }
 

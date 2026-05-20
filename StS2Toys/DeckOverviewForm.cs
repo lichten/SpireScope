@@ -15,7 +15,7 @@ public partial class DeckOverviewForm : Form
 
     private IReadOnlyList<DeckCard>? _cards;
     private IReadOnlyList<RelicEntry>? _relics;
-    private IReadOnlyList<(string LabelEn, string LabelJa, Func<DeckCard, bool> Filter)>? _keywordGroups;
+    private IReadOnlyList<(string LabelEn, string LabelJa, Func<string, bool> Filter)>? _keywordGroups;
     private IReadOnlyList<OverviewSection>? _sections;
     private string _titleEn = "Deck Overview";
     private string _titleJa = "デッキ概観";
@@ -62,7 +62,7 @@ public partial class DeckOverviewForm : Form
     }
 
     public void SetKeywordGroups(
-        IReadOnlyList<(string LabelEn, string LabelJa, Func<DeckCard, bool> Filter)> groups,
+        IReadOnlyList<(string LabelEn, string LabelJa, Func<string, bool> Filter)> groups,
         string titleEn, string titleJa)
     {
         _keywordGroups = groups;
@@ -103,27 +103,16 @@ public partial class DeckOverviewForm : Form
 
     Bitmap ComposeImage(int availableWidth)
     {
-        List<(string Label, List<DeckCard> Cards)> groups;
-        IReadOnlyList<RelicEntry> relics;
-        bool showRelics;
-
         if (_keywordGroups is not null)
-        {
-            groups = BuildKeywordGroups(_cards ?? []);
-            relics = [];
-            showRelics = false;
-        }
-        else
-        {
-            bool ja = AppLanguage.IsJapanese;
-            groups = (_cards ?? [])
-                .GroupBy(c => c.Type)
-                .OrderBy(g => TypeOrder(g.Key))
-                .Select(g => (Label: TypeLabel(g.Key), Cards: g.OrderBy(c => ja ? c.NameJa : c.NameEn).ToList()))
-                .ToList();
-            relics = _relics ?? [];
-            showRelics = true;
-        }
+            return ComposeImageKeyword(availableWidth);
+
+        bool ja = AppLanguage.IsJapanese;
+        var groups = (_cards ?? [])
+            .GroupBy(c => c.Type)
+            .OrderBy(g => TypeOrder(g.Key))
+            .Select(g => (Label: TypeLabel(g.Key), Cards: g.OrderBy(c => ja ? c.NameJa : c.NameEn).ToList()))
+            .ToList();
+        var relics = _relics ?? [];
 
         int cardsPerRow = Math.Max(1, (availableWidth - 2 * PadX + Gap) / (CardW + Gap));
 
@@ -133,11 +122,8 @@ public partial class DeckOverviewForm : Form
             int rows = (cards.Count + cardsPerRow - 1) / cardsPerRow;
             totalHeight += HeaderH + rows * (CardH + Gap) + SectionGap;
         }
-        if (showRelics)
-        {
-            int relicRows = relics.Count > 0 ? (relics.Count + cardsPerRow - 1) / cardsPerRow : 1;
-            totalHeight += HeaderH + relicRows * (RelicH + Gap) + SectionGap;
-        }
+        int relicRows = relics.Count > 0 ? (relics.Count + cardsPerRow - 1) / cardsPerRow : 1;
+        totalHeight += HeaderH + relicRows * (RelicH + Gap) + SectionGap;
         totalHeight += PadY;
 
         _hitMap.Clear();
@@ -173,33 +159,30 @@ public partial class DeckOverviewForm : Form
             y += totalRows * (CardH + Gap) + SectionGap;
         }
 
-        if (showRelics)
+        var relicHeader = jaMode ? "レリック" : "Relics";
+        var relicCount  = jaMode ? (relics.Count > 0 ? $"{relics.Count}個" : "なし") : (relics.Count > 0 ? relics.Count.ToString() : "None");
+        DrawSectionHeader(g, relicHeader, relicCount,
+            new Rectangle(PadX, y, availableWidth - 2 * PadX, HeaderH));
+        y += HeaderH;
+        if (relics.Count > 0)
         {
-            var relicHeader = jaMode ? "レリック" : "Relics";
-            var relicCount  = jaMode ? (relics.Count > 0 ? $"{relics.Count}個" : "なし") : (relics.Count > 0 ? relics.Count.ToString() : "None");
-            DrawSectionHeader(g, relicHeader, relicCount,
-                new Rectangle(PadX, y, availableWidth - 2 * PadX, HeaderH));
-            y += HeaderH;
-            if (relics.Count > 0)
+            for (int i = 0; i < relics.Count; i++)
             {
-                for (int i = 0; i < relics.Count; i++)
-                {
-                    int col = i % cardsPerRow;
-                    int row = i / cardsPerRow;
-                    var relicRect = new Rectangle(
-                        PadX + col * (CardW + Gap),
-                        y + row * (RelicH + Gap),
-                        CardW, RelicH);
-                    _hitMap.Add(new HitEntry(relicRect, relics[i].Id, true));
-                    DrawRelicTile(g, relics[i], relicRect);
-                }
+                int col = i % cardsPerRow;
+                int row = i / cardsPerRow;
+                var relicRect = new Rectangle(
+                    PadX + col * (CardW + Gap),
+                    y + row * (RelicH + Gap),
+                    CardW, RelicH);
+                _hitMap.Add(new HitEntry(relicRect, relics[i].Id, true));
+                DrawRelicTile(g, relics[i], relicRect);
             }
-            else
-            {
-                using var fgNone = new SolidBrush(SystemColors.GrayText);
-                using var fontNone = new Font("Segoe UI", 8.5f);
-                g.DrawString(jaMode ? "なし" : "None", fontNone, fgNone, new PointF(PadX + 4, y + 8));
-            }
+        }
+        else
+        {
+            using var fgNone = new SolidBrush(SystemColors.GrayText);
+            using var fontNone = new Font("Segoe UI", 8.5f);
+            g.DrawString(jaMode ? "なし" : "None", fontNone, fgNone, new PointF(PadX + 4, y + 8));
         }
 
         return bmp;
@@ -290,20 +273,97 @@ public partial class DeckOverviewForm : Form
         return bmp;
     }
 
-    List<(string Label, List<DeckCard> Cards)> BuildKeywordGroups(IReadOnlyList<DeckCard> cards)
+    List<(string Label, List<DeckCard> Cards, List<RelicEntry> Relics)> BuildKeywordGroups(
+        IReadOnlyList<DeckCard> cards, IReadOnlyList<RelicEntry> relics)
     {
         bool ja = AppLanguage.IsJapanese;
-        var assigned = new HashSet<DeckCard>();
-        var result = new List<(string Label, List<DeckCard> Cards)>();
+        var assignedCards  = new HashSet<DeckCard>();
+        var assignedRelics = new HashSet<RelicEntry>();
+        var result = new List<(string Label, List<DeckCard> Cards, List<RelicEntry> Relics)>();
         foreach (var (labelEn, labelJa, filter) in _keywordGroups!)
         {
-            var group = cards.Where(filter).OrderBy(c => ja ? c.NameJa : c.NameEn).ToList();
-            foreach (var c in group) assigned.Add(c);
-            result.Add((ja ? labelJa : labelEn, group));
+            var cardGroup  = cards.Where(c => filter(c.Id)).OrderBy(c => ja ? c.NameJa : c.NameEn).ToList();
+            var relicGroup = relics.Where(r => filter(r.Id)).OrderBy(r => ja ? r.NameJa : r.NameEn).ToList();
+            foreach (var c in cardGroup)  assignedCards.Add(c);
+            foreach (var r in relicGroup) assignedRelics.Add(r);
+            result.Add((ja ? labelJa : labelEn, cardGroup, relicGroup));
         }
-        var others = cards.Where(c => !assigned.Contains(c)).OrderBy(c => ja ? c.NameJa : c.NameEn).ToList();
-        if (others.Count > 0) result.Add((ja ? "その他" : "Other", others));
+        var otherCards  = cards.Where(c => !assignedCards.Contains(c)).OrderBy(c => ja ? c.NameJa : c.NameEn).ToList();
+        var otherRelics = relics.Where(r => !assignedRelics.Contains(r)).OrderBy(r => ja ? r.NameJa : r.NameEn).ToList();
+        if (otherCards.Count > 0 || otherRelics.Count > 0)
+            result.Add((ja ? "その他" : "Other", otherCards, otherRelics));
         return result;
+    }
+
+    Bitmap ComposeImageKeyword(int availableWidth)
+    {
+        bool ja = AppLanguage.IsJapanese;
+        var groups = BuildKeywordGroups(_cards ?? [], _relics ?? []);
+        int cardsPerRow = Math.Max(1, (availableWidth - 2 * PadX + Gap) / (CardW + Gap));
+        int deckTotal = _deckTotalOverride ?? (_cards ?? []).Sum(c => c.Count);
+
+        int totalHeight = PadY;
+        foreach (var (_, groupCards, groupRelics) in groups)
+        {
+            int cardRows  = groupCards.Count  > 0 ? (groupCards.Count  + cardsPerRow - 1) / cardsPerRow : 0;
+            int relicRows = groupRelics.Count > 0 ? (groupRelics.Count + cardsPerRow - 1) / cardsPerRow : 0;
+            totalHeight += HeaderH;
+            if (cardRows  > 0) totalHeight += cardRows  * (CardH  + Gap);
+            if (relicRows > 0) totalHeight += relicRows * (RelicH + Gap) + (cardRows > 0 ? Gap : 0);
+            if (cardRows == 0 && relicRows == 0) totalHeight += RelicH;
+            totalHeight += SectionGap;
+        }
+        totalHeight += PadY;
+
+        _hitMap.Clear();
+        var bmp = new Bitmap(availableWidth, Math.Max(totalHeight, 1));
+        using var g = Graphics.FromImage(bmp);
+        g.Clear(SystemColors.Control);
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
+        int y = PadY;
+        foreach (var (label, groupCards, groupRelics) in groups)
+        {
+            var countStr = FormatCardCount(groupCards.Sum(c => c.Count), deckTotal, ja);
+            DrawSectionHeader(g, label, countStr, new Rectangle(PadX, y, availableWidth - 2 * PadX, HeaderH));
+            y += HeaderH;
+
+            int cardRows = groupCards.Count > 0 ? (groupCards.Count + cardsPerRow - 1) / cardsPerRow : 0;
+            for (int i = 0; i < groupCards.Count; i++)
+            {
+                int col = i % cardsPerRow, row = i / cardsPerRow;
+                var cardRect = new Rectangle(PadX + col * (CardW + Gap), y + row * (CardH + Gap), CardW, CardH);
+                _hitMap.Add(new HitEntry(cardRect, groupCards[i].Id, false, groupCards[i].EnchantmentId, groupCards[i].EnchantmentAmount));
+                DrawCard(g, groupCards[i], cardRect);
+            }
+            if (cardRows > 0) y += cardRows * (CardH + Gap);
+
+            if (groupRelics.Count > 0)
+            {
+                if (cardRows > 0) y += Gap;
+                int relicRows = (groupRelics.Count + cardsPerRow - 1) / cardsPerRow;
+                for (int i = 0; i < groupRelics.Count; i++)
+                {
+                    int col = i % cardsPerRow, row = i / cardsPerRow;
+                    var relicRect = new Rectangle(PadX + col * (CardW + Gap), y + row * (RelicH + Gap), CardW, RelicH);
+                    _hitMap.Add(new HitEntry(relicRect, groupRelics[i].Id, true));
+                    DrawRelicTile(g, groupRelics[i], relicRect);
+                }
+                y += relicRows * (RelicH + Gap);
+            }
+            else if (groupCards.Count == 0)
+            {
+                using var fgNone = new SolidBrush(SystemColors.GrayText);
+                using var fontNone = new Font("Segoe UI", 8.5f);
+                g.DrawString(ja ? "なし" : "None", fontNone, fgNone, new PointF(PadX + 4, y + 8));
+                y += RelicH;
+            }
+
+            y += SectionGap;
+        }
+
+        return bmp;
     }
 
     void DrawCard(Graphics g, DeckCard card, Rectangle rect)
