@@ -6,6 +6,7 @@ namespace StS2Toys;
 
 public record DeckCard(string Id, string NameEn, string NameJa, string Cost, string Type, int Count, bool IsUpgraded = false, string EnchantmentId = "", int EnchantmentAmount = 0);
 public record RelicEntry(string Id, string NameEn, string NameJa);
+public record OverviewSection(string LabelEn, string LabelJa, IReadOnlyList<DeckCard> Cards, IReadOnlyList<RelicEntry> Relics);
 record HitEntry(Rectangle Rect, string Id, bool IsRelic, string EnchantmentId = "", int EnchantmentAmount = 0);
 
 public partial class DeckOverviewForm : Form
@@ -14,13 +15,15 @@ public partial class DeckOverviewForm : Form
 
     private IReadOnlyList<DeckCard>? _cards;
     private IReadOnlyList<RelicEntry>? _relics;
-    private IReadOnlyList<(string Label, Func<DeckCard, bool> Filter)>? _keywordGroups;
+    private IReadOnlyList<(string LabelEn, string LabelJa, Func<DeckCard, bool> Filter)>? _keywordGroups;
+    private IReadOnlyList<OverviewSection>? _sections;
+    private string _titleEn = "Deck Overview";
+    private string _titleJa = "デッキ概観";
+    private int? _deckTotalOverride;
     private readonly Dictionary<string, Bitmap?> _imageCache = new();
     readonly ToolTip _hoverTip = new() { InitialDelay = 400, ReshowDelay = 100, AutoPopDelay = 8000, ShowAlways = true };
     List<HitEntry> _hitMap = [];
     string? _hoveredId;
-    IReadOnlyList<(string Label, Func<DeckCard, bool> Filter)>? _suffixGroups;
-    IReadOnlyList<DeckCard> _suffixSource = [];
 
     public DeckOverviewForm()
     {
@@ -55,19 +58,13 @@ public partial class DeckOverviewForm : Form
         if (Visible) RecomposeIfNeeded();
     }
 
-    public void SetBlockStats(int blockCount, int totalCount, int relicCount)
-    {
-        double pct = totalCount > 0 ? 100.0 * blockCount / totalCount : 0;
-        var relicPart = relicCount > 0 ? $"  レリック: {relicCount}個" : "";
-        _statsLabel.Text = $"ブロック関連: {blockCount}枚 / デッキ全体: {totalCount}枚 ({pct:F0}%){relicPart}";
-        _statsPanel.Visible = true;
-        Text = "ブロック関連カード概観";
-    }
-
-    public void SetKeywordGroups(IReadOnlyList<(string Label, Func<DeckCard, bool> Filter)> groups, string windowTitle)
+    public void SetKeywordGroups(
+        IReadOnlyList<(string LabelEn, string LabelJa, Func<DeckCard, bool> Filter)> groups,
+        string titleEn, string titleJa)
     {
         _keywordGroups = groups;
-        Text = windowTitle;
+        _titleEn = titleEn;
+        _titleJa = titleJa;
     }
 
     public void SetStatsText(string text)
@@ -76,37 +73,25 @@ public partial class DeckOverviewForm : Form
         _statsPanel.Visible = !string.IsNullOrEmpty(text);
     }
 
-    public void SetSuffixGroups(IReadOnlyList<DeckCard> source,
-        IReadOnlyList<(string Label, Func<DeckCard, bool> Filter)> groups)
+    public void SetSections(IReadOnlyList<OverviewSection> sections, int deckTotal)
     {
-        _suffixSource = source;
-        _suffixGroups = groups;
+        _sections = sections;
+        _deckTotalOverride = deckTotal;
+        _cards = null;
+        _relics = null;
+        _keywordGroups = null;
+        _statsPanel.Visible = false;
         if (Visible) RecomposeIfNeeded();
-    }
-
-    public void ClearSuffixGroups()
-    {
-        _suffixSource = [];
-        _suffixGroups = null;
-        if (Visible) RecomposeIfNeeded();
-    }
-
-    public void SetDrawStats(int drawCount, int totalCount, int relicCount)
-    {
-        double pct = totalCount > 0 ? 100.0 * drawCount / totalCount : 0;
-        var relicPart = relicCount > 0 ? $"  レリック: {relicCount}個" : "";
-        _statsLabel.Text = $"ドロー関連: {drawCount}枚 / デッキ全体: {totalCount}枚 ({pct:F0}%){relicPart}";
-        _statsPanel.Visible = true;
-        Text = "ドロー関連カード概観";
     }
 
     void RecomposeIfNeeded()
     {
-        if (_cards is null) return;
+        if (_cards is null && _sections is null) return;
+        Text = AppLanguage.IsJapanese ? _titleJa : _titleEn;
         var w = _scrollPanel.ClientSize.Width;
         if (w <= 0) return;
 
-        var bmp = ComposeImage(w);
+        var bmp = _sections is not null ? ComposeFromSections(w) : ComposeImage(w);
         var oldImage = _pictureBox.Image;
         _pictureBox.Size = new Size(bmp.Width, bmp.Height);
         _pictureBox.Image = bmp;
@@ -127,10 +112,11 @@ public partial class DeckOverviewForm : Form
         }
         else
         {
+            bool ja = AppLanguage.IsJapanese;
             groups = (_cards ?? [])
                 .GroupBy(c => c.Type)
                 .OrderBy(g => TypeOrder(g.Key))
-                .Select(g => (Label: TypeLabel(g.Key), Cards: g.OrderBy(c => c.NameJa).ToList()))
+                .Select(g => (Label: TypeLabel(g.Key), Cards: g.OrderBy(c => ja ? c.NameJa : c.NameEn).ToList()))
                 .ToList();
             relics = _relics ?? [];
             showRelics = true;
@@ -149,16 +135,6 @@ public partial class DeckOverviewForm : Form
             int relicRows = relics.Count > 0 ? (relics.Count + cardsPerRow - 1) / cardsPerRow : 1;
             totalHeight += HeaderH + relicRows * (RelicH + Gap) + SectionGap;
         }
-        if (_suffixGroups is not null)
-        {
-            foreach (var (_, filter) in _suffixGroups)
-            {
-                int count = _suffixSource.Count(c => filter(c));
-                if (count == 0) continue;
-                int rows = (count + cardsPerRow - 1) / cardsPerRow;
-                totalHeight += HeaderH + rows * (CardH + Gap) + SectionGap;
-            }
-        }
         totalHeight += PadY;
 
         _hitMap.Clear();
@@ -169,9 +145,12 @@ public partial class DeckOverviewForm : Form
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
         int y = PadY;
+        bool jaMode = AppLanguage.IsJapanese;
+        int deckTotal = _deckTotalOverride ?? (_cards ?? []).Sum(c => c.Count);
         foreach (var (label, cards) in groups)
         {
-            DrawSectionHeader(g, label, $"{cards.Sum(c => c.Count)}枚",
+            var countStr = FormatCardCount(cards.Sum(c => c.Count), deckTotal, jaMode);
+            DrawSectionHeader(g, label, countStr,
                 new Rectangle(PadX, y, availableWidth - 2 * PadX, HeaderH));
             y += HeaderH;
 
@@ -193,7 +172,9 @@ public partial class DeckOverviewForm : Form
 
         if (showRelics)
         {
-            DrawSectionHeader(g, "レリック", relics.Count > 0 ? $"{relics.Count}個" : "なし",
+            var relicHeader = jaMode ? "レリック" : "Relics";
+            var relicCount  = jaMode ? (relics.Count > 0 ? $"{relics.Count}個" : "なし") : (relics.Count > 0 ? relics.Count.ToString() : "None");
+            DrawSectionHeader(g, relicHeader, relicCount,
                 new Rectangle(PadX, y, availableWidth - 2 * PadX, HeaderH));
             y += HeaderH;
             if (relics.Count > 0)
@@ -214,34 +195,83 @@ public partial class DeckOverviewForm : Form
             {
                 using var fgNone = new SolidBrush(SystemColors.GrayText);
                 using var fontNone = new Font("Segoe UI", 8.5f);
-                g.DrawString("なし", fontNone, fgNone, new PointF(PadX + 4, y + 8));
+                g.DrawString(jaMode ? "なし" : "None", fontNone, fgNone, new PointF(PadX + 4, y + 8));
             }
         }
 
-        if (_suffixGroups is not null)
+        return bmp;
+    }
+
+    Bitmap ComposeFromSections(int availableWidth)
+    {
+        int cardsPerRow = Math.Max(1, (availableWidth - 2 * PadX + Gap) / (CardW + Gap));
+        bool jaMode = AppLanguage.IsJapanese;
+        int deckTotal = _deckTotalOverride ?? 0;
+
+        int totalH = PadY;
+        foreach (var sec in _sections!)
         {
-            foreach (var (label, filter) in _suffixGroups)
+            int cardRows  = sec.Cards.Count  > 0 ? (sec.Cards.Count  + cardsPerRow - 1) / cardsPerRow : 0;
+            int relicRows = sec.Relics.Count > 0 ? (sec.Relics.Count + cardsPerRow - 1) / cardsPerRow : 0;
+            totalH += HeaderH;
+            if (cardRows > 0)  totalH += cardRows  * (CardH  + Gap);
+            if (relicRows > 0) totalH += relicRows  * (RelicH + Gap) + (cardRows > 0 ? Gap : 0);
+            if (cardRows == 0 && relicRows == 0) totalH += RelicH;
+            totalH += SectionGap;
+        }
+        totalH += PadY;
+
+        _hitMap.Clear();
+        var bmp = new Bitmap(availableWidth, Math.Max(totalH, 1));
+        using var g = Graphics.FromImage(bmp);
+        g.Clear(SystemColors.Control);
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
+        int y = PadY;
+        foreach (var sec in _sections!)
+        {
+            var label = jaMode ? sec.LabelJa : sec.LabelEn;
+            int cardCount = sec.Cards.Sum(c => c.Count);
+            string countStr = sec.Cards.Count == 0 && sec.Relics.Count > 0
+                ? (jaMode ? $"{sec.Relics.Count}個" : sec.Relics.Count.ToString())
+                : FormatCardCount(cardCount, deckTotal, jaMode);
+            DrawSectionHeader(g, label, countStr,
+                new Rectangle(PadX, y, availableWidth - 2 * PadX, HeaderH));
+            y += HeaderH;
+
+            int cardRows = sec.Cards.Count > 0 ? (sec.Cards.Count + cardsPerRow - 1) / cardsPerRow : 0;
+            for (int i = 0; i < sec.Cards.Count; i++)
             {
-                var groupCards = _suffixSource.Where(c => filter(c)).OrderBy(c => c.NameJa).ToList();
-                if (groupCards.Count == 0) continue;
-                DrawSectionHeader(g, label, $"{groupCards.Sum(c => c.Count)}枚",
-                    new Rectangle(PadX, y, availableWidth - 2 * PadX, HeaderH));
-                y += HeaderH;
-                for (int i = 0; i < groupCards.Count; i++)
-                {
-                    int col = i % cardsPerRow;
-                    int row = i / cardsPerRow;
-                    var cardRect = new Rectangle(
-                        PadX + col * (CardW + Gap),
-                        y + row * (CardH + Gap),
-                        CardW, CardH);
-                    _hitMap.Add(new HitEntry(cardRect, groupCards[i].Id, false,
-                        groupCards[i].EnchantmentId, groupCards[i].EnchantmentAmount));
-                    DrawCard(g, groupCards[i], cardRect);
-                }
-                int totalRows = (groupCards.Count + cardsPerRow - 1) / cardsPerRow;
-                y += totalRows * (CardH + Gap) + SectionGap;
+                int col = i % cardsPerRow, row = i / cardsPerRow;
+                var cardRect = new Rectangle(PadX + col * (CardW + Gap), y + row * (CardH + Gap), CardW, CardH);
+                _hitMap.Add(new HitEntry(cardRect, sec.Cards[i].Id, false, sec.Cards[i].EnchantmentId, sec.Cards[i].EnchantmentAmount));
+                DrawCard(g, sec.Cards[i], cardRect);
             }
+            if (cardRows > 0) y += cardRows * (CardH + Gap);
+
+            if (sec.Relics.Count > 0)
+            {
+                if (cardRows > 0) y += Gap;
+                int relicRows = (sec.Relics.Count + cardsPerRow - 1) / cardsPerRow;
+                for (int i = 0; i < sec.Relics.Count; i++)
+                {
+                    int col = i % cardsPerRow, row = i / cardsPerRow;
+                    var relicRect = new Rectangle(PadX + col * (CardW + Gap), y + row * (RelicH + Gap), CardW, RelicH);
+                    _hitMap.Add(new HitEntry(relicRect, sec.Relics[i].Id, true));
+                    DrawRelicTile(g, sec.Relics[i], relicRect);
+                }
+                y += relicRows * (RelicH + Gap);
+            }
+            else if (sec.Cards.Count == 0)
+            {
+                using var fgNone = new SolidBrush(SystemColors.GrayText);
+                using var fontNone = new Font("Segoe UI", 8.5f);
+                g.DrawString(jaMode ? "なし" : "None", fontNone, fgNone, new PointF(PadX + 4, y + 8));
+                y += RelicH;
+            }
+
+            y += SectionGap;
         }
 
         return bmp;
@@ -249,16 +279,17 @@ public partial class DeckOverviewForm : Form
 
     List<(string Label, List<DeckCard> Cards)> BuildKeywordGroups(IReadOnlyList<DeckCard> cards)
     {
+        bool ja = AppLanguage.IsJapanese;
         var assigned = new HashSet<DeckCard>();
         var result = new List<(string Label, List<DeckCard> Cards)>();
-        foreach (var (label, filter) in _keywordGroups!)
+        foreach (var (labelEn, labelJa, filter) in _keywordGroups!)
         {
-            var group = cards.Where(filter).OrderBy(c => c.NameJa).ToList();
+            var group = cards.Where(filter).OrderBy(c => ja ? c.NameJa : c.NameEn).ToList();
             foreach (var c in group) assigned.Add(c);
-            result.Add((label, group));
+            result.Add((ja ? labelJa : labelEn, group));
         }
-        var others = cards.Where(c => !assigned.Contains(c)).OrderBy(c => c.NameJa).ToList();
-        if (others.Count > 0) result.Add(("その他", others));
+        var others = cards.Where(c => !assigned.Contains(c)).OrderBy(c => ja ? c.NameJa : c.NameEn).ToList();
+        if (others.Count > 0) result.Add((ja ? "その他" : "Other", others));
         return result;
     }
 
@@ -424,14 +455,18 @@ public partial class DeckOverviewForm : Form
                 Trimming = StringTrimming.EllipsisCharacter,
             };
             int halfH = rect.Height / 2;
-            using var fontJa = new Font("Segoe UI", 7.5f, FontStyle.Bold);
-            using var fgJa = new SolidBrush(Color.DarkSlateBlue);
-            g.DrawString(relic.NameJa, fontJa, fgJa,
+            bool ja = AppLanguage.IsJapanese;
+            var primaryName   = ja ? relic.NameJa : relic.NameEn;
+            var secondaryName = ja ? relic.NameEn  : relic.NameJa;
+
+            using var fontPrimary = new Font("Segoe UI", 7.5f, FontStyle.Bold);
+            using var fgPrimary = new SolidBrush(Color.DarkSlateBlue);
+            g.DrawString(primaryName, fontPrimary, fgPrimary,
                 new RectangleF(textX, rect.Y, textW, halfH), fmt);
 
-            using var fontEn = new Font("Segoe UI", 6f);
-            using var fgEn = new SolidBrush(Color.FromArgb(150, 50, 50, 120));
-            g.DrawString(relic.NameEn, fontEn, fgEn,
+            using var fontSecondary = new Font("Segoe UI", 6f);
+            using var fgSecondary = new SolidBrush(Color.FromArgb(150, 50, 50, 120));
+            g.DrawString(secondaryName, fontSecondary, fgSecondary,
                 new RectangleF(textX, rect.Y + halfH, textW, halfH), fmt);
         }
     }
@@ -480,24 +515,21 @@ public partial class DeckOverviewForm : Form
 
     static string BuildTooltipText(HitEntry hit)
     {
-        var nameJa = CardDatabaseService.GetName(hit.Id, japanese: true);
-        var nameEn = CardDatabaseService.GetName(hit.Id, japanese: false);
+        bool ja = AppLanguage.IsJapanese;
+        var name = CardDatabaseService.GetName(hit.Id, japanese: ja);
         var (descEn, descJa) = CardDatabaseService.GetDescription(hit.Id);
         var stats = hit.IsRelic ? null : CardDatabaseService.GetCardStats(hit.Id);
-        var jaText = DescriptionFormatter.Resolve(descJa, stats, japanese: true);
-        var enText = DescriptionFormatter.Resolve(descEn, stats);
+        var descText = DescriptionFormatter.Resolve(ja ? descJa : descEn, stats, japanese: ja);
 
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine($"{nameJa}  /  {nameEn}");
-        if (!string.IsNullOrWhiteSpace(jaText)) sb.AppendLine(jaText);
-        if (!string.IsNullOrWhiteSpace(enText)) sb.AppendLine(enText);
+        sb.AppendLine(name);
+        if (!string.IsNullOrWhiteSpace(descText)) sb.AppendLine(descText);
 
         if (!hit.IsRelic && !string.IsNullOrEmpty(hit.EnchantmentId))
         {
-            var enchJa = CardDatabaseService.FormatEnchantmentLabel(hit.EnchantmentId, hit.EnchantmentAmount, japanese: true);
-            var enchEn = CardDatabaseService.FormatEnchantmentLabel(hit.EnchantmentId, hit.EnchantmentAmount, japanese: false);
+            var enchLabel = CardDatabaseService.FormatEnchantmentLabel(hit.EnchantmentId, hit.EnchantmentAmount, japanese: ja);
             sb.AppendLine();
-            sb.Append($"[{enchJa} / {enchEn}]");
+            sb.Append($"[{enchLabel}]");
         }
 
         return sb.ToString().Trim();
@@ -514,14 +546,24 @@ public partial class DeckOverviewForm : Form
         _        => 6
     };
 
-    static string TypeLabel(string type) => type switch
+    static string FormatCardCount(int groupCount, int deckTotal, bool japanese)
     {
-        "Attack" => "アタック",
-        "Skill"  => "スキル",
-        "Power"  => "パワー",
-        "Curse"  => "呪い",
-        "Status" => "状態異常",
-        "Quest"  => "クエスト",
-        _ => type.Length > 0 ? type : "その他"
-    };
+        double pct = deckTotal > 0 ? 100.0 * groupCount / deckTotal : 0;
+        return japanese
+            ? $"{deckTotal}枚中{groupCount}枚（{pct:F0}%）"
+            : $"{groupCount} / {deckTotal} ({pct:F0}%)";
+    }
+
+    static string TypeLabel(string type) => AppLanguage.IsJapanese
+        ? type switch
+        {
+            "Attack" => "アタック",
+            "Skill"  => "スキル",
+            "Power"  => "パワー",
+            "Curse"  => "呪い",
+            "Status" => "状態異常",
+            "Quest"  => "クエスト",
+            _ => type.Length > 0 ? type : "その他"
+        }
+        : (type.Length > 0 ? type : "Other");
 }

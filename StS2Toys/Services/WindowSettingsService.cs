@@ -8,10 +8,7 @@ record AppSettings(
     WindowSettings? Main = null,
     SubWindowSettings? ImageViewer = null,
     SubWindowSettings? CardDetail = null,
-    SubWindowSettings? DeckOverview = null,
-    SubWindowSettings? BlockOverview = null,
     SubWindowSettings? HpHistory = null,
-    SubWindowSettings? DrawOverview = null,
     SubWindowSettings? EncounterOverview = null,
     int? SidePanelWidth = null,
     SubWindowSettings? NecroOverview = null,
@@ -19,7 +16,8 @@ record AppSettings(
     SubWindowSettings? SilentOverview = null,
     SubWindowSettings? DefectOverview = null,
     SubWindowSettings? RegentOverview = null,
-    SubWindowSettings? CommonOverview = null);
+    SubWindowSettings? CombinedOverview = null,
+    string? Language = null);
 
 static class WindowSettingsService
 {

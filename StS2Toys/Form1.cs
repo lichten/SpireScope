@@ -11,22 +11,17 @@ namespace StS2Toys
         private readonly System.Windows.Forms.Timer _flashTimer = new() { Interval = 2000 };
         private CardImageViewerForm? _imageViewer;
         private CardDetailForm? _detailViewer;
-        private DeckOverviewForm? _deckOverview;
-        private DeckOverviewForm? _blockOverview;
-        private DeckOverviewForm? _drawOverview;
+        private DeckOverviewForm? _combinedOverview;
         private DeckOverviewForm? _necroOverview;
         private DeckOverviewForm? _ironcladOverview;
         private DeckOverviewForm? _silentOverview;
         private DeckOverviewForm? _defectOverview;
         private DeckOverviewForm? _regentOverview;
-        private DeckOverviewForm? _commonOverview;
         private EncounterOverviewForm? _encounterOverview;
         private HpHistoryForm? _hpHistory;
         private SubWindowSettings? _imageViewerSettings;
         private SubWindowSettings? _cardDetailSettings;
-        private SubWindowSettings? _deckOverviewSettings;
-        private SubWindowSettings? _blockOverviewSettings;
-        private SubWindowSettings? _drawOverviewSettings;
+        private SubWindowSettings? _combinedOverviewSettings;
         private SubWindowSettings? _encounterOverviewSettings;
         private SubWindowSettings? _hpHistorySettings;
         private SubWindowSettings? _necroOverviewSettings;
@@ -34,7 +29,6 @@ namespace StS2Toys
         private SubWindowSettings? _silentOverviewSettings;
         private SubWindowSettings? _defectOverviewSettings;
         private SubWindowSettings? _regentOverviewSettings;
-        private SubWindowSettings? _commonOverviewSettings;
         private IReadOnlyList<DeckCard>? _lastDeckCards;
         private IReadOnlyList<RelicEntry>? _lastRelics;
         private RunSaveData? _lastRunData;
@@ -46,7 +40,9 @@ namespace StS2Toys
         // ブロック関連カード絞り込み
         private bool _blockFilter = false;
 
-        private static readonly string[] DeckColumnTexts = ["カード名 (EN)", "カード名 (JP)", "コスト", "種別", "エンチャント", "枚数"];
+        static string[] DeckColumnTexts => AppLanguage.IsJapanese
+            ? ["カード名 (EN)", "カード名 (JP)", "コスト", "種別", "エンチャント", "枚数"]
+            : ["Card Name (EN)", "Card Name (JP)", "Cost", "Type", "Enchantment", "Count"];
 
         public Form1()
         {
@@ -76,9 +72,7 @@ namespace StS2Toys
             _flashTimer.Dispose();
             _imageViewer?.Close();
             _detailViewer?.Close();
-            _deckOverview?.Close();
-            _blockOverview?.Close();
-            _drawOverview?.Close();
+            _combinedOverview?.Close();
             _encounterOverview?.Close();
             _hpHistory?.Close();
             _necroOverview?.Close();
@@ -86,17 +80,16 @@ namespace StS2Toys
             _silentOverview?.Close();
             _defectOverview?.Close();
             _regentOverview?.Close();
-            _commonOverview?.Close();
         }
 
         void RestoreWindowSettings()
         {
             var app = WindowSettingsService.Load();
+            AppLanguage.IsJapanese = app.Language != "en";
+            UpdateLangButton();
             _imageViewerSettings = app.ImageViewer;
             _cardDetailSettings = app.CardDetail;
-            _deckOverviewSettings = app.DeckOverview;
-            _blockOverviewSettings = app.BlockOverview;
-            _drawOverviewSettings = app.DrawOverview;
+            _combinedOverviewSettings = app.CombinedOverview;
             _encounterOverviewSettings = app.EncounterOverview;
             _hpHistorySettings = app.HpHistory;
             _necroOverviewSettings    = app.NecroOverview;
@@ -104,7 +97,6 @@ namespace StS2Toys
             _silentOverviewSettings   = app.SilentOverview;
             _defectOverviewSettings   = app.DefectOverview;
             _regentOverviewSettings   = app.RegentOverview;
-            _commonOverviewSettings   = app.CommonOverview;
 
             if (app.SidePanelWidth is int w)
                 splitContainerOuter.SplitterDistance = w;
@@ -128,12 +120,8 @@ namespace StS2Toys
                 _imageViewerSettings = WindowToSub(_imageViewer);
             if (_detailViewer is { IsDisposed: false })
                 _cardDetailSettings = WindowToSub(_detailViewer);
-            if (_deckOverview is { IsDisposed: false })
-                _deckOverviewSettings = WindowToSub(_deckOverview);
-            if (_blockOverview is { IsDisposed: false })
-                _blockOverviewSettings = WindowToSub(_blockOverview);
-            if (_drawOverview is { IsDisposed: false })
-                _drawOverviewSettings = WindowToSub(_drawOverview);
+            if (_combinedOverview is { IsDisposed: false })
+                _combinedOverviewSettings = WindowToSub(_combinedOverview);
             if (_necroOverview is { IsDisposed: false })
                 _necroOverviewSettings = WindowToSub(_necroOverview);
             if (_ironcladOverview is { IsDisposed: false })
@@ -144,8 +132,6 @@ namespace StS2Toys
                 _defectOverviewSettings = WindowToSub(_defectOverview);
             if (_regentOverview is { IsDisposed: false })
                 _regentOverviewSettings = WindowToSub(_regentOverview);
-            if (_commonOverview is { IsDisposed: false })
-                _commonOverviewSettings = WindowToSub(_commonOverview);
             if (_encounterOverview is { IsDisposed: false })
                 _encounterOverviewSettings = WindowToSub(_encounterOverview);
             if (_hpHistory is { IsDisposed: false })
@@ -154,7 +140,7 @@ namespace StS2Toys
             var state = WindowState == FormWindowState.Minimized ? FormWindowState.Normal : WindowState;
             var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
             var main = new WindowSettings(bounds.X, bounds.Y, bounds.Width, bounds.Height, state.ToString());
-            WindowSettingsService.Save(new AppSettings(main, _imageViewerSettings, _cardDetailSettings, _deckOverviewSettings, _blockOverviewSettings, _hpHistorySettings, _drawOverviewSettings, _encounterOverviewSettings, splitContainerOuter.SplitterDistance, _necroOverviewSettings, _ironcladOverviewSettings, _silentOverviewSettings, _defectOverviewSettings, _regentOverviewSettings, _commonOverviewSettings));
+            WindowSettingsService.Save(new AppSettings(main, _imageViewerSettings, _cardDetailSettings, _hpHistorySettings, _encounterOverviewSettings, splitContainerOuter.SplitterDistance, _necroOverviewSettings, _ironcladOverviewSettings, _silentOverviewSettings, _defectOverviewSettings, _regentOverviewSettings, _combinedOverviewSettings, AppLanguage.IsJapanese ? "ja" : "en"));
         }
 
         static SubWindowSettings WindowToSub(Form form) =>
@@ -162,9 +148,7 @@ namespace StS2Toys
 
         void RestoreSubWindowVisibility()
         {
-            if (_deckOverviewSettings?.Visible == true)  BtnDeckOverview_Click(null, EventArgs.Empty);
-            if (_blockOverviewSettings?.Visible == true) BtnBlockOverview_Click(null, EventArgs.Empty);
-            if (_drawOverviewSettings?.Visible == true)       BtnDrawOverview_Click(null, EventArgs.Empty);
+            if (_combinedOverviewSettings?.Visible == true)  BtnCombinedOverview_Click(null, EventArgs.Empty);
             if (_encounterOverviewSettings?.Visible == true)  BtnEncounterOverview_Click(null, EventArgs.Empty);
             if (_hpHistorySettings?.Visible == true)          BtnHpHistory_Click(null, EventArgs.Empty);
             if (_necroOverviewSettings?.Visible == true)      BtnNecroOverview_Click(null, EventArgs.Empty);
@@ -172,7 +156,6 @@ namespace StS2Toys
             if (_silentOverviewSettings?.Visible == true)     BtnSilentOverview_Click(null, EventArgs.Empty);
             if (_defectOverviewSettings?.Visible == true)     BtnDefectOverview_Click(null, EventArgs.Empty);
             if (_regentOverviewSettings?.Visible == true)     BtnRegentOverview_Click(null, EventArgs.Empty);
-            if (_commonOverviewSettings?.Visible == true)     BtnCommonOverview_Click(null, EventArgs.Empty);
         }
 
         static SubWindowSettings BoundsToSub(Rectangle r) => new(r.X, r.Y, r.Width, r.Height);
@@ -213,6 +196,15 @@ namespace StS2Toys
             else if (!string.IsNullOrEmpty(txtFilePath.Text))
                 StartWatching(txtFilePath.Text);
         }
+
+        void BtnLang_Click(object? sender, EventArgs e)
+        {
+            AppLanguage.IsJapanese = !AppLanguage.IsJapanese;
+            UpdateLangButton();
+            if (_lastRunData is not null) DisplayData(_lastRunData);
+        }
+
+        void UpdateLangButton() => btnLang.Text = AppLanguage.IsJapanese ? "JP" : "EN";
 
         void OpenFile(string path)
         {
@@ -276,7 +268,9 @@ namespace StS2Toys
 
         void UpdateAutoButton(bool watching)
         {
-            btnToggleAuto.Text = watching ? "● 監視中" : "○ 自動更新";
+            btnToggleAuto.Text = watching
+                ? (AppLanguage.IsJapanese ? "● 監視中" : "● Watching")
+                : (AppLanguage.IsJapanese ? "○ 自動更新" : "○ Auto");
             btnToggleAuto.ForeColor = watching ? Color.DarkGreen : SystemColors.ControlText;
         }
 
@@ -288,13 +282,9 @@ namespace StS2Toys
 
             var characterEn = CardDatabaseService.GetName(player.CharacterId, japanese: false);
             var characterJa = CardDatabaseService.GetName(player.CharacterId, japanese: true);
-            lblInfo.Text =
-                $"キャラクター: {characterJa} ({characterEn})　" +
-                $"アセンション: {data.Ascension}　" +
-                $"Act: {data.CurrentActIndex + 1}　　" +
-                $"HP: {player.CurrentHp}/{player.MaxHp}　" +
-                $"ゴールド: {player.Gold}　" +
-                $"エネルギー: {player.MaxEnergy}";
+            lblInfo.Text = AppLanguage.IsJapanese
+                ? $"キャラクター: {characterJa} ({characterEn})　アセンション: {data.Ascension}　Act: {data.CurrentActIndex + 1}　　HP: {player.CurrentHp}/{player.MaxHp}　ゴールド: {player.Gold}　エネルギー: {player.MaxEnergy}"
+                : $"Character: {characterEn} ({characterJa})  Ascension: {data.Ascension}  Act: {data.CurrentActIndex + 1}    HP: {player.CurrentHp}/{player.MaxHp}  Gold: {player.Gold}  Energy: {player.MaxEnergy}";
 
             DisplayDeck(player);
             DisplayRelics(player);
@@ -311,7 +301,7 @@ namespace StS2Toys
                     TinkerType: c.GetPropInt("TinkerTimeType"),
                     EnchantmentId: c.Enchantment?.Id ?? "",
                     EnchantmentAmount: c.Enchantment?.Amount ?? 0))
-                .OrderBy(g => CardDatabaseService.GetName(g.Key.Id, japanese: true))
+                .OrderBy(g => CardDatabaseService.GetName(g.Key.Id, japanese: AppLanguage.IsJapanese))
                 .ThenBy(g => g.Key.IsUpgraded)
                 .ThenBy(g => g.Key.EnchantmentId)
                 .Select(g =>
@@ -351,9 +341,14 @@ namespace StS2Toys
 
             var cards = _blockFilter ? (IReadOnlyList<DeckCard>)blockCards : _lastDeckCards;
 
+            bool ja = AppLanguage.IsJapanese;
             lblDeckTitle.Text = _blockFilter
-                ? $"デッキ（ブロック関連 {blockCount}/{total}枚）"
-                : $"デッキ ({total}枚)";
+                ? (ja ? $"デッキ（ブロック関連 {blockCount}/{total}枚）" : $"Deck (Block-related {blockCount}/{total})")
+                : (ja ? $"デッキ ({total}枚)" : $"Deck ({total})");
+
+            var colTexts = DeckColumnTexts;
+            for (int ci = 0; ci < listViewDeck.Columns.Count; ci++)
+                listViewDeck.Columns[ci].Text = colTexts[ci] + (ci == _sortColumn ? (_sortAscending ? " ▲" : " ▼") : "");
 
             listViewDeck.BeginUpdate();
             listViewDeck.Items.Clear();
@@ -373,14 +368,12 @@ namespace StS2Toys
             if (_sortColumn >= 0)
                 listViewDeck.ListViewItemSorter = new DeckItemComparer(_sortColumn, _sortAscending);
 
-            RefreshBlockOverview();
-            RefreshDrawOverview();
+            RefreshCombinedOverview();
             RefreshNecroOverview();
             RefreshIroncladOverview();
             RefreshSilentOverview();
             RefreshDefectOverview();
             RefreshRegentOverview();
-            RefreshCommonOverview();
         }
 
         void DisplayRelics(PlayerData player)
@@ -392,7 +385,9 @@ namespace StS2Toys
                     CardDatabaseService.GetName(r.Id, japanese: true)))
                 .ToList();
 
-            lblRelicsTitle.Text = $"レリック ({player.Relics.Count}個)";
+            lblRelicsTitle.Text = AppLanguage.IsJapanese
+                ? $"レリック ({player.Relics.Count}個)"
+                : $"Relics ({player.Relics.Count})";
 
             listViewRelics.BeginUpdate();
             listViewRelics.Items.Clear();
@@ -405,53 +400,72 @@ namespace StS2Toys
             }
             listViewRelics.EndUpdate();
 
-            RefreshDeckOverview();
-            RefreshBlockOverview();
-            RefreshDrawOverview();
+            RefreshCombinedOverview();
         }
 
-        void RefreshDeckOverview()
+        void RefreshCombinedOverview()
         {
-            if (_deckOverview is null || _deckOverview.IsDisposed || !_deckOverview.Visible) return;
-            if (_lastDeckCards != null)
-                _deckOverview.UpdateDeck(_lastDeckCards);
-            _deckOverview.UpdateRelics(_lastRelics ?? []);
-        }
-
-        void RefreshBlockOverview()
-        {
-            if (_blockOverview is null || _blockOverview.IsDisposed || !_blockOverview.Visible) return;
+            if (_combinedOverview is null || _combinedOverview.IsDisposed || !_combinedOverview.Visible) return;
             if (_lastDeckCards is null) return;
 
-            var blockCards  = _lastDeckCards.Where(c => CardDatabaseService.IsBlockGiver(c.Id)).ToList();
-            var blockRelics = (_lastRelics ?? []).Where(r => CardDatabaseService.IsRelicBlockGiver(r.Id)).ToList();
-            int total = _lastDeckCards.Sum(c => c.Count);
+            bool ja = AppLanguage.IsJapanese;
+            var cards   = _lastDeckCards;
+            var relics  = _lastRelics ?? [];
+            int deckTotal = cards.Sum(c => c.Count);
+            var charId  = _lastRunData?.Players.FirstOrDefault()?.CharacterId ?? "";
+            bool isNecro = charId.Contains("NECRO", StringComparison.OrdinalIgnoreCase);
 
-            _blockOverview.UpdateDeck(blockCards);
-            _blockOverview.UpdateRelics(blockRelics);
-            _blockOverview.SetBlockStats(blockCards.Sum(c => c.Count), total, blockRelics.Count);
+            var drawRelics  = relics.Where(r => CardDatabaseService.IsRelicDrawRelated(r.Id)).ToList();
+            var blockRelics = relics.Where(r => CardDatabaseService.IsRelicBlockGiver(r.Id)).ToList();
+            var otherRelics = relics.Where(r => !CardDatabaseService.IsRelicDrawRelated(r.Id) && !CardDatabaseService.IsRelicBlockGiver(r.Id)).ToList();
 
-            var charId = _lastRunData?.Players.FirstOrDefault()?.CharacterId ?? "";
-            if (charId.Contains("NECRO", StringComparison.OrdinalIgnoreCase))
-                _blockOverview.SetSuffixGroups(_lastDeckCards,
-                    [("召喚 (Summon)", c => CardDatabaseService.IsNecroSummon(c.Id))]);
-            else
-                _blockOverview.ClearSuffixGroups();
+            var sections = new List<OverviewSection>();
+
+            // 1. タイプ別
+            foreach (var g in cards.GroupBy(c => c.Type).OrderBy(g => CombinedTypeOrder(g.Key)))
+                sections.Add(new OverviewSection(CombinedTypeLabelEn(g.Key), CombinedTypeLabelJa(g.Key),
+                    g.OrderBy(c => ja ? c.NameJa : c.NameEn).ToList(), []));
+
+            // 2. ドロー関連
+            sections.Add(new OverviewSection("Draw-related", "ドロー関連",
+                cards.Where(c => CardDatabaseService.IsDrawRelated(c.Id)).OrderBy(c => ja ? c.NameJa : c.NameEn).ToList(),
+                drawRelics));
+
+            // 3. ブロック関連
+            sections.Add(new OverviewSection("Block-related", "ブロック関連",
+                cards.Where(c => CardDatabaseService.IsBlockGiver(c.Id)).OrderBy(c => ja ? c.NameJa : c.NameEn).ToList(),
+                blockRelics));
+
+            // 4. 召喚 (Necrobinder only)
+            if (isNecro)
+                sections.Add(new OverviewSection("Summon", "召喚",
+                    cards.Where(c => CardDatabaseService.IsNecroSummon(c.Id)).OrderBy(c => ja ? c.NameJa : c.NameEn).ToList(),
+                    []));
+
+            // 5. 共通キーワード
+            foreach (var m in CharacterMechanics.MechanicsFor("Common"))
+                sections.Add(new OverviewSection(m.EnLabel, m.JaLabel,
+                    cards.Where(c => m.Filter(c.Id)).OrderBy(c => ja ? c.NameJa : c.NameEn).ToList(),
+                    []));
+
+            // 6. その他のレリック
+            sections.Add(new OverviewSection("Other Relics", "その他のレリック", [], otherRelics));
+
+            _combinedOverview.SetSections(sections, deckTotal);
         }
 
-        void RefreshDrawOverview()
+        static int CombinedTypeOrder(string type) => type switch
         {
-            if (_drawOverview is null || _drawOverview.IsDisposed || !_drawOverview.Visible) return;
-            if (_lastDeckCards is null) return;
+            "Attack" => 0, "Skill" => 1, "Power" => 2, "Curse" => 3, "Status" => 4, "Quest" => 5, _ => 6
+        };
 
-            var drawCards  = _lastDeckCards.Where(c => CardDatabaseService.IsDrawRelated(c.Id)).ToList();
-            var drawRelics = (_lastRelics ?? []).Where(r => CardDatabaseService.IsRelicDrawRelated(r.Id)).ToList();
-            int total = _lastDeckCards.Sum(c => c.Count);
-
-            _drawOverview.UpdateDeck(drawCards);
-            _drawOverview.UpdateRelics(drawRelics);
-            _drawOverview.SetDrawStats(drawCards.Sum(c => c.Count), total, drawRelics.Count);
-        }
+        static string CombinedTypeLabelEn(string type) => type.Length > 0 ? type : "Other";
+        static string CombinedTypeLabelJa(string type) => type switch
+        {
+            "Attack" => "アタック", "Skill" => "スキル", "Power" => "パワー",
+            "Curse" => "呪い", "Status" => "状態異常", "Quest" => "クエスト",
+            _ => type.Length > 0 ? type : "その他"
+        };
 
         void RefreshEncounterOverview()
         {
@@ -491,35 +505,35 @@ namespace StS2Toys
             btnEncounterOverview.ForeColor = visible ? Color.DarkSlateBlue : SystemColors.ControlText;
         }
 
-        void BtnDrawOverview_Click(object? sender, EventArgs e)
+        void BtnCombinedOverview_Click(object? sender, EventArgs e)
         {
-            if (_drawOverview is null || _drawOverview.IsDisposed || !_drawOverview.Visible)
+            if (_combinedOverview is null || _combinedOverview.IsDisposed || !_combinedOverview.Visible)
             {
-                if (_drawOverview is null || _drawOverview.IsDisposed)
+                if (_combinedOverview is null || _combinedOverview.IsDisposed)
                 {
-                    _drawOverview = new DeckOverviewForm();
-                    ApplySubWindowSettings(_drawOverview, _drawOverviewSettings, new Point(Right + 4, Top));
-                    _drawOverview.FormClosed += (_, _) =>
+                    _combinedOverview = new DeckOverviewForm();
+                    ApplySubWindowSettings(_combinedOverview, _combinedOverviewSettings, new Point(Right + 4, Top));
+                    _combinedOverview.FormClosed += (_, _) =>
                     {
-                        _drawOverviewSettings = BoundsToSub(_drawOverview.Bounds);
-                        UpdateDrawOverviewButton(false);
+                        _combinedOverviewSettings = BoundsToSub(_combinedOverview.Bounds);
+                        UpdateCombinedOverviewButton(false);
                     };
                 }
-                _drawOverview.Show(this);
-                UpdateDrawOverviewButton(true);
-                RefreshDrawOverview();
+                _combinedOverview.Show(this);
+                UpdateCombinedOverviewButton(true);
+                RefreshCombinedOverview();
             }
             else
             {
-                _drawOverview.Hide();
-                UpdateDrawOverviewButton(false);
+                _combinedOverview.Hide();
+                UpdateCombinedOverviewButton(false);
             }
         }
 
-        void UpdateDrawOverviewButton(bool visible)
+        void UpdateCombinedOverviewButton(bool visible)
         {
-            btnDrawOverview.Text = visible ? "● ドロー関連概観" : "○ ドロー関連概観";
-            btnDrawOverview.ForeColor = visible ? Color.DarkGreen : SystemColors.ControlText;
+            btnCombinedOverview.Text = visible ? "● デッキ概観" : "○ デッキ概観";
+            btnCombinedOverview.ForeColor = visible ? Color.DarkRed : SystemColors.ControlText;
         }
 
         void BtnNecroOverview_Click(object? sender, EventArgs e)
@@ -531,8 +545,8 @@ namespace StS2Toys
                     _necroOverview = new DeckOverviewForm();
                     _necroOverview.SetKeywordGroups(
                         CharacterMechanics.MechanicsFor("Necrobinder")
-                            .Select(m => (m.JaLabel, (Func<DeckCard, bool>)(c => m.Filter(c.Id)))).ToArray(),
-                        "Necrobinder概観");
+                            .Select(m => (m.EnLabel, m.JaLabel, (Func<DeckCard, bool>)(c => m.Filter(c.Id)))).ToArray(),
+                        "Necrobinder Overview", "Necrobinder概観");
                     ApplySubWindowSettings(_necroOverview, _necroOverviewSettings, new Point(Right + 4, Top));
                     _necroOverview.FormClosed += (_, _) =>
                     {
@@ -574,8 +588,8 @@ namespace StS2Toys
                     _ironcladOverview = new DeckOverviewForm();
                     _ironcladOverview.SetKeywordGroups(
                         CharacterMechanics.MechanicsFor("Ironclad")
-                            .Select(m => (m.JaLabel, (Func<DeckCard, bool>)(c => m.Filter(c.Id)))).ToArray(),
-                        "Ironclad概観");
+                            .Select(m => (m.EnLabel, m.JaLabel, (Func<DeckCard, bool>)(c => m.Filter(c.Id)))).ToArray(),
+                        "Ironclad Overview", "Ironclad概観");
                     ApplySubWindowSettings(_ironcladOverview, _ironcladOverviewSettings, new Point(Right + 4, Top));
                     _ironcladOverview.FormClosed += (_, _) =>
                     {
@@ -617,8 +631,8 @@ namespace StS2Toys
                     _silentOverview = new DeckOverviewForm();
                     _silentOverview.SetKeywordGroups(
                         CharacterMechanics.MechanicsFor("Silent")
-                            .Select(m => (m.JaLabel, (Func<DeckCard, bool>)(c => m.Filter(c.Id)))).ToArray(),
-                        "Silent概観");
+                            .Select(m => (m.EnLabel, m.JaLabel, (Func<DeckCard, bool>)(c => m.Filter(c.Id)))).ToArray(),
+                        "Silent Overview", "Silent概観");
                     ApplySubWindowSettings(_silentOverview, _silentOverviewSettings, new Point(Right + 4, Top));
                     _silentOverview.FormClosed += (_, _) =>
                     {
@@ -660,8 +674,8 @@ namespace StS2Toys
                     _defectOverview = new DeckOverviewForm();
                     _defectOverview.SetKeywordGroups(
                         CharacterMechanics.MechanicsFor("Defect")
-                            .Select(m => (m.JaLabel, (Func<DeckCard, bool>)(c => m.Filter(c.Id)))).ToArray(),
-                        "Defect概観");
+                            .Select(m => (m.EnLabel, m.JaLabel, (Func<DeckCard, bool>)(c => m.Filter(c.Id)))).ToArray(),
+                        "Defect Overview", "Defect概観");
                     ApplySubWindowSettings(_defectOverview, _defectOverviewSettings, new Point(Right + 4, Top));
                     _defectOverview.FormClosed += (_, _) =>
                     {
@@ -703,8 +717,8 @@ namespace StS2Toys
                     _regentOverview = new DeckOverviewForm();
                     _regentOverview.SetKeywordGroups(
                         CharacterMechanics.MechanicsFor("Regent")
-                            .Select(m => (m.JaLabel, (Func<DeckCard, bool>)(c => m.Filter(c.Id)))).ToArray(),
-                        "Regent概観");
+                            .Select(m => (m.EnLabel, m.JaLabel, (Func<DeckCard, bool>)(c => m.Filter(c.Id)))).ToArray(),
+                        "Regent Overview", "Regent概観");
                     ApplySubWindowSettings(_regentOverview, _regentOverviewSettings, new Point(Right + 4, Top));
                     _regentOverview.FormClosed += (_, _) =>
                     {
@@ -737,52 +751,11 @@ namespace StS2Toys
             _regentOverview.SetStatsText(BuildStatsText("Regent", _lastDeckCards));
         }
 
-        void BtnCommonOverview_Click(object? sender, EventArgs e)
-        {
-            if (_commonOverview is null || _commonOverview.IsDisposed || !_commonOverview.Visible)
-            {
-                if (_commonOverview is null || _commonOverview.IsDisposed)
-                {
-                    _commonOverview = new DeckOverviewForm();
-                    _commonOverview.SetKeywordGroups(
-                        CharacterMechanics.MechanicsFor("Common")
-                            .Select(m => (m.JaLabel, (Func<DeckCard, bool>)(c => m.Filter(c.Id)))).ToArray(),
-                        "共通概観");
-                    ApplySubWindowSettings(_commonOverview, _commonOverviewSettings, new Point(Right + 4, Top));
-                    _commonOverview.FormClosed += (_, _) =>
-                    {
-                        _commonOverviewSettings = BoundsToSub(_commonOverview.Bounds);
-                        UpdateCommonOverviewButton(false);
-                    };
-                }
-                _commonOverview.Show(this);
-                UpdateCommonOverviewButton(true);
-                RefreshCommonOverview();
-            }
-            else
-            {
-                _commonOverview.Hide();
-                UpdateCommonOverviewButton(false);
-            }
-        }
-
-        void UpdateCommonOverviewButton(bool visible)
-        {
-            btnCommonOverview.Text = visible ? "● 共通概観" : "○ 共通概観";
-            btnCommonOverview.ForeColor = visible ? Color.DarkCyan : SystemColors.ControlText;
-        }
-
-        void RefreshCommonOverview()
-        {
-            if (_commonOverview is null || _commonOverview.IsDisposed || !_commonOverview.Visible) return;
-            if (_lastDeckCards is null) return;
-            _commonOverview.UpdateDeck(_lastDeckCards);
-            _commonOverview.SetStatsText(BuildStatsText("Common", _lastDeckCards));
-        }
-
         static string BuildStatsText(string charLabel, IReadOnlyList<DeckCard> deck) =>
             string.Join("  ", CharacterMechanics.MechanicsFor(charLabel)
-                .Select(m => $"{m.JaLabel}: {deck.Where(c => m.Filter(c.Id)).Sum(c => c.Count)}枚"));
+                .Select(m => AppLanguage.IsJapanese
+                    ? $"{m.JaLabel}: {deck.Where(c => m.Filter(c.Id)).Sum(c => c.Count)}枚"
+                    : $"{m.EnLabel}: {deck.Where(c => m.Filter(c.Id)).Sum(c => c.Count)}"));
 
         void ListViewDeck_ColumnClick(object? sender, ColumnClickEventArgs e)
         {
@@ -794,23 +767,25 @@ namespace StS2Toys
                 _sortAscending = true;
             }
 
+            var colTexts = DeckColumnTexts;
             for (int i = 0; i < listViewDeck.Columns.Count; i++)
-                listViewDeck.Columns[i].Text = DeckColumnTexts[i] +
-                    (i == _sortColumn ? (_sortAscending ? " ▲" : " ▼") : "");
+                listViewDeck.Columns[i].Text = colTexts[i] + (i == _sortColumn ? (_sortAscending ? " ▲" : " ▼") : "");
 
             listViewDeck.ListViewItemSorter = new DeckItemComparer(_sortColumn, _sortAscending);
         }
 
-        static string LocalizeType(string type) => type switch
-        {
-            "Attack" => "アタック",
-            "Skill"  => "スキル",
-            "Power"  => "パワー",
-            "Status" => "状態",
-            "Curse"  => "呪い",
-            "Quest"  => "クエスト",
-            _        => type
-        };
+        static string LocalizeType(string type) => AppLanguage.IsJapanese
+            ? type switch
+            {
+                "Attack" => "アタック",
+                "Skill"  => "スキル",
+                "Power"  => "パワー",
+                "Status" => "状態",
+                "Curse"  => "呪い",
+                "Quest"  => "クエスト",
+                _        => type
+            }
+            : type;
 
         void BtnImageViewer_Click(object? sender, EventArgs e)
         {
@@ -892,68 +867,6 @@ namespace StS2Toys
         {
             btnFilterBlock.Text = active ? "● ブロック関連のみ" : "○ ブロック関連絞り込み";
             btnFilterBlock.ForeColor = active ? Color.DarkBlue : SystemColors.ControlText;
-        }
-
-        void BtnDeckOverview_Click(object? sender, EventArgs e)
-        {
-            if (_deckOverview is null || _deckOverview.IsDisposed || !_deckOverview.Visible)
-            {
-                if (_deckOverview is null || _deckOverview.IsDisposed)
-                {
-                    _deckOverview = new DeckOverviewForm();
-                    ApplySubWindowSettings(_deckOverview, _deckOverviewSettings, new Point(Right + 4, Top));
-                    _deckOverview.FormClosed += (_, _) =>
-                    {
-                        _deckOverviewSettings = BoundsToSub(_deckOverview.Bounds);
-                        UpdateDeckOverviewButton(false);
-                    };
-                }
-                _deckOverview.Show(this);
-                UpdateDeckOverviewButton(true);
-                RefreshDeckOverview();
-            }
-            else
-            {
-                _deckOverview.Hide();
-                UpdateDeckOverviewButton(false);
-            }
-        }
-
-        void UpdateDeckOverviewButton(bool visible)
-        {
-            btnDeckOverview.Text = visible ? "● デッキ概観" : "○ デッキ概観";
-            btnDeckOverview.ForeColor = visible ? Color.DarkRed : SystemColors.ControlText;
-        }
-
-        void BtnBlockOverview_Click(object? sender, EventArgs e)
-        {
-            if (_blockOverview is null || _blockOverview.IsDisposed || !_blockOverview.Visible)
-            {
-                if (_blockOverview is null || _blockOverview.IsDisposed)
-                {
-                    _blockOverview = new DeckOverviewForm();
-                    ApplySubWindowSettings(_blockOverview, _blockOverviewSettings, new Point(Right + 4, Top));
-                    _blockOverview.FormClosed += (_, _) =>
-                    {
-                        _blockOverviewSettings = BoundsToSub(_blockOverview.Bounds);
-                        UpdateBlockOverviewButton(false);
-                    };
-                }
-                _blockOverview.Show(this);
-                UpdateBlockOverviewButton(true);
-                RefreshBlockOverview();
-            }
-            else
-            {
-                _blockOverview.Hide();
-                UpdateBlockOverviewButton(false);
-            }
-        }
-
-        void UpdateBlockOverviewButton(bool visible)
-        {
-            btnBlockOverview.Text = visible ? "● ブロック関連概観" : "○ ブロック関連概観";
-            btnBlockOverview.ForeColor = visible ? Color.DarkBlue : SystemColors.ControlText;
         }
 
         void BtnHpHistory_Click(object? sender, EventArgs e)
