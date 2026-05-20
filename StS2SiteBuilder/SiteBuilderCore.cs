@@ -111,8 +111,10 @@ var faviconDst = Path.Combine(distDir, "favicon.png");
 if (File.Exists(faviconSrc)) File.Copy(faviconSrc, faviconDst, overwrite: true);
 
 File.WriteAllText(Path.Combine(distDir, "index.html"),  BuildIndex(chars),                      System.Text.Encoding.UTF8);
-var aboutPath = Path.Combine(distDir, "about.html");
+var aboutPath     = Path.Combine(distDir, "about.html");
 File.WriteAllText(aboutPath, BuildAboutPage(chars, ExtractReview(aboutPath)), System.Text.Encoding.UTF8);
+var changelogPath = Path.Combine(distDir, "changelog.html");
+File.WriteAllText(changelogPath, BuildChangelogPage(chars, ExtractReview(changelogPath)), System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "pages.html"),  BuildPageList(pages, chars),            System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "cards.html"),  BuildCardListPage(allCardIds, chars),   System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "relics.html"), BuildRelicListPage(allRelicIds, chars), System.Text.Encoding.UTF8);
@@ -194,7 +196,7 @@ foreach (var group in CharacterMechanics.All.Where(g => g.Mechanics.Length > 0))
 }
 
 var totalMecs = CharacterMechanics.All.Sum(g => g.Mechanics.Length);
-        log($"Generated {8 + chars.Length + allCardIds.Length + allRelicIds.Length + allEventIds.Length + allEncounterIds.Length + 1 + totalMecs} files -> {distDir}");
+        log($"Generated {9 + chars.Length + allCardIds.Length + allRelicIds.Length + allEventIds.Length + allEncounterIds.Length + 1 + totalMecs} files -> {distDir}");
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────────
@@ -254,6 +256,16 @@ static string BuildAboutPage(CharData[] chars, string review = "")
         </section>
         """);
 }
+
+static string BuildChangelogPage(CharData[] chars, string review = "") =>
+    Layout("更新履歴", "changelog", "#4a90d9", chars, $"""
+        <div class="page-hero">
+          <h1 class="hero-title">更新履歴</h1>
+        </div>
+        <section class="section">
+          <!-- REVIEW_START -->{review}<!-- REVIEW_END -->
+        </section>
+        """);
 
 static string BuildIndex(CharData[] chars)
 {
@@ -2026,9 +2038,12 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
     var homeActive   = activeId == "index";
     var homeStyle    = homeActive   ? " style=\"border-left-color:#4a90d9\"" : "";
     var homeClass    = homeActive   ? " active" : "";
-    var aboutActive  = activeId == "about";
-    var aboutStyle   = aboutActive  ? " style=\"border-left-color:#4a90d9\"" : "";
-    var aboutClass   = aboutActive  ? " active" : "";
+    var aboutActive     = activeId == "about";
+    var aboutStyle      = aboutActive     ? " style=\"border-left-color:#4a90d9\"" : "";
+    var aboutClass      = aboutActive     ? " active" : "";
+    var changelogActive = activeId == "changelog";
+    var changelogStyle  = changelogActive ? " style=\"border-left-color:#4a90d9\"" : "";
+    var changelogClass  = changelogActive ? " active" : "";
     var pagesActive  = activeId == "pages";
     var pagesStyle   = pagesActive  ? " style=\"border-left-color:#4a90d9\"" : "";
     var pagesClass   = pagesActive  ? " active" : "";
@@ -2088,6 +2103,9 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
                 </a>
                 <a href="{basePath}about.html" class="nav-link{aboutClass}"{aboutStyle}>
                   <span class="nav-icon">&#9432;</span>このサイトについて
+                </a>
+                <a href="{basePath}changelog.html" class="nav-link{changelogClass}"{changelogStyle}>
+                  <span class="nav-icon">&#9711;</span>更新履歴
                 </a>
                 <a href="{basePath}pages.html" class="nav-link{pagesClass}"{pagesStyle}>
                   <span class="nav-icon">&#9776;</span>ページ一覧
