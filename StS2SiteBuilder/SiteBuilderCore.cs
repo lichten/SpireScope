@@ -1733,7 +1733,7 @@ static string BuildMechanicPage(CharGroup group, MechanicDef mec, string[] allCa
             <span style="color:#bbb"> / メカニクス</span>
           </div>
           <h1 class="card-title-en" style="color:{accent}">{(mec.EnLabel == mec.JaLabel ? mec.EnLabel : mec.JaLabel)}</h1>
-          {(mec.EnLabel != mec.JaLabel ? $"""<div class="card-title-ja">{mec.EnLabel}</div>""" : "")}
+          {(mec.EnLabel != mec.JaLabel ? $"""<div class="mec-title-en">{mec.EnLabel}</div>""" : "")}
         </div>
         {reviewZone}
         {cardSections}
@@ -1884,6 +1884,7 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
         .char-back-neutral { color: #888; }
         .card-title-en  { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
         .card-title-ja  { font-size: 13px; color: #777; margin-top: 5px; }
+        .mec-title-en   { font-size: 13px; color: #777; margin-top: 5px; }
         .card-badges    { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
         .desc-main   { font-size: 14px; color: #333; line-height: 1.75; }
         .desc-sub   { font-size: 13px; color: #777; line-height: 1.75; margin-top: 12px; }
