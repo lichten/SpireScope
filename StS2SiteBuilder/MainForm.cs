@@ -93,7 +93,7 @@ public partial class MainForm : Form
         _savedReviewContent = content;
         _isDirty = false;
         _reviewEditor.TextChanged -= ReviewEditor_TextChanged;
-        _reviewEditor.Text = content;
+        _reviewEditor.Text = content.Replace("\r\n", "\n").Replace("\n", "\r\n");
         _reviewEditor.TextChanged += ReviewEditor_TextChanged;
         _reviewLabel.Text = $"レビュー編集: {Path.GetFileName(filePath)}";
         _previewSplit.Panel2Collapsed = false;
@@ -118,7 +118,7 @@ public partial class MainForm : Form
     private void SaveReview_Click(object? sender, EventArgs e)
     {
         if (string.IsNullOrEmpty(_currentFilePath)) return;
-        SiteBuilderCore.SaveReview(_currentFilePath, _reviewEditor.Text);
+        SiteBuilderCore.SaveReview(_currentFilePath, _reviewEditor.Text.Replace("\r\n", "\n"));
         _savedReviewContent = _reviewEditor.Text;
         _isDirty = false;
         UpdateReviewButtons();
