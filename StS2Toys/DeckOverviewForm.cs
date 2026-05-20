@@ -24,6 +24,8 @@ public partial class DeckOverviewForm : Form
     readonly ToolTip _hoverTip = new() { InitialDelay = 400, ReshowDelay = 100, AutoPopDelay = 8000, ShowAlways = true };
     List<HitEntry> _hitMap = [];
     string? _hoveredId;
+    readonly HashSet<string> _collapsedSections = new();
+    List<(Rectangle Rect, string Key)> _sectionHeaderMap = [];
 
     public DeckOverviewForm()
     {
@@ -31,7 +33,8 @@ public partial class DeckOverviewForm : Form
         VisibleChanged += (_, _) => { if (Visible) RecomposeIfNeeded(); };
         ResizeEnd += (_, _) => RecomposeIfNeeded();
         _pictureBox.MouseMove  += OnPictureBoxMouseMove;
-        _pictureBox.MouseLeave += (_, _) => { _hoverTip.Hide(_pictureBox); _hoveredId = null; };
+        _pictureBox.MouseClick += OnPictureBoxClick;
+        _pictureBox.MouseLeave += (_, _) => { _hoverTip.Hide(_pictureBox); _hoveredId = null; _pictureBox.Cursor = Cursors.Default; };
     }
 
     protected override void Dispose(bool disposing)
@@ -211,17 +214,22 @@ public partial class DeckOverviewForm : Form
         int totalH = PadY;
         foreach (var sec in _sections!)
         {
-            int cardRows  = sec.Cards.Count  > 0 ? (sec.Cards.Count  + cardsPerRow - 1) / cardsPerRow : 0;
-            int relicRows = sec.Relics.Count > 0 ? (sec.Relics.Count + cardsPerRow - 1) / cardsPerRow : 0;
+            bool collapsed = _collapsedSections.Contains(sec.LabelEn);
             totalH += HeaderH;
-            if (cardRows > 0)  totalH += cardRows  * (CardH  + Gap);
-            if (relicRows > 0) totalH += relicRows  * (RelicH + Gap) + (cardRows > 0 ? Gap : 0);
-            if (cardRows == 0 && relicRows == 0) totalH += RelicH;
+            if (!collapsed)
+            {
+                int cardRows  = sec.Cards.Count  > 0 ? (sec.Cards.Count  + cardsPerRow - 1) / cardsPerRow : 0;
+                int relicRows = sec.Relics.Count > 0 ? (sec.Relics.Count + cardsPerRow - 1) / cardsPerRow : 0;
+                if (cardRows > 0)  totalH += cardRows  * (CardH  + Gap);
+                if (relicRows > 0) totalH += relicRows  * (RelicH + Gap) + (cardRows > 0 ? Gap : 0);
+                if (cardRows == 0 && relicRows == 0) totalH += RelicH;
+            }
             totalH += SectionGap;
         }
         totalH += PadY;
 
         _hitMap.Clear();
+        _sectionHeaderMap.Clear();
         var bmp = new Bitmap(availableWidth, Math.Max(totalH, 1));
         using var g = Graphics.FromImage(bmp);
         g.Clear(SystemColors.Control);
@@ -231,44 +239,49 @@ public partial class DeckOverviewForm : Form
         int y = PadY;
         foreach (var sec in _sections!)
         {
-            var label = jaMode ? sec.LabelJa : sec.LabelEn;
+            bool collapsed = _collapsedSections.Contains(sec.LabelEn);
+            var label = (collapsed ? "▶ " : "▼ ") + (jaMode ? sec.LabelJa : sec.LabelEn);
             int cardCount = sec.Cards.Sum(c => c.Count);
             string countStr = sec.Cards.Count == 0 && sec.Relics.Count > 0
                 ? (jaMode ? $"{sec.Relics.Count}個" : sec.Relics.Count.ToString())
                 : FormatCardCount(cardCount, deckTotal, jaMode);
-            DrawSectionHeader(g, label, countStr,
-                new Rectangle(PadX, y, availableWidth - 2 * PadX, HeaderH));
+            var headerRect = new Rectangle(PadX, y, availableWidth - 2 * PadX, HeaderH);
+            DrawSectionHeader(g, label, countStr, headerRect);
+            _sectionHeaderMap.Add((headerRect, sec.LabelEn));
             y += HeaderH;
 
-            int cardRows = sec.Cards.Count > 0 ? (sec.Cards.Count + cardsPerRow - 1) / cardsPerRow : 0;
-            for (int i = 0; i < sec.Cards.Count; i++)
+            if (!collapsed)
             {
-                int col = i % cardsPerRow, row = i / cardsPerRow;
-                var cardRect = new Rectangle(PadX + col * (CardW + Gap), y + row * (CardH + Gap), CardW, CardH);
-                _hitMap.Add(new HitEntry(cardRect, sec.Cards[i].Id, false, sec.Cards[i].EnchantmentId, sec.Cards[i].EnchantmentAmount));
-                DrawCard(g, sec.Cards[i], cardRect);
-            }
-            if (cardRows > 0) y += cardRows * (CardH + Gap);
-
-            if (sec.Relics.Count > 0)
-            {
-                if (cardRows > 0) y += Gap;
-                int relicRows = (sec.Relics.Count + cardsPerRow - 1) / cardsPerRow;
-                for (int i = 0; i < sec.Relics.Count; i++)
+                int cardRows = sec.Cards.Count > 0 ? (sec.Cards.Count + cardsPerRow - 1) / cardsPerRow : 0;
+                for (int i = 0; i < sec.Cards.Count; i++)
                 {
                     int col = i % cardsPerRow, row = i / cardsPerRow;
-                    var relicRect = new Rectangle(PadX + col * (CardW + Gap), y + row * (RelicH + Gap), CardW, RelicH);
-                    _hitMap.Add(new HitEntry(relicRect, sec.Relics[i].Id, true));
-                    DrawRelicTile(g, sec.Relics[i], relicRect);
+                    var cardRect = new Rectangle(PadX + col * (CardW + Gap), y + row * (CardH + Gap), CardW, CardH);
+                    _hitMap.Add(new HitEntry(cardRect, sec.Cards[i].Id, false, sec.Cards[i].EnchantmentId, sec.Cards[i].EnchantmentAmount));
+                    DrawCard(g, sec.Cards[i], cardRect);
                 }
-                y += relicRows * (RelicH + Gap);
-            }
-            else if (sec.Cards.Count == 0)
-            {
-                using var fgNone = new SolidBrush(SystemColors.GrayText);
-                using var fontNone = new Font("Segoe UI", 8.5f);
-                g.DrawString(jaMode ? "なし" : "None", fontNone, fgNone, new PointF(PadX + 4, y + 8));
-                y += RelicH;
+                if (cardRows > 0) y += cardRows * (CardH + Gap);
+
+                if (sec.Relics.Count > 0)
+                {
+                    if (cardRows > 0) y += Gap;
+                    int relicRows = (sec.Relics.Count + cardsPerRow - 1) / cardsPerRow;
+                    for (int i = 0; i < sec.Relics.Count; i++)
+                    {
+                        int col = i % cardsPerRow, row = i / cardsPerRow;
+                        var relicRect = new Rectangle(PadX + col * (CardW + Gap), y + row * (RelicH + Gap), CardW, RelicH);
+                        _hitMap.Add(new HitEntry(relicRect, sec.Relics[i].Id, true));
+                        DrawRelicTile(g, sec.Relics[i], relicRect);
+                    }
+                    y += relicRows * (RelicH + Gap);
+                }
+                else if (sec.Cards.Count == 0)
+                {
+                    using var fgNone = new SolidBrush(SystemColors.GrayText);
+                    using var fontNone = new Font("Segoe UI", 8.5f);
+                    g.DrawString(jaMode ? "なし" : "None", fontNone, fgNone, new PointF(PadX + 4, y + 8));
+                    y += RelicH;
+                }
             }
 
             y += SectionGap;
@@ -504,8 +517,25 @@ public partial class DeckOverviewForm : Form
         return thumb;
     }
 
+    void OnPictureBoxClick(object? sender, MouseEventArgs e)
+    {
+        var header = _sectionHeaderMap.FirstOrDefault(h => h.Rect.Contains(e.Location));
+        if (header.Key is null) return;
+        if (!_collapsedSections.Remove(header.Key))
+            _collapsedSections.Add(header.Key);
+        RecomposeIfNeeded();
+    }
+
     void OnPictureBoxMouseMove(object? sender, MouseEventArgs e)
     {
+        if (_sections is not null && _sectionHeaderMap.Any(h => h.Rect.Contains(e.Location)))
+        {
+            _pictureBox.Cursor = Cursors.Hand;
+            _hoverTip.Hide(_pictureBox);
+            _hoveredId = null;
+            return;
+        }
+        _pictureBox.Cursor = Cursors.Default;
         var hit = _hitMap.FirstOrDefault(h => h.Rect.Contains(e.Location));
         if (hit?.Id == _hoveredId) return;
         _hoveredId = hit?.Id;
