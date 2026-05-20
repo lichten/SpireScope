@@ -1,4 +1,5 @@
 using StS2Toys.Models;
+using StS2Toys.Services;
 using StS2Shared.Services;
 
 namespace StS2Toys;
@@ -90,6 +91,7 @@ public partial class EncounterOverviewForm : Form
         using var eliteBrush     = new SolidBrush(Color.FromArgb(160, 80, 0));
 
         int y = PadY;
+        bool ja = AppLanguage.IsJapanese;
 
         for (int i = 0; i < acts.Count; i++)
         {
@@ -102,15 +104,20 @@ public partial class EncounterOverviewForm : Form
 
             if (done)
             {
-                g.DrawString($"Act {i + 1}  {nameJp}  ✓  完了", completedFont, completedBrush, new PointF(PadX, y + 1));
+                var doneText = ja
+                    ? $"Act {i + 1}  {nameJp}  ✓  完了"
+                    : $"Act {i + 1}  {nameEn}  ✓  Done";
+                g.DrawString(doneText, completedFont, completedBrush, new PointF(PadX, y + 1));
                 y += CompletedH + 2;
                 continue;
             }
 
             // act header
-            var tag = isCurr ? "  【現在】" : "";
-            g.DrawString($"Act {i + 1}:  {nameJp}  ({nameEn}){tag}",
-                headerFont, isCurr ? currentBrush : futureBrush, new PointF(PadX, y));
+            var tag = isCurr ? (ja ? "  【現在】" : "  [Current]") : "";
+            var actHeader = ja
+                ? $"Act {i + 1}:  {nameJp}  ({nameEn}){tag}"
+                : $"Act {i + 1}:  {nameEn}  ({nameJp}){tag}";
+            g.DrawString(actHeader, headerFont, isCurr ? currentBrush : futureBrush, new PointF(PadX, y));
             y += HeaderH;
 
             var rooms = act.Rooms;
@@ -122,9 +129,11 @@ public partial class EncounterOverviewForm : Form
                 var bEn = EncounterDatabaseService.GetEncounterName(rooms.BossId, false);
                 var bJp = EncounterDatabaseService.GetEncounterName(rooms.BossId, true);
                 float lx = PadX + 16;
-                g.DrawString("ボス:  ", labelFont, bossBrush, new PointF(lx, y));
-                float lw = g.MeasureString("ボス:  ", labelFont).Width;
-                g.DrawString($"{bJp}  ({bEn})", nameFont, bossBrush, new PointF(lx + lw, y));
+                var bossLabel = ja ? "ボス:  " : "Boss:  ";
+                g.DrawString(bossLabel, labelFont, bossBrush, new PointF(lx, y));
+                float lw = g.MeasureString(bossLabel, labelFont).Width;
+                var bossName = ja ? $"{bJp}  ({bEn})" : $"{bEn}  ({bJp})";
+                g.DrawString(bossName, nameFont, bossBrush, new PointF(lx + lw, y));
                 y += LineH;
             }
 
@@ -132,16 +141,17 @@ public partial class EncounterOverviewForm : Form
             {
                 var bEn = EncounterDatabaseService.GetEncounterName(rooms.SecondBossId, false);
                 var bJp = EncounterDatabaseService.GetEncounterName(rooms.SecondBossId, true);
-                g.DrawString($"第2ボス:  {bJp}  ({bEn})", nameFont, bossBrush, new PointF(PadX + 16, y));
+                var secondBoss = ja ? $"第2ボス:  {bJp}  ({bEn})" : $"2nd Boss:  {bEn}  ({bJp})";
+                g.DrawString(secondBoss, nameFont, bossBrush, new PointF(PadX + 16, y));
                 y += LineH;
             }
 
             // elites
-            var elites     = RemainingElites(rooms, isCurr);
+            var elites      = RemainingElites(rooms, isCurr);
             int uniqueTotal = rooms.EliteEncounterIds.Distinct(StringComparer.OrdinalIgnoreCase).Count();
             var eliteLabel  = isCurr
-                ? $"エリート  残り {elites.Count} / 全 {uniqueTotal} 種:"
-                : $"エリート候補  {uniqueTotal} 種:";
+                ? (ja ? $"エリート  残り {elites.Count} / 全 {uniqueTotal} 種:" : $"Elites  {elites.Count} remaining / {uniqueTotal} total:")
+                : (ja ? $"エリート候補  {uniqueTotal} 種:" : $"Elite candidates  {uniqueTotal}:");
             g.DrawString(eliteLabel, labelFont, eliteBrush, new PointF(PadX + 16, y));
             y += LineH;
 
@@ -149,7 +159,8 @@ public partial class EncounterOverviewForm : Form
             {
                 var eEn = EncounterDatabaseService.GetEncounterName(id, false);
                 var eJp = EncounterDatabaseService.GetEncounterName(id, true);
-                g.DrawString($"   · {eJp}  ({eEn})", nameFont, eliteBrush, new PointF(PadX + 16, y));
+                var eliteName = ja ? $"   · {eJp}  ({eEn})" : $"   · {eEn}  ({eJp})";
+                g.DrawString(eliteName, nameFont, eliteBrush, new PointF(PadX + 16, y));
                 y += LineH;
             }
 
