@@ -214,6 +214,14 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
 .wiki-link { display: inline-block; margin-top: 12px; font-size: 12.5px; color: #1a5799; }
 .wiki-link:hover { text-decoration: underline; }
 
+/* ── Changelog list ── */
+.changelog-list { list-style: none; margin: 0; padding: 0; }
+.cl-entry { display: flex; align-items: baseline; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; line-height: 1.6; }
+.cl-entry:last-child { border-bottom: none; }
+.cl-date { font-size: 12px; color: #999; white-space: nowrap; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.cl-link { color: #1a5799; }
+.cl-link:hover { text-decoration: underline; }
+
 /* ── Markdown body ── */
 .md-body p { font-size: 14px; color: #333; line-height: 1.75; margin-top: 1em; }
 .md-body p:first-child { margin-top: 0; }
@@ -320,20 +328,15 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   <p class="desc-sub" style="font-style:italic">主人公は忙しいボウルバグの群れの邪魔をした。</p>
 </section>
 
-<!-- REVIEW_START -->
-<!--
-  【評価・メモ】
-  このコメントブロック全体を削除し、かわりにHTMLを書いてください。
-  ビルド（dotnet run --project StS2SiteBuilder）後も上書きされません。
+<!-- REVIEW_START --><script type="text/markdown">
+テスト
 
-  ▼ テンプレート（コピーして使ってください） ▼
+TODO: 
 
-  <section class="section">
-    <h2 class="section-title">評価・メモ</h2>
-    <p>ここに感想や評価を書く。</p>
-  </section>
--->
-<!-- REVIEW_END -->
+ - 画像がおかしい
+ - モンスターの構成も表示できないか
+
+</script><!-- REVIEW_END -->
 
     </main>
   </div>

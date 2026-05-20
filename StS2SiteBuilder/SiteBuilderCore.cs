@@ -1979,6 +1979,14 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
         .wiki-link { display: inline-block; margin-top: 12px; font-size: 12.5px; color: #1a5799; }
         .wiki-link:hover { text-decoration: underline; }
 
+        /* ── Changelog list ── */
+        .changelog-list { list-style: none; margin: 0; padding: 0; }
+        .cl-entry { display: flex; align-items: baseline; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; line-height: 1.6; }
+        .cl-entry:last-child { border-bottom: none; }
+        .cl-date { font-size: 12px; color: #999; white-space: nowrap; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+        .cl-link { color: #1a5799; }
+        .cl-link:hover { text-decoration: underline; }
+
         /* ── Markdown body ── */
         .md-body p { font-size: 14px; color: #333; line-height: 1.75; margin-top: 1em; }
         .md-body p:first-child { margin-top: 0; }
@@ -2263,6 +2271,62 @@ public static void SaveReview(string filePath, string reviewHtml)
     if (s < 0 || e <= s) return;
     var newContent = content[..(s + START.Length)] + reviewHtml + content[e..];
     File.WriteAllText(filePath, newContent, System.Text.Encoding.UTF8);
+}
+
+public static void AppendChangelogEntry(string reviewedFilePath)
+{
+    var distDir      = Path.GetFullPath(GetDistDir());
+    var changelogPath = Path.Combine(distDir, "changelog.html");
+    if (!File.Exists(changelogPath)) return;
+
+    var relPath = Path.GetRelativePath(distDir, reviewedFilePath).Replace('\\', '/');
+    var today   = DateTime.Today.ToString("yyyy-MM-dd");
+    var marker  = $"<!-- CL:{today}:{relPath} -->";
+
+    var fileContent = File.ReadAllText(changelogPath, System.Text.Encoding.UTF8);
+    if (fileContent.Contains(marker, StringComparison.Ordinal)) return;
+
+    var pageTitle = ExtractPageTitle(reviewedFilePath);
+    var newEntry  = $"{marker}\n      <li class=\"cl-entry\"><span class=\"cl-date\">{today}</span><a href=\"{relPath}\" class=\"cl-link\">{pageTitle}</a> のレビューを更新しました。</li>";
+    InsertChangelogEntry(changelogPath, newEntry);
+}
+
+public static void AppendManualChangelogEntry(string entryText)
+{
+    var distDir       = Path.GetFullPath(GetDistDir());
+    var changelogPath = Path.Combine(distDir, "changelog.html");
+    if (!File.Exists(changelogPath)) return;
+
+    var today   = DateTime.Today.ToString("yyyy-MM-dd");
+    var escaped = System.Net.WebUtility.HtmlEncode(entryText.Trim());
+    var newEntry = $"<!-- CL-MANUAL:{today} -->\n      <li class=\"cl-entry\"><span class=\"cl-date\">{today}</span>{escaped}</li>";
+
+    InsertChangelogEntry(changelogPath, newEntry);
+}
+
+static void InsertChangelogEntry(string changelogPath, string newEntry)
+{
+    var review = ExtractReview(changelogPath);
+    string newReview;
+    const string LIST_OPEN = "<ul class=\"changelog-list\">";
+    if (review.Contains(LIST_OPEN, StringComparison.Ordinal))
+    {
+        var idx = review.IndexOf(LIST_OPEN, StringComparison.Ordinal) + LIST_OPEN.Length;
+        newReview = review[..idx] + "\n      " + newEntry + review[idx..];
+    }
+    else
+    {
+        newReview = $"\n    <ul class=\"changelog-list\">\n      {newEntry}\n    </ul>\n  ";
+    }
+    SaveReview(changelogPath, newReview);
+}
+
+static string ExtractPageTitle(string filePath)
+{
+    if (!File.Exists(filePath)) return Path.GetFileNameWithoutExtension(filePath);
+    var html = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
+    var m = Regex.Match(html, @"<title>(.+?)\s*\|");
+    return m.Success ? m.Groups[1].Value.Trim() : Path.GetFileNameWithoutExtension(filePath);
 }
 } // class SiteBuilderCore
 

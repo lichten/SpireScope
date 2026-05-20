@@ -11,23 +11,27 @@ partial class MainForm
 
     private void InitializeComponent()
     {
-        _statusStrip        = new StatusStrip();
-        _statusLabel        = new ToolStripStatusLabel();
-        _tabControl         = new TabControl();
-        _tabPreview         = new TabPage();
-        _tabBuild           = new TabPage();
-        _previewSplit       = new SplitContainer();
-        _webView2           = new Microsoft.Web.WebView2.WinForms.WebView2();
-        _reviewPanel        = new Panel();
-        _reviewLabel        = new Label();
-        _reviewEditor       = new TextBox();
-        _reviewButtons      = new FlowLayoutPanel();
-        _saveReviewButton   = new Button();
-        _revertReviewButton = new Button();
-        _buildToolbar       = new FlowLayoutPanel();
-        _buildButton        = new Button();
-        _openDistButton     = new Button();
-        _logBox             = new TextBox();
+        _statusStrip          = new StatusStrip();
+        _statusLabel          = new ToolStripStatusLabel();
+        _tabControl           = new TabControl();
+        _tabPreview           = new TabPage();
+        _tabBuild             = new TabPage();
+        _previewSplit         = new SplitContainer();
+        _webView2             = new Microsoft.Web.WebView2.WinForms.WebView2();
+        _reviewPanel          = new Panel();
+        _reviewLabel          = new Label();
+        _reviewEditor         = new TextBox();
+        _reviewButtons        = new FlowLayoutPanel();
+        _saveReviewButton     = new Button();
+        _revertReviewButton   = new Button();
+        _changelogPanel       = new Panel();
+        _changelogLabel       = new Label();
+        _changelogEditor      = new TextBox();
+        _changelogAddButton   = new Button();
+        _buildToolbar         = new FlowLayoutPanel();
+        _buildButton          = new Button();
+        _openDistButton       = new Button();
+        _logBox               = new TextBox();
         _statusStrip.SuspendLayout();
         _tabControl.SuspendLayout();
         _tabPreview.SuspendLayout();
@@ -37,6 +41,7 @@ partial class MainForm
         ((System.ComponentModel.ISupportInitialize)_webView2).BeginInit();
         _reviewPanel.SuspendLayout();
         _reviewButtons.SuspendLayout();
+        _changelogPanel.SuspendLayout();
         _buildToolbar.SuspendLayout();
         SuspendLayout();
         //
@@ -95,6 +100,7 @@ partial class MainForm
         _previewSplit.TabIndex = 0;
         _previewSplit.Panel1.Controls.Add(_webView2);
         _previewSplit.Panel2.Controls.Add(_reviewPanel);
+        _previewSplit.Panel2.Controls.Add(_changelogPanel);
         //
         // _webView2
         //
@@ -164,6 +170,47 @@ partial class MainForm
         _reviewEditor.ScrollBars = ScrollBars.Vertical;
         _reviewEditor.TabIndex = 1;
         //
+        // _changelogPanel
+        //
+        _changelogPanel.Controls.Add(_changelogEditor);
+        _changelogPanel.Controls.Add(_changelogLabel);
+        _changelogPanel.Controls.Add(_changelogAddButton);
+        _changelogPanel.Dock = DockStyle.Fill;
+        _changelogPanel.Name = "_changelogPanel";
+        _changelogPanel.Padding = new Padding(8);
+        _changelogPanel.Visible = false;
+        _changelogPanel.TabIndex = 1;
+        //
+        // _changelogLabel
+        //
+        _changelogLabel.Dock = DockStyle.Top;
+        _changelogLabel.Font = new Font("Yu Gothic UI", 9F, FontStyle.Bold);
+        _changelogLabel.Name = "_changelogLabel";
+        _changelogLabel.Padding = new Padding(0, 0, 0, 4);
+        _changelogLabel.Size = new Size(0, 28);
+        _changelogLabel.TabIndex = 0;
+        _changelogLabel.Text = "手動エントリを追加";
+        //
+        // _changelogAddButton
+        //
+        _changelogAddButton.Dock = DockStyle.Bottom;
+        _changelogAddButton.Name = "_changelogAddButton";
+        _changelogAddButton.Padding = new Padding(12, 4, 12, 4);
+        _changelogAddButton.Size = new Size(0, 36);
+        _changelogAddButton.TabIndex = 2;
+        _changelogAddButton.Text = "追加";
+        //
+        // _changelogEditor
+        //
+        _changelogEditor.BackColor = Color.FromArgb(30, 30, 30);
+        _changelogEditor.Dock = DockStyle.Fill;
+        _changelogEditor.Font = new Font("Yu Gothic UI", 10F);
+        _changelogEditor.ForeColor = Color.FromArgb(220, 220, 220);
+        _changelogEditor.Multiline = true;
+        _changelogEditor.Name = "_changelogEditor";
+        _changelogEditor.ScrollBars = ScrollBars.Vertical;
+        _changelogEditor.TabIndex = 1;
+        //
         // _buildToolbar
         //
         _buildToolbar.Controls.Add(_buildButton);
@@ -229,6 +276,8 @@ partial class MainForm
         _reviewPanel.PerformLayout();
         _reviewButtons.ResumeLayout(false);
         _reviewButtons.PerformLayout();
+        _changelogPanel.ResumeLayout(false);
+        _changelogPanel.PerformLayout();
         _buildToolbar.ResumeLayout(false);
         _buildToolbar.PerformLayout();
         ResumeLayout(false);
@@ -248,6 +297,10 @@ partial class MainForm
     private FlowLayoutPanel      _reviewButtons;
     private Button               _saveReviewButton;
     private Button               _revertReviewButton;
+    private Panel                _changelogPanel;
+    private Label                _changelogLabel;
+    private TextBox              _changelogEditor;
+    private Button               _changelogAddButton;
     private FlowLayoutPanel      _buildToolbar;
     private Button               _buildButton;
     private Button               _openDistButton;
