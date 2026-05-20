@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Minion Strike | StS2 カードリファレンス</title>
+  <title>Minion Strike | Slay the Spire 2 攻略メモメモ</title>
   <link rel="icon" type="image/png" href="../../favicon.png">
   <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -120,8 +120,8 @@ a { color: inherit; text-decoration: none; }
 .card-title-en  { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
 .card-title-ja  { font-size: 13px; color: #777; margin-top: 5px; }
 .card-badges    { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
-.card-desc-en   { font-size: 14px; color: #333; line-height: 1.75; }
-.card-desc-ja   { font-size: 13px; color: #777; line-height: 1.75; margin-top: 12px; }
+.desc-main   { font-size: 14px; color: #333; line-height: 1.75; }
+.desc-sub   { font-size: 13px; color: #777; line-height: 1.75; margin-top: 12px; }
 .stat-table     { border-collapse: collapse; }
 .stat-key { font-size: 13px; color: #666; padding: 3px 20px 3px 0; }
 .stat-val { font-size: 13px; font-weight: 600; color: #222; }
@@ -156,6 +156,17 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   padding: 2px 8px; margin-left: 8px; vertical-align: middle;
   letter-spacing: 0.5px; font-style: normal;
 }
+
+/* ── Monster grid ── */
+.monster-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+.monster-card { display: flex; flex-direction: column; align-items: center; width: 120px; }
+.monster-thumb { width: 100px; height: 100px; object-fit: contain;
+  background: #1e1e23; border-radius: 6px; border: 1px solid #ddd; }
+.monster-thumb-missing { width: 100px; height: 100px; display: flex; align-items: center;
+  justify-content: center; background: #f0f0f0; border-radius: 6px;
+  border: 1px dashed #ccc; color: #aaa; font-size: 28px; }
+.monster-name-ja { font-size: 12px; font-weight: 600; text-align: center; margin-top: 4px; }
+.monster-name-en { font-size: 10px; color: #888; text-align: center; }
 
 /* ── Card table ── */
 .card-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -203,6 +214,15 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
 .wiki-link { display: inline-block; margin-top: 12px; font-size: 12.5px; color: #1a5799; }
 .wiki-link:hover { text-decoration: underline; }
 
+/* ── Markdown body ── */
+.md-body p { font-size: 14px; color: #333; line-height: 1.75; margin-top: 1em; }
+.md-body p:first-child { margin-top: 0; }
+.md-body ul { margin: 1em 0 0 1.5em; font-size: 14px; color: #333; line-height: 1.75; }
+.md-body ul:first-child { margin-top: 0; }
+.md-body li + li { margin-top: 0.3em; }
+.md-body a { color: #1a5799; }
+.md-body a:hover { text-decoration: underline; }
+
 /* ── Upgrade tabs ── */
 .tab-bar { display: flex; gap: 6px; margin-bottom: 14px; }
 .tab-btn {
@@ -220,12 +240,15 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
     <nav class="sidebar">
       <div class="sidebar-brand">
         <div class="brand-game">Slay the Spire 2</div>
-        <div class="brand-label">カードリファレンス</div>
+        <div class="brand-label">攻略メモメモ</div>
       </div>
       <div class="nav-section">
         <div class="nav-group-label">ページ</div>
         <a href="../../index.html" class="nav-link">
           <span class="nav-icon">&#8962;</span>トップ
+        </a>
+        <a href="../../about.html" class="nav-link">
+          <span class="nav-icon">&#9432;</span>このサイトについて
         </a>
         <a href="../../pages.html" class="nav-link">
           <span class="nav-icon">&#9776;</span>ページ一覧
@@ -287,12 +310,12 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
     <button class="tab-btn" data-tab="upgraded">アップグレード後</button>
   </div>
   <div class="tab-panel" data-panel="base">
-    <p class="card-desc-en">Deal 6(9) damage.<br>Draw [Cards] card.</p>
-    <p class="card-desc-ja">6(9)ダメージを与える。<br>カードを[Cards]枚引く。</p>
+    <p class="desc-main">Deal 6(9) damage.<br>Draw [Cards] card.</p>
+    <p class="desc-sub">6(9)ダメージを与える。<br>カードを[Cards]枚引く。</p>
   </div>
   <div class="tab-panel hidden" data-panel="upgraded">
-    <p class="card-desc-en">Deal 9 damage.<br>Draw [Cards] card.</p>
-    <p class="card-desc-ja">9ダメージを与える。<br>カードを[Cards]枚引く。</p>
+    <p class="desc-main">Deal 9 damage.<br>Draw [Cards] card.</p>
+    <p class="desc-sub">9ダメージを与える。<br>カードを[Cards]枚引く。</p>
   </div>
 </section>
 
@@ -335,6 +358,39 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
 </section>
     </main>
   </div>
+  <script>
+(function () {
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function inline(s) {
+    return esc(s)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  }
+  function renderMd(src) {
+    return src.trim().split(/\n[ \t]*\n/).map(function (block) {
+      block = block.trim();
+      if (!block) return '';
+      var lines = block.split('\n');
+      if (/^[-*]\s/.test(lines[0])) {
+        return '<ul>' + lines
+          .filter(function (l) { return /^[-*]\s/.test(l); })
+          .map(function (l) { return '<li>' + inline(l.replace(/^[-*]\s+/, '')) + '</li>'; })
+          .join('') + '</ul>';
+      }
+      return '<p>' + inline(block.replace(/\n/g, ' ')) + '</p>';
+    }).join('');
+  }
+  document.querySelectorAll('script[type="text/markdown"]').forEach(function (el) {
+    var d = document.createElement('div');
+    d.className = 'md-body';
+    d.innerHTML = renderMd(el.textContent);
+    el.parentNode.replaceChild(d, el);
+  });
+})();
+</script>
   <script src="../../wiki-link.js"></script>
   <script>
 (function() {

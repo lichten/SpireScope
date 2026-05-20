@@ -111,6 +111,8 @@ var faviconDst = Path.Combine(distDir, "favicon.png");
 if (File.Exists(faviconSrc)) File.Copy(faviconSrc, faviconDst, overwrite: true);
 
 File.WriteAllText(Path.Combine(distDir, "index.html"),  BuildIndex(chars),                      System.Text.Encoding.UTF8);
+var aboutPath = Path.Combine(distDir, "about.html");
+File.WriteAllText(aboutPath, BuildAboutPage(chars, ExtractReview(aboutPath)), System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "pages.html"),  BuildPageList(pages, chars),            System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "cards.html"),  BuildCardListPage(allCardIds, chars),   System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "relics.html"), BuildRelicListPage(allRelicIds, chars), System.Text.Encoding.UTF8);
@@ -192,7 +194,7 @@ foreach (var group in CharacterMechanics.All.Where(g => g.Mechanics.Length > 0))
 }
 
 var totalMecs = CharacterMechanics.All.Sum(g => g.Mechanics.Length);
-        log($"Generated {7 + chars.Length + allCardIds.Length + allRelicIds.Length + allEventIds.Length + allEncounterIds.Length + 1 + totalMecs} files -> {distDir}");
+        log($"Generated {8 + chars.Length + allCardIds.Length + allRelicIds.Length + allEventIds.Length + allEncounterIds.Length + 1 + totalMecs} files -> {distDir}");
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────────
@@ -207,6 +209,51 @@ static string GetCardDir(string cardId, CharData[] chars)
 }
 
 // ── page builders ─────────────────────────────────────────────────────────────
+
+static string BuildAboutPage(CharData[] chars, string review = "")
+{
+    const string OVERVIEW_DEFAULT = """
+
+        <script type="text/markdown">
+        このサイトは **Slay the Spire 2** のカード・レリック・イベント・エンカウンター・メカニクスをまとめた個人用リファレンスです。
+
+        ゲームデータをもとに静的 HTML として生成されており、英語・日本語の両名称および効果テキストを掲載しています。
+        </script>
+
+        """;
+
+    var overviewContent = review == "" ? OVERVIEW_DEFAULT : review;
+
+    return Layout("このサイトについて", "about", "#4a90d9", chars, $"""
+        <div class="page-hero">
+          <h1 class="hero-title">このサイトについて</h1>
+          <p class="hero-sub">Slay the Spire 2 攻略メモメモ</p>
+        </div>
+        <section class="section">
+          <h2 class="section-title">概要</h2>
+          <!-- REVIEW_START -->{overviewContent}<!-- REVIEW_END -->
+        </section>
+        <section class="section">
+          <h2 class="section-title">収録コンテンツ</h2>
+          <table class="card-table" style="max-width:480px">
+            <tbody>
+              <tr><td class="col-name">カード一覧</td><td>全キャラクターのカードをタイプ・レアリティ別に掲載</td></tr>
+              <tr><td class="col-name">レリック一覧</td><td>全レリックの効果テキストを掲載</td></tr>
+              <tr><td class="col-name">イベント一覧</td><td>全イベントの本文・選択肢を掲載</td></tr>
+              <tr><td class="col-name">エンカウンター一覧</td><td>全エンカウンターの登場モンスターを掲載</td></tr>
+              <tr><td class="col-name">メカニクス一覧</td><td>キャラクター固有および共通メカニクスを掲載</td></tr>
+            </tbody>
+          </table>
+        </section>
+        <section class="section">
+          <h2 class="section-title">注意事項</h2>
+          <p class="desc-main">
+            本サイトはゲームのアーリーアクセス版データをもとに生成されており、内容はゲームのアップデートにより変更される場合があります。
+            公式情報については <a href="https://store.steampowered.com/app/646570/Slay_the_Spire_2/" class="wiki-link" target="_blank" rel="noopener">Steam ストアページ</a> をご確認ください。
+          </p>
+        </section>
+        """);
+}
 
 static string BuildIndex(CharData[] chars)
 {
@@ -226,7 +273,7 @@ static string BuildIndex(CharData[] chars)
     return Layout("トップ", "index", "#4a90d9", chars, $"""
         <div class="page-hero">
           <h1 class="hero-title">Slay the Spire 2</h1>
-          <p class="hero-sub">カードリファレンス</p>
+          <p class="hero-sub">攻略メモメモ</p>
           <p class="hero-desc">5人のキャラクターのカード・メカニクスを確認できます。</p>
         </div>
         <div class="char-grid">
@@ -883,8 +930,8 @@ static string BuildEventPage(string eventId, CharData[] chars, bool hasImage = f
     var descSection = descEn != "" ? $"""
         <section class="section">
           <h2 class="section-title">イベントテキスト</h2>
-          <p class="card-desc-en">{descEn}</p>
-          {(descJa != "" && descJa != descEn ? $"""<p class="card-desc-ja">{descJa}</p>""" : "")}
+          <p class="desc-main">{descEn}</p>
+          {(descJa != "" && descJa != descEn ? $"""<p class="desc-sub">{descJa}</p>""" : "")}
         </section>
         """ : "";
 
@@ -1133,8 +1180,8 @@ static string BuildEncounterPage(string encId, CharData[] chars, HashSet<string>
     var lossSection = lossEn != "" ? $"""
         <section class="section">
           <h2 class="section-title">敗北テキスト</h2>
-          <p class="card-desc-en" style="font-style:italic;color:#666">{lossEn}</p>
-          {(lossJa != "" && lossJa != lossEn ? $"""<p class="card-desc-ja" style="font-style:italic">{lossJa}</p>""" : "")}
+          <p class="desc-main" style="font-style:italic;color:#666">{lossEn}</p>
+          {(lossJa != "" && lossJa != lossEn ? $"""<p class="desc-sub" style="font-style:italic">{lossJa}</p>""" : "")}
         </section>
         """ : "";
 
@@ -1144,8 +1191,8 @@ static string BuildEncounterPage(string encId, CharData[] chars, HashSet<string>
     var rewardSection = rewardEn != "" ? $"""
         <section class="section">
           <h2 class="section-title">特別報酬</h2>
-          <p class="card-desc-en">{rewardEn}</p>
-          {(rewardJa != "" && rewardJa != rewardEn ? $"""<p class="card-desc-ja">{rewardJa}</p>""" : "")}
+          <p class="desc-main">{rewardEn}</p>
+          {(rewardJa != "" && rewardJa != rewardEn ? $"""<p class="desc-sub">{rewardJa}</p>""" : "")}
         </section>
         """ : "";
 
@@ -1253,16 +1300,16 @@ static string BuildRelicPage(string relicId, CharData[] chars, bool hasImage = f
     var descSection = descEn != "" ? $"""
         <section class="section">
           <h2 class="section-title">効果テキスト</h2>
-          <p class="card-desc-en">{descEn}</p>
-          {(descJa != "" && descJa != descEn ? $"""<p class="card-desc-ja">{descJa}</p>""" : "")}
+          <p class="desc-main">{descEn}</p>
+          {(descJa != "" && descJa != descEn ? $"""<p class="desc-sub">{descJa}</p>""" : "")}
         </section>
         """ : "";
 
     var flavorSection = flavor is { En: var flEn, Ja: var flJa } ? $"""
         <section class="section">
           <h2 class="section-title">フレーバーテキスト</h2>
-          <p class="card-desc-en" style="font-style:italic;color:#888">{flEn}</p>
-          {(flJa != "" && flJa != flEn ? $"""<p class="card-desc-ja" style="font-style:italic">{flJa}</p>""" : "")}
+          <p class="desc-main" style="font-style:italic;color:#888">{flEn}</p>
+          {(flJa != "" && flJa != flEn ? $"""<p class="desc-sub" style="font-style:italic">{flJa}</p>""" : "")}
         </section>
         """ : "";
 
@@ -1362,8 +1409,8 @@ static string BuildCardPage(string cardId, CharData[] chars, string basePath, st
     }
     else if (hasUpgrade)
     {
-        var jaBase = descJa != "" && descJa != descEn    ? $"""<p class="card-desc-ja">{descJa}</p>"""    : "";
-        var jaUpg  = descJaUpg != "" && descJaUpg != descEnUpg ? $"""<p class="card-desc-ja">{descJaUpg}</p>""" : "";
+        var jaBase = descJa != "" && descJa != descEn    ? $"""<p class="desc-sub">{descJa}</p>"""    : "";
+        var jaUpg  = descJaUpg != "" && descJaUpg != descEnUpg ? $"""<p class="desc-sub">{descJaUpg}</p>""" : "";
         descSection = $"""
             <section class="section">
               <h2 class="section-title">効果テキスト</h2>
@@ -1372,11 +1419,11 @@ static string BuildCardPage(string cardId, CharData[] chars, string basePath, st
                 <button class="tab-btn" data-tab="upgraded">アップグレード後</button>
               </div>
               <div class="tab-panel" data-panel="base">
-                <p class="card-desc-en">{descEn}</p>
+                <p class="desc-main">{descEn}</p>
                 {jaBase}
               </div>
               <div class="tab-panel hidden" data-panel="upgraded">
-                <p class="card-desc-en">{descEnUpg}</p>
+                <p class="desc-main">{descEnUpg}</p>
                 {jaUpg}
               </div>
             </section>
@@ -1387,8 +1434,8 @@ static string BuildCardPage(string cardId, CharData[] chars, string basePath, st
         descSection = $"""
             <section class="section">
               <h2 class="section-title">効果テキスト</h2>
-              <p class="card-desc-en">{descEn}</p>
-              {(descJa != "" && descJa != descEn ? $"""<p class="card-desc-ja">{descJa}</p>""" : "")}
+              <p class="desc-main">{descEn}</p>
+              {(descJa != "" && descJa != descEn ? $"""<p class="desc-sub">{descJa}</p>""" : "")}
             </section>
             """;
     }
@@ -1826,8 +1873,8 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
         .card-title-en  { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
         .card-title-ja  { font-size: 13px; color: #777; margin-top: 5px; }
         .card-badges    { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
-        .card-desc-en   { font-size: 14px; color: #333; line-height: 1.75; }
-        .card-desc-ja   { font-size: 13px; color: #777; line-height: 1.75; margin-top: 12px; }
+        .desc-main   { font-size: 14px; color: #333; line-height: 1.75; }
+        .desc-sub   { font-size: 13px; color: #777; line-height: 1.75; margin-top: 12px; }
         .stat-table     { border-collapse: collapse; }
         .stat-key { font-size: 13px; color: #666; padding: 3px 20px 3px 0; }
         .stat-val { font-size: 13px; font-weight: 600; color: #222; }
@@ -1920,6 +1967,15 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
         .wiki-link { display: inline-block; margin-top: 12px; font-size: 12.5px; color: #1a5799; }
         .wiki-link:hover { text-decoration: underline; }
 
+        /* ── Markdown body ── */
+        .md-body p { font-size: 14px; color: #333; line-height: 1.75; margin-top: 1em; }
+        .md-body p:first-child { margin-top: 0; }
+        .md-body ul { margin: 1em 0 0 1.5em; font-size: 14px; color: #333; line-height: 1.75; }
+        .md-body ul:first-child { margin-top: 0; }
+        .md-body li + li { margin-top: 0.3em; }
+        .md-body a { color: #1a5799; }
+        .md-body a:hover { text-decoration: underline; }
+
         /* ── Upgrade tabs ── */
         .tab-bar { display: flex; gap: 6px; margin-bottom: 14px; }
         .tab-btn {
@@ -1931,9 +1987,48 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
         .tab-panel.hidden { display: none; }
         """;
 
+    const string MD_JS = """
+        <script>
+        (function () {
+          function esc(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          }
+          function inline(s) {
+            return esc(s)
+              .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+              .replace(/\*(.+?)\*/g, '<em>$1</em>')
+              .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+          }
+          function renderMd(src) {
+            return src.trim().split(/\n[ \t]*\n/).map(function (block) {
+              block = block.trim();
+              if (!block) return '';
+              var lines = block.split('\n');
+              if (/^[-*]\s/.test(lines[0])) {
+                return '<ul>' + lines
+                  .filter(function (l) { return /^[-*]\s/.test(l); })
+                  .map(function (l) { return '<li>' + inline(l.replace(/^[-*]\s+/, '')) + '</li>'; })
+                  .join('') + '</ul>';
+              }
+              return '<p>' + inline(block.replace(/\n/g, ' ')) + '</p>';
+            }).join('');
+          }
+          document.querySelectorAll('script[type="text/markdown"]').forEach(function (el) {
+            var d = document.createElement('div');
+            d.className = 'md-body';
+            d.innerHTML = renderMd(el.textContent);
+            el.parentNode.replaceChild(d, el);
+          });
+        })();
+        </script>
+        """;
+
     var homeActive   = activeId == "index";
     var homeStyle    = homeActive   ? " style=\"border-left-color:#4a90d9\"" : "";
     var homeClass    = homeActive   ? " active" : "";
+    var aboutActive  = activeId == "about";
+    var aboutStyle   = aboutActive  ? " style=\"border-left-color:#4a90d9\"" : "";
+    var aboutClass   = aboutActive  ? " active" : "";
     var pagesActive  = activeId == "pages";
     var pagesStyle   = pagesActive  ? " style=\"border-left-color:#4a90d9\"" : "";
     var pagesClass   = pagesActive  ? " active" : "";
@@ -1972,7 +2067,7 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>{title} | StS2 カードリファレンス</title>
+          <title>{title} | Slay the Spire 2 攻略メモメモ</title>
           <link rel="icon" type="image/png" href="{basePath}favicon.png">
           <style>
         {CSS}
@@ -1984,12 +2079,15 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
             <nav class="sidebar">
               <div class="sidebar-brand">
                 <div class="brand-game">Slay the Spire 2</div>
-                <div class="brand-label">カードリファレンス</div>
+                <div class="brand-label">攻略メモメモ</div>
               </div>
               <div class="nav-section">
                 <div class="nav-group-label">ページ</div>
                 <a href="{basePath}index.html" class="nav-link{homeClass}"{homeStyle}>
                   <span class="nav-icon">&#8962;</span>トップ
+                </a>
+                <a href="{basePath}about.html" class="nav-link{aboutClass}"{aboutStyle}>
+                  <span class="nav-icon">&#9432;</span>このサイトについて
                 </a>
                 <a href="{basePath}pages.html" class="nav-link{pagesClass}"{pagesStyle}>
                   <span class="nav-icon">&#9776;</span>ページ一覧
@@ -2019,6 +2117,7 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
               {content}
             </main>
           </div>
+          {MD_JS}
           <script src="{basePath}wiki-link.js"></script>
           {extraFoot}
         </body>
