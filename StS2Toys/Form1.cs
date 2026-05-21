@@ -17,6 +17,7 @@ namespace StS2Toys
         private DeckOverviewForm? _silentOverview;
         private DeckOverviewForm? _defectOverview;
         private DeckOverviewForm? _regentOverview;
+        private DeckOverviewForm? _disappearanceOverview;
         private EncounterOverviewForm? _encounterOverview;
         private HpHistoryForm? _hpHistory;
         private SubWindowSettings? _imageViewerSettings;
@@ -29,6 +30,7 @@ namespace StS2Toys
         private SubWindowSettings? _silentOverviewSettings;
         private SubWindowSettings? _defectOverviewSettings;
         private SubWindowSettings? _regentOverviewSettings;
+        private SubWindowSettings? _disappearanceOverviewSettings;
         private IReadOnlyList<DeckCard>? _lastDeckCards;
         private IReadOnlyList<RelicEntry>? _lastRelics;
         private RunSaveData? _lastRunData;
@@ -80,6 +82,7 @@ namespace StS2Toys
             _silentOverview?.Close();
             _defectOverview?.Close();
             _regentOverview?.Close();
+            _disappearanceOverview?.Close();
         }
 
         void RestoreWindowSettings()
@@ -96,7 +99,8 @@ namespace StS2Toys
             _ironcladOverviewSettings = app.IroncladOverview;
             _silentOverviewSettings   = app.SilentOverview;
             _defectOverviewSettings   = app.DefectOverview;
-            _regentOverviewSettings   = app.RegentOverview;
+            _regentOverviewSettings       = app.RegentOverview;
+            _disappearanceOverviewSettings = app.DisappearanceOverview;
 
             if (app.SidePanelWidth is int w)
                 splitContainerOuter.SplitterDistance = w;
@@ -132,6 +136,8 @@ namespace StS2Toys
                 _defectOverviewSettings = WindowToSub(_defectOverview);
             if (_regentOverview is { IsDisposed: false })
                 _regentOverviewSettings = WindowToSub(_regentOverview);
+            if (_disappearanceOverview is { IsDisposed: false })
+                _disappearanceOverviewSettings = WindowToSub(_disappearanceOverview);
             if (_encounterOverview is { IsDisposed: false })
                 _encounterOverviewSettings = WindowToSub(_encounterOverview);
             if (_hpHistory is { IsDisposed: false })
@@ -140,7 +146,7 @@ namespace StS2Toys
             var state = WindowState == FormWindowState.Minimized ? FormWindowState.Normal : WindowState;
             var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
             var main = new WindowSettings(bounds.X, bounds.Y, bounds.Width, bounds.Height, state.ToString());
-            WindowSettingsService.Save(new AppSettings(main, _imageViewerSettings, _cardDetailSettings, _hpHistorySettings, _encounterOverviewSettings, splitContainerOuter.SplitterDistance, _necroOverviewSettings, _ironcladOverviewSettings, _silentOverviewSettings, _defectOverviewSettings, _regentOverviewSettings, _combinedOverviewSettings, AppLanguage.IsJapanese ? "ja" : "en"));
+            WindowSettingsService.Save(new AppSettings(main, _imageViewerSettings, _cardDetailSettings, _hpHistorySettings, _encounterOverviewSettings, splitContainerOuter.SplitterDistance, _necroOverviewSettings, _ironcladOverviewSettings, _silentOverviewSettings, _defectOverviewSettings, _regentOverviewSettings, _combinedOverviewSettings, _disappearanceOverviewSettings, AppLanguage.IsJapanese ? "ja" : "en"));
         }
 
         static SubWindowSettings WindowToSub(Form form) =>
@@ -155,7 +161,8 @@ namespace StS2Toys
             if (_ironcladOverviewSettings?.Visible == true)   BtnIroncladOverview_Click(null, EventArgs.Empty);
             if (_silentOverviewSettings?.Visible == true)     BtnSilentOverview_Click(null, EventArgs.Empty);
             if (_defectOverviewSettings?.Visible == true)     BtnDefectOverview_Click(null, EventArgs.Empty);
-            if (_regentOverviewSettings?.Visible == true)     BtnRegentOverview_Click(null, EventArgs.Empty);
+            if (_regentOverviewSettings?.Visible == true)        BtnRegentOverview_Click(null, EventArgs.Empty);
+            if (_disappearanceOverviewSettings?.Visible == true) BtnDisappearanceOverview_Click(null, EventArgs.Empty);
         }
 
         static SubWindowSettings BoundsToSub(Rectangle r) => new(r.X, r.Y, r.Width, r.Height);
@@ -374,6 +381,7 @@ namespace StS2Toys
             RefreshSilentOverview();
             RefreshDefectOverview();
             RefreshRegentOverview();
+            RefreshDisappearanceOverview();
         }
 
         void DisplayRelics(PlayerData player)
@@ -406,6 +414,7 @@ namespace StS2Toys
             RefreshSilentOverview();
             RefreshDefectOverview();
             RefreshRegentOverview();
+            RefreshDisappearanceOverview();
         }
 
         void RefreshCombinedOverview()
@@ -477,6 +486,62 @@ namespace StS2Toys
             "Curse" => "呪い", "Status" => "状態異常", "Quest" => "クエスト",
             _ => type.Length > 0 ? type : "その他"
         };
+
+        void BtnDisappearanceOverview_Click(object? sender, EventArgs e)
+        {
+            if (_disappearanceOverview is null || _disappearanceOverview.IsDisposed || !_disappearanceOverview.Visible)
+            {
+                if (_disappearanceOverview is null || _disappearanceOverview.IsDisposed)
+                {
+                    _disappearanceOverview = new DeckOverviewForm();
+                    ApplySubWindowSettings(_disappearanceOverview, _disappearanceOverviewSettings, new Point(Right + 4, Top));
+                    _disappearanceOverview.FormClosed += (_, _) =>
+                    {
+                        _disappearanceOverviewSettings = BoundsToSub(_disappearanceOverview.Bounds);
+                        UpdateDisappearanceOverviewButton(false);
+                    };
+                }
+                _disappearanceOverview.Show(this);
+                UpdateDisappearanceOverviewButton(true);
+                RefreshDisappearanceOverview();
+            }
+            else
+            {
+                _disappearanceOverview.Hide();
+                UpdateDisappearanceOverviewButton(false);
+            }
+        }
+
+        void UpdateDisappearanceOverviewButton(bool visible)
+        {
+            btnDisappearanceOverview.Text = visible ? "● 消滅概観" : "○ 消滅概観";
+            btnDisappearanceOverview.ForeColor = visible ? Color.DarkSlateBlue : SystemColors.ControlText;
+        }
+
+        void RefreshDisappearanceOverview()
+        {
+            if (_disappearanceOverview is null || _disappearanceOverview.IsDisposed || !_disappearanceOverview.Visible) return;
+            if (_lastDeckCards is null) return;
+
+            bool ja = AppLanguage.IsJapanese;
+            var cards  = _lastDeckCards;
+            var relics = _lastRelics ?? [];
+            int deckTotal = cards.Sum(c => c.Count);
+
+            bool IsDisposable(DeckCard c) =>
+                c.Type == "Power" || CardDatabaseService.IsExhaustAction(c.Id);
+
+            var sections = new List<OverviewSection>
+            {
+                new("Disappears in Battle", "戦闘中に消滅する",
+                    cards.Where(c =>  IsDisposable(c)).OrderBy(c => ja ? c.NameJa : c.NameEn).ToList(), []),
+                new("Persists in Battle", "戦闘中に消滅しない",
+                    cards.Where(c => !IsDisposable(c)).OrderBy(c => ja ? c.NameJa : c.NameEn).ToList(),
+                    relics),
+            };
+
+            _disappearanceOverview.SetSections(sections, deckTotal);
+        }
 
         void RefreshEncounterOverview()
         {

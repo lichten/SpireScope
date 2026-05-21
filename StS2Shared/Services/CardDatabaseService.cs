@@ -140,6 +140,7 @@ public static class CardDatabaseService
     static readonly HashSet<string> _necroSummon   = ComputeByTag("[gold]Summon[/gold]");
     static readonly HashSet<string> _ironcladStr    = ComputeByTag("[gold]Strength[/gold]");
     static readonly HashSet<string> _ironcladEx    = ComputeByTag("[gold]Exhaust[/gold]", "[gold]Exhausted[/gold]", "[gold]Exhaust Pile[/gold]");
+    static readonly HashSet<string> _exhaustAction  = ComputeExhaustAction();
     static readonly HashSet<string> _ironcladStrike = ComputeByNameContaining("Strike");
     static readonly HashSet<string> _silentPoison  = ComputeByTag("[gold]Poison[/gold]");
     static readonly HashSet<string> _silentShiv    = ComputeByGoldTagContaining("Shiv");
@@ -238,6 +239,25 @@ public static class CardDatabaseService
             if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
             var stripped = desc.Replace(drawPileTag, "", StringComparison.Ordinal);
             if (stripped.Contains("draw", StringComparison.OrdinalIgnoreCase))
+                result.Add(key[..^descSuffix.Length]);
+        }
+        return result;
+    }
+
+    static HashSet<string> ComputeExhaustAction()
+    {
+        const string exhaustTag     = "[gold]Exhaust[/gold]";
+        const string exhaustPileTag = "[gold]Exhaust Pile[/gold]";
+        const string exhaustedTag   = "[gold]Exhausted[/gold]";
+        const string descSuffix     = ".description";
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, desc) in _loc.EngCards)
+        {
+            if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
+            var stripped = desc
+                .Replace(exhaustPileTag, "", StringComparison.Ordinal)
+                .Replace(exhaustedTag,   "", StringComparison.Ordinal);
+            if (stripped.Contains(exhaustTag, StringComparison.Ordinal))
                 result.Add(key[..^descSuffix.Length]);
         }
         return result;
@@ -378,6 +398,7 @@ public static class CardDatabaseService
     public static bool IsNecroSummon(string id)    => _necroSummon.Contains(ToRawId(id));
     public static bool IsIroncladStrength(string id) => _ironcladStr.Contains(ToRawId(id));
     public static bool IsIroncladExhaust(string id)  => _ironcladEx.Contains(ToRawId(id));
+    public static bool IsExhaustAction(string id)    => _exhaustAction.Contains(ToRawId(id));
     public static bool IsIroncladStrike(string id)   => _ironcladStrike.Contains(ToRawId(id));
     public static bool IsSilentPoison(string id)   => _silentPoison.Contains(ToRawId(id));
     public static bool IsSilentShiv(string id)     => _silentShiv.Contains(ToRawId(id));

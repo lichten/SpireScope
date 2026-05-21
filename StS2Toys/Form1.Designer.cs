@@ -34,6 +34,7 @@ namespace StS2Toys
             btnSilentOverview = new Button();
             btnIroncladOverview = new Button();
             btnNecroOverview = new Button();
+            btnDisappearanceOverview = new Button();
             btnCombinedOverview = new Button();
             lblGroupOverview = new Label();
             btnCardDetail = new Button();
@@ -202,6 +203,7 @@ namespace StS2Toys
             panelSideButtons.Controls.Add(btnSilentOverview);
             panelSideButtons.Controls.Add(btnIroncladOverview);
             panelSideButtons.Controls.Add(btnNecroOverview);
+            panelSideButtons.Controls.Add(btnDisappearanceOverview);
             panelSideButtons.Controls.Add(btnCombinedOverview);
             panelSideButtons.Controls.Add(lblGroupOverview);
             panelSideButtons.Controls.Add(btnCardDetail);
@@ -305,9 +307,18 @@ namespace StS2Toys
             btnNecroOverview.TabIndex = 8;
             btnNecroOverview.Text = "○ Necrobinder概観";
             btnNecroOverview.Click += BtnNecroOverview_Click;
-            // 
+            //
+            // btnDisappearanceOverview
+            //
+            btnDisappearanceOverview.Dock = DockStyle.Top;
+            btnDisappearanceOverview.Name = "btnDisappearanceOverview";
+            btnDisappearanceOverview.Size = new System.Drawing.Size(150, 30);
+            btnDisappearanceOverview.TabIndex = 15;
+            btnDisappearanceOverview.Text = "○ 消滅概観";
+            btnDisappearanceOverview.Click += BtnDisappearanceOverview_Click;
+            //
             // btnCombinedOverview
-            // 
+            //
             btnCombinedOverview.Dock = DockStyle.Top;
             btnCombinedOverview.Location = new Point(0, 78);
             btnCombinedOverview.Name = "btnCombinedOverview";
@@ -507,6 +518,7 @@ namespace StS2Toys
         private Button btnEncounterOverview;
         private Button btnFilterBlock;
         private Button btnNecroOverview;
+        private Button btnDisappearanceOverview;
         private Button btnIroncladOverview;
         private Button btnSilentOverview;
         private Button btnDefectOverview;

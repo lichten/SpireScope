@@ -17,6 +17,7 @@ record AppSettings(
     SubWindowSettings? DefectOverview = null,
     SubWindowSettings? RegentOverview = null,
     SubWindowSettings? CombinedOverview = null,
+    SubWindowSettings? DisappearanceOverview = null,
     string? Language = null);
 
 static class WindowSettingsService
