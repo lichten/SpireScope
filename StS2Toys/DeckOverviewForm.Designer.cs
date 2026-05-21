@@ -57,7 +57,7 @@ namespace StS2Toys
             Controls.Add(_statsPanel);
             MinimumSize = new Size(300, 200);
             Name = "DeckOverviewForm";
-            Text = "デッキ概観";
+            Text = "デッキ枚数理論値";
             _statsPanel.ResumeLayout(false);
             _scrollPanel.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)_pictureBox).EndInit();

@@ -608,7 +608,7 @@ namespace StS2Toys
 
         void UpdateCombinedOverviewButton(bool visible)
         {
-            btnCombinedOverview.Text = visible ? "● デッキ概観" : "○ デッキ概観";
+            btnCombinedOverview.Text = visible ? "● デッキ枚数理論値" : "○ デッキ枚数理論値";
             btnCombinedOverview.ForeColor = visible ? Color.DarkRed : SystemColors.ControlText;
         }
 

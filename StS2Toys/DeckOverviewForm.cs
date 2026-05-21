@@ -18,7 +18,7 @@ public partial class DeckOverviewForm : Form
     private IReadOnlyList<(string LabelEn, string LabelJa, Func<string, bool> Filter)>? _keywordGroups;
     private IReadOnlyList<OverviewSection>? _sections;
     private string _titleEn = "Deck Overview";
-    private string _titleJa = "デッキ概観";
+    private string _titleJa = "デッキ枚数理論値";
     private int? _deckTotalOverride;
     private readonly Dictionary<string, Bitmap?> _imageCache = new();
     readonly ToolTip _hoverTip = new() { InitialDelay = 400, ReshowDelay = 100, AutoPopDelay = 8000, ShowAlways = true };
