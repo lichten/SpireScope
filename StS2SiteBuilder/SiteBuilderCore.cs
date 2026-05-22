@@ -118,6 +118,12 @@ var faviconSrc = Path.Combine(Path.GetDirectoryName(distDir)!, "assets", "favico
 var faviconDst = Path.Combine(distDir, "favicon.png");
 if (File.Exists(faviconSrc)) File.Copy(faviconSrc, faviconDst, overwrite: true);
 
+chars = chars.Select(ch =>
+{
+    var saved = ExtractReview(Path.Combine(distDir, $"{ch.Id}.html"));
+    return string.IsNullOrEmpty(saved) ? ch : ch with { Desc = saved };
+}).ToArray();
+
 File.WriteAllText(Path.Combine(distDir, "index.html"),      BuildIndex(chars),         System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "characters.html"), BuildCharListPage(chars),  System.Text.Encoding.UTF8);
 var aboutPath     = Path.Combine(distDir, "about.html");
@@ -549,6 +555,10 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
             var flags   = ComputeFlags(id);
             var dir     = GetCardDir(id, chars);
             var href    = $"cards/{dir}/{rawId}.html";
+            var (rawDescEn, rawDescJa) = CardDatabaseService.GetDescription(id);
+            var descAttr = System.Net.WebUtility.HtmlEncode(
+                DescriptionFormatter.Clean(rawDescEn) + " " +
+                DescriptionFormatter.Clean(rawDescJa, japanese: true));
 
             var typeBadge   = type   != "" ? $"""<span class="badge type-{type.ToLower()}">{type}</span>""" : "";
             var rarityBadge = rarity != "" ? $"""<span class="badge rarity-{rarity.ToLower()}">{rarity}</span>""" : "";
@@ -559,7 +569,7 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
             var jaSpan = nameJa != nameEn ? $"""<span class="card-name-ja">{nameJa}</span>""" : "";
 
             return $"""
-                      <tr>
+                      <tr data-desc="{descAttr}">
                         <td class="col-name">
                           <a href="{href}" class="card-name-link">{nameEn}</a>{jaSpan}
                         </td>
@@ -595,8 +605,8 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
     var filterPanel = $"""
         <div class="filter-panel">
           <div class="filter-section">
-            <span class="filter-label">カード名</span>
-            <input type="text" id="card-search" class="search-input" placeholder="名前で検索…" autocomplete="off">
+            <span class="filter-label">検索</span>
+            <input type="text" id="card-search" class="search-input" placeholder="名前・説明文で検索…" autocomplete="off">
             <button class="filter-btn" id="thumb-toggle" style="margin-left:4px">サムネイル表示</button>
           </div>
           <div class="filter-section">
@@ -743,7 +753,8 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
                 var ok = (tf === 'all' || tc === 'type-' + tf)
                       && (rf === 'all' || rc === 'rarity-' + rf)
                       && (q  === ''   || (nl && nl.textContent.toLowerCase().includes(q))
-                                      || (nj && nj.textContent.toLowerCase().includes(q)));
+                                      || (nj && nj.textContent.toLowerCase().includes(q))
+                                      || row.dataset.desc.toLowerCase().includes(q));
                 row.style.display = ok ? '' : 'none';
                 if (ok) n++;
               });
@@ -822,8 +833,12 @@ static string BuildRelicListPage(string[] allRelicIds, CharData[] chars)
         var href   = $"relics/{id}.html";
         var jaSpan      = nameJa != nameEn ? $"""<span class="card-name-ja">{nameJa}</span>""" : "";
         var rarityBadge = rarity != "" ? $"""<span class="badge rarity-{rarity.ToLower()}">{rarity}</span>""" : "";
+        var (rawDescEn, rawDescJa) = CardDatabaseService.GetDescription("RELIC." + id);
+        var descAttr = System.Net.WebUtility.HtmlEncode(
+            DescriptionFormatter.Clean(rawDescEn) + " " +
+            DescriptionFormatter.Clean(rawDescJa, japanese: true));
         return $"""
-                  <tr data-rarity="{rarity.ToLower()}">
+                  <tr data-rarity="{rarity.ToLower()}" data-desc="{descAttr}">
                     <td class="col-name">
                       <a href="{href}" class="card-name-link">{nameEn}</a>{jaSpan}
                     </td>
@@ -898,7 +913,8 @@ static string BuildRelicListPage(string[] allRelicIds, CharData[] chars)
               var ja  = row.querySelector('.card-name-ja');
               var rowRarity = row.getAttribute('data-rarity') || '';
               var nameOk = q === '' || (lnk && lnk.textContent.toLowerCase().includes(q))
-                                    || (ja  && ja.textContent.toLowerCase().includes(q));
+                                    || (ja  && ja.textContent.toLowerCase().includes(q))
+                                    || row.dataset.desc.toLowerCase().includes(q);
               var rarityOk = r === 'all' || rowRarity === r;
               var ok = nameOk && rarityOk;
               row.style.display = ok ? '' : 'none';
@@ -921,8 +937,8 @@ static string BuildRelicListPage(string[] allRelicIds, CharData[] chars)
     var filterPanel = $"""
         <div class="relic-filter-panel">
           <div class="relic-filter-section">
-            <span class="relic-filter-label">レリック名</span>
-            <input type="text" id="relic-search" class="relic-search-input" placeholder="名前で検索…" autocomplete="off">
+            <span class="relic-filter-label">検索</span>
+            <input type="text" id="relic-search" class="relic-search-input" placeholder="名前・説明文で検索…" autocomplete="off">
             <span class="relic-count" id="relic-count">{allRelicIds.Length}件</span>
           </div>
           <div class="relic-filter-section">
@@ -1733,7 +1749,7 @@ static string BuildCharPage(CharData ch, CharData[] chars, (string En, string Ja
           <div class="char-header-body">
             <h1 class="char-title-en" style="color:{ch.Accent}">{ch.EnName}</h1>
             <div class="char-title-ja">{ch.JaName}</div>
-            <p class="char-desc-full">{ch.Desc}</p>
+            <p class="char-desc-full"><!-- REVIEW_START -->{ch.Desc}<!-- REVIEW_END --></p>
           </div>
           <img src="images/characters/{ch.Id}.jpg" class="char-hero-img" alt="{ch.EnName}">
         </div>
