@@ -124,7 +124,9 @@ var aboutPath     = Path.Combine(distDir, "about.html");
 File.WriteAllText(aboutPath, BuildAboutPage(chars, ExtractReview(aboutPath)), System.Text.Encoding.UTF8);
 var changelogPath = Path.Combine(distDir, "changelog.html");
 File.WriteAllText(changelogPath, BuildChangelogPage(chars, ExtractReview(changelogPath)), System.Text.Encoding.UTF8);
-File.WriteAllText(Path.Combine(distDir, "pages.html"),  BuildPageList(pages, chars),            System.Text.Encoding.UTF8);
+File.WriteAllText(Path.Combine(distDir, "pages.html"),
+    BuildPageList(pages, chars, allCardIds, allRelicIds, allEventIds, allEncounterIds),
+    System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "cards.html"),  BuildCardListPage(allCardIds, chars),   System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "relics.html"), BuildRelicListPage(allRelicIds, chars), System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "events.html"),     BuildEventListPage(allEventIds, chars, eventsWithImg), System.Text.Encoding.UTF8);
@@ -331,54 +333,173 @@ static string BuildCharListPage(CharData[] chars)
         """);
 }
 
-static string BuildPageList(PageEntry[] pages, CharData[] chars)
+static string BuildPageList(PageEntry[] pages, CharData[] chars,
+    string[] allCardIds, string[] allRelicIds, string[] allEventIds, string[] allEncounterIds)
 {
-    string[] allCategories = ["キャラクター", "カード", "レリック", "イベント", "エンカウンター"];
+    static string Pills(IEnumerable<(string href, string label, string? labelSub)> items) =>
+        string.Concat(items.Select(x =>
+            x.labelSub is not null
+                ? $"""<a href="{x.href}" class="mec-tag">{x.label}<span class="mec-sub">{x.labelSub}</span></a>"""
+                : $"""<a href="{x.href}" class="mec-tag">{x.label}</a>"""));
 
-    var sections = string.Concat(allCategories.Select(cat =>
+    static string SubSection(string title, string pillsHtml) => $"""
+        <div class="pagelist-sub">
+          <div class="pagelist-sub-title">{title}</div>
+          <div class="mec-tags">{pillsHtml}</div>
+        </div>
+        """;
+
+    // ── サイト情報 ──────────────────────────────────────────────────────────────
+    var siteInfoLinks = new (string href, string label)[]
     {
-        var catPages = pages.Where(p => p.Category == cat).ToArray();
+        ("index.html",      "トップ"),
+        ("about.html",      "このサイトについて"),
+        ("changelog.html",  "更新履歴"),
+        ("pages.html",      "全ページ一覧"),
+    };
+    var siteInfoHtml = string.Concat(siteInfoLinks.Select(x =>
+        $"""<a href="{x.href}" class="pagelist-list-link">{x.label}</a>"""));
 
-        string content;
-        if (catPages.Length == 0)
+    // ── キャラクター ────────────────────────────────────────────────────────────
+    var charListLink = $"""<a href="characters.html" class="pagelist-list-link">キャラクター一覧</a>""";
+    var charIndivLinks = Pills(chars.Select(ch =>
+        (href: $"{ch.Id}.html", label: ch.JaName, labelSub: ch.EnName != ch.JaName ? (string?)ch.EnName : null)));
+
+    // ── カード ──────────────────────────────────────────────────────────────────
+    var charCardSubSecs = string.Concat(chars.Select(ch =>
+    {
+        var ids = allCardIds
+            .Where(id => CardDatabaseService.GetCardCharacter(id)
+                .Equals(ch.EnName, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(id => TypeOrder(CardDatabaseService.GetCardType(id)))
+            .ThenBy(id => RarityOrder(CardDatabaseService.GetCardRarity(id)))
+            .ThenBy(id => CardDatabaseService.GetName(id))
+            .ToArray();
+        if (ids.Length == 0) return "";
+        var pills = Pills(ids.Select(id =>
         {
-            content = """<p class="placeholder">ページはまだ追加されていません。</p>""";
-        }
-        else
+            var en = CardDatabaseService.GetName(id);
+            var ja = CardDatabaseService.GetName(id, japanese: true);
+            return ($"cards/{ch.Id}/{RawId(id)}.html", en, ja != en ? (string?)ja : null);
+        }));
+        return SubSection($"{ch.EnName} ({ids.Length})", pills);
+    }));
+    var sharedIds = allCardIds
+        .Where(id => !chars.Any(ch => CardDatabaseService.GetCardCharacter(id)
+            .Equals(ch.EnName, StringComparison.OrdinalIgnoreCase)))
+        .ToArray();
+    if (sharedIds.Length > 0)
+    {
+        var pills = Pills(sharedIds.Select(id =>
         {
-            var cardHtml = string.Concat(catPages.Select(p => $"""
-                      <a href="{p.Path}" class="char-card">
-                        <div class="char-card-header" style="background:{p.Color}">
-                          <div class="char-name-en">{p.TitleEn}</div>
-                          <div class="char-name-ja">{p.TitleJa}</div>
-                        </div>
-                        <div class="char-card-body">
-                          <p class="char-desc">{p.Desc}</p>
-                        </div>
-                        <div class="char-card-footer">ページへ &rarr;</div>
-                      </a>
-                """));
-            content = $"""<div class="char-grid">{cardHtml}</div>""";
-        }
+            var en = CardDatabaseService.GetName(id);
+            var ja = CardDatabaseService.GetName(id, japanese: true);
+            return ($"cards/shared/{RawId(id)}.html", en, ja != en ? (string?)ja : null);
+        }));
+        charCardSubSecs += SubSection($"共有 ({sharedIds.Length})", pills);
+    }
 
-        var pendingBadge = catPages.Length == 0 ? """ <span class="pending-badge">準備中</span>""" : "";
-        var sectionClass = catPages.Length == 0 ? " section-pending" : "";
-
-        return $"""
-            <section class="section{sectionClass}">
-              <h2 class="section-title">{cat}{pendingBadge}</h2>
-              {content}
-            </section>
-            """;
+    // ── レリック ────────────────────────────────────────────────────────────────
+    var relicPills = Pills(allRelicIds.Select(id =>
+    {
+        var en = CardDatabaseService.GetRelicTitle(id);
+        var ja = CardDatabaseService.GetRelicTitle(id, japanese: true);
+        return ($"relics/{id}.html", en, ja != en ? (string?)ja : null);
     }));
 
-    return Layout("ページ一覧", "pages", "#4a90d9", chars, $"""
+    // ── イベント ────────────────────────────────────────────────────────────────
+    var eventPills = Pills(allEventIds.Select(id =>
+    {
+        var en = CardDatabaseService.GetEventTitle(id);
+        var ja = CardDatabaseService.GetEventTitle(id, japanese: true);
+        return ($"events/{id}.html", en, ja != en ? (string?)ja : null);
+    }));
+
+    // ── エンカウンター ──────────────────────────────────────────────────────────
+    var encounterPills = Pills(allEncounterIds.Select(id =>
+    {
+        var en = EncounterDatabaseService.GetEncounterName(id);
+        var ja = EncounterDatabaseService.GetEncounterName(id, japanese: true);
+        return ($"encounters/{id}.html", en, ja != en ? (string?)ja : null);
+    }));
+
+    // ── メカニクス ──────────────────────────────────────────────────────────────
+    var mecSubSecs = string.Concat(
+        CharacterMechanics.All
+            .Where(g => g.Mechanics.Length > 0)
+            .Select(g =>
+            {
+                var groupDir = g.EnLabel.ToLowerInvariant();
+                var pills = Pills(g.Mechanics.Select(mec =>
+                    ($"mechanics/{groupDir}/{MecFileName(mec.EnLabel)}",
+                     mec.JaLabel,
+                     mec.JaLabel != mec.EnLabel ? (string?)mec.EnLabel : null)));
+                return SubSection($"{g.JaLabel} ({g.Mechanics.Length})", pills);
+            }));
+
+    var totalPages = 4 + 1 + chars.Length + allCardIds.Length + allRelicIds.Length
+                   + allEventIds.Length + allEncounterIds.Length + 1
+                   + CharacterMechanics.All.Sum(g => g.Mechanics.Length);
+
+    var content = $"""
         <div class="page-hero">
-          <h1 class="hero-title">ページ一覧</h1>
-          <p class="hero-sub">全ページの一覧</p>
+          <h1 class="hero-title">全ページ一覧</h1>
+          <p class="hero-sub">Full Page Index</p>
+          <p class="hero-desc">全{totalPages}ページのリンクを列挙しています。</p>
         </div>
-        {sections}
-        """);
+
+        <section class="section">
+          <h2 class="section-title">サイト情報</h2>
+          <div class="pagelist-top-links">{siteInfoHtml}</div>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">キャラクター — {chars.Length + 1}件</h2>
+          <div class="pagelist-top-links">{charListLink}</div>
+          <div class="pagelist-sub">
+            <div class="pagelist-sub-title">個別ページ ({chars.Length})</div>
+            <div class="mec-tags">{charIndivLinks}</div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">カード — {allCardIds.Length + 1}件</h2>
+          <div class="pagelist-top-links"><a href="cards.html" class="pagelist-list-link">カード一覧</a></div>
+          {charCardSubSecs}
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">レリック — {allRelicIds.Length + 1}件</h2>
+          <div class="pagelist-top-links"><a href="relics.html" class="pagelist-list-link">レリック一覧</a></div>
+          <div class="pagelist-sub">
+            <div class="mec-tags">{relicPills}</div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">イベント — {allEventIds.Length + 1}件</h2>
+          <div class="pagelist-top-links"><a href="events.html" class="pagelist-list-link">イベント一覧</a></div>
+          <div class="pagelist-sub">
+            <div class="mec-tags">{eventPills}</div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">エンカウンター — {allEncounterIds.Length + 1}件</h2>
+          <div class="pagelist-top-links"><a href="encounters.html" class="pagelist-list-link">エンカウンター一覧</a></div>
+          <div class="pagelist-sub">
+            <div class="mec-tags">{encounterPills}</div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">メカニクス — {CharacterMechanics.All.Sum(g => g.Mechanics.Length) + 1}件</h2>
+          <div class="pagelist-top-links"><a href="mechanics.html" class="pagelist-list-link">メカニクス一覧</a></div>
+          {mecSubSecs}
+        </section>
+        """;
+
+    return Layout("全ページ一覧", "pages", "#4a90d9", chars, content);
 }
 
 static string BuildCardListPage(string[] allCardIds, CharData[] chars)
@@ -1909,6 +2030,20 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
           border-radius: 6px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
         }
 
+        /* ── 全ページ一覧 ── */
+        .pagelist-sub { margin-top: 14px; }
+        .pagelist-sub-title {
+          font-size: 11.5px; font-weight: 700; color: #999; letter-spacing: 0.05em;
+          text-transform: uppercase; margin-bottom: 6px;
+        }
+        .pagelist-top-links { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+        .pagelist-list-link {
+          display: inline-block; padding: 5px 14px;
+          background: #e8f0fe; border-radius: 6px; font-size: 13px;
+          color: #1a5799; font-weight: 600;
+        }
+        .pagelist-list-link:hover { background: #d0e3ff; }
+
         /* ── Event detail ── */
         .event-image-wrap {
           margin-bottom: 20px; border-radius: 10px; overflow: hidden;
@@ -2160,7 +2295,7 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
                   <span class="nav-icon">&#9711;</span>更新履歴
                 </a>
                 <a href="{basePath}pages.html" class="nav-link{pagesClass}"{pagesStyle}>
-                  <span class="nav-icon">&#9776;</span>ページ一覧
+                  <span class="nav-icon">&#9776;</span>全ページ一覧
                 </a>
                 <a href="{basePath}characters.html" class="nav-link{charsClass}"{charsStyle}>
                   <span class="nav-icon">&#9786;</span>キャラクター一覧
