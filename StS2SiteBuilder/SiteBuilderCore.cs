@@ -566,7 +566,9 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
                 CardFlags.AllDefs
                     .Where(f => flags.Contains(f.Key))
                     .Select(f => $"""<span class="badge flag-badge">{f.Label}</span>"""));
-            var jaSpan = nameJa != nameEn ? $"""<span class="card-name-ja">{nameJa}</span>""" : "";
+            var jaSpan    = nameJa != nameEn ? $"""<span class="card-name-ja">{nameJa}</span>""" : "";
+            var charLabel = g.LabelJa != "" ? g.LabelJa : g.Label;
+            var charBadge = $"""<span class="badge char-{g.CharId}">{charLabel}</span>""";
 
             return $"""
                       <tr data-desc="{descAttr}">
@@ -575,6 +577,7 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
                         </td>
                         <td class="col-type">{typeBadge}</td>
                         <td class="col-rarity">{rarityBadge}</td>
+                        <td class="col-char">{charBadge}</td>
                         <td class="col-flags"><div class="flag-cell">{flagBadges}</div></td>
                       </tr>
                 """;
@@ -590,7 +593,7 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
               <table class="card-table">
                 <thead>
                   <tr>
-                    <th>カード名</th><th>タイプ</th><th>レアリティ</th><th>特性</th>
+                    <th>カード名</th><th>タイプ</th><th>レアリティ</th><th>キャラ</th><th>特性</th>
                   </tr>
                 </thead>
                 <tbody>{rows}</tbody>
@@ -643,6 +646,14 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
             </div>
           </div>
         </div>
+        """;
+
+    var charCss = $$"""
+        <style>
+        .col-char { white-space: nowrap; }
+        {{string.Concat(chars.Select(ch => $".char-{ch.Id}{{background:{ch.LightBg};color:{ch.Accent}}}\n"))}}
+        .char-shared { background: #f0f0f0; color: #888; }
+        </style>
         """;
 
     const string FILTER_CSS = """
@@ -820,7 +831,7 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
         </div>
         {filterPanel}
         {sections}
-        """, extraHead: FILTER_CSS, extraFoot: FILTER_JS);
+        """, extraHead: charCss + FILTER_CSS, extraFoot: FILTER_JS);
 }
 
 static string BuildRelicListPage(string[] allRelicIds, CharData[] chars)
