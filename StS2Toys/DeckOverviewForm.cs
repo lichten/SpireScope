@@ -61,6 +61,12 @@ public partial class DeckOverviewForm : Form
         if (Visible) RecomposeIfNeeded();
     }
 
+    public void SetTitle(string titleEn, string titleJa)
+    {
+        _titleEn = titleEn;
+        _titleJa = titleJa;
+    }
+
     public void SetKeywordGroups(
         IReadOnlyList<(string LabelEn, string LabelJa, Func<string, bool> Filter)> groups,
         string titleEn, string titleJa)
@@ -500,9 +506,27 @@ public partial class DeckOverviewForm : Form
 
     static void DrawRelicTile(Graphics g, RelicEntry relic, Rectangle rect)
     {
-        using var bg = new SolidBrush(Color.FromArgb(220, 235, 255));
+        var rarity = CardDatabaseService.GetRelicRarity(relic.Id);
+        Color bgColor = rarity switch {
+            "Rare"     => Color.FromArgb(255, 240, 195),
+            "Uncommon" => Color.FromArgb(210, 240, 215),
+            "Shop"     => Color.FromArgb(235, 215, 255),
+            "Event"    => Color.FromArgb(210, 245, 240),
+            "Ancient"  => Color.FromArgb(255, 225, 195),
+            "Starter"  => Color.FromArgb(220, 220, 225),
+            _          => Color.FromArgb(228, 228, 228),
+        };
+        Color fgColor = rarity switch {
+            "Rare"     => Color.FromArgb(100, 60, 0),
+            "Uncommon" => Color.FromArgb(20, 90, 40),
+            "Shop"     => Color.FromArgb(70, 20, 120),
+            "Event"    => Color.FromArgb(10, 90, 80),
+            "Ancient"  => Color.FromArgb(120, 60, 0),
+            _          => Color.DimGray,
+        };
+        using var bg = new SolidBrush(bgColor);
         g.FillRectangle(bg, rect);
-        using var borderPen = new Pen(Color.FromArgb(120, 80, 100, 180));
+        using var borderPen = new Pen(Color.FromArgb(120, fgColor.R, fgColor.G, fgColor.B));
         g.DrawRectangle(borderPen, rect);
 
         const int ImgPad = 2;
@@ -533,12 +557,12 @@ public partial class DeckOverviewForm : Form
             var secondaryName = ja ? relic.NameEn  : relic.NameJa;
 
             using var fontPrimary = new Font("Segoe UI", 7.5f, FontStyle.Bold);
-            using var fgPrimary = new SolidBrush(Color.DarkSlateBlue);
+            using var fgPrimary = new SolidBrush(fgColor);
             g.DrawString(primaryName, fontPrimary, fgPrimary,
                 new RectangleF(textX, rect.Y, textW, halfH), fmt);
 
             using var fontSecondary = new Font("Segoe UI", 6f);
-            using var fgSecondary = new SolidBrush(Color.FromArgb(150, 50, 50, 120));
+            using var fgSecondary = new SolidBrush(Color.FromArgb(150, fgColor.R, fgColor.G, fgColor.B));
             g.DrawString(secondaryName, fontSecondary, fgSecondary,
                 new RectangleF(textX, rect.Y + halfH, textW, halfH), fmt);
         }
