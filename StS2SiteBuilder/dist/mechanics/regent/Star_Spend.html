@@ -263,7 +263,16 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
 .tab-btn.active { border-color: #4a90d9; color: #1a5799; background: #eef3fc; }
 .tab-panel.hidden { display: none; }
   </style>
-  
+  <style>
+.col-char { white-space: nowrap; }
+.char-ironclad{background:#fde8e8;color:#c0392b}
+.char-silent{background:#e8f8f0;color:#1a7a4a}
+.char-defect{background:#e8f0fc;color:#1a5799}
+.char-necrobinder{background:#f4ecf7;color:#6c3483}
+.char-regent{background:#fdf8e8;color:#7d6608}
+
+.char-shared { background: #f0f0f0; color: #888; }
+</style>
 </head>
 <body>
   <div class="layout">
@@ -335,12 +344,13 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   </h2>
   <table class="card-table">
     <thead><tr>
-      <th>カード名</th><th>タイプ</th><th>コスト</th>
+      <th>カード名</th><th>タイプ</th><th>コスト</th><th>キャラ</th>
     </tr></thead>
     <tbody>      <tr>
         <td class="col-name"><a href="../../cards/regent/FALLING_STAR.html" class="card-name-link">Falling Star</a><span class="card-name-ja">落星</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr></tbody>
   </table>
 </section><section class="section">
@@ -350,24 +360,28 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   </h2>
   <table class="card-table">
     <thead><tr>
-      <th>カード名</th><th>タイプ</th><th>コスト</th>
+      <th>カード名</th><th>タイプ</th><th>コスト</th><th>キャラ</th>
     </tr></thead>
     <tbody>      <tr>
         <td class="col-name"><a href="../../cards/regent/ASTRAL_PULSE.html" class="card-name-link">Astral Pulse</a><span class="card-name-ja">星霊の波動</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/CLOAK_OF_STARS.html" class="card-name-link">Cloak of Stars</a><span class="card-name-ja">星の外套</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/CRESCENT_SPEAR.html" class="card-name-link">Crescent Spear</a><span class="card-name-ja">三日月の槍</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/GUIDING_STAR.html" class="card-name-link">Guiding Star</a><span class="card-name-ja">導きの星</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr></tbody>
   </table>
 </section><section class="section">
@@ -377,52 +391,63 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   </h2>
   <table class="card-table">
     <thead><tr>
-      <th>カード名</th><th>タイプ</th><th>コスト</th>
+      <th>カード名</th><th>タイプ</th><th>コスト</th><th>キャラ</th>
     </tr></thead>
     <tbody>      <tr>
         <td class="col-name"><a href="../../cards/regent/ALIGNMENT.html" class="card-name-link">Alignment</a><span class="card-name-ja">星の巡り</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/BLACK_HOLE.html" class="card-name-link">Black Hole</a><span class="card-name-ja">ブラックホール</span></td>
         <td class="col-type"><span class="badge type-power">Power</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/CHILD_OF_THE_STARS.html" class="card-name-link">Child of the Stars</a><span class="card-name-ja">星の子</span></td>
         <td class="col-type"><span class="badge type-power">Power</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/DEVASTATE.html" class="card-name-link">Devastate</a><span class="card-name-ja">撃滅</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/GAMMA_BLAST.html" class="card-name-link">Gamma Blast</a><span class="card-name-ja">ガンマブラスト</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/PARTICLE_WALL.html" class="card-name-link">Particle Wall</a><span class="card-name-ja">粒子障壁</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/QUASAR.html" class="card-name-link">Quasar</a><span class="card-name-ja">クエーサー</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/REFLECT.html" class="card-name-link">Reflect</a><span class="card-name-ja">反射</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/RESONANCE.html" class="card-name-link">Resonance</a><span class="card-name-ja">共鳴</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/ROYAL_GAMBLE.html" class="card-name-link">Royal Gamble</a><span class="card-name-ja">ロイヤルギャンブル</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/STARDUST.html" class="card-name-link">Stardust</a><span class="card-name-ja">星屑</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">X</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr></tbody>
   </table>
 </section><section class="section">
@@ -432,32 +457,38 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   </h2>
   <table class="card-table">
     <thead><tr>
-      <th>カード名</th><th>タイプ</th><th>コスト</th>
+      <th>カード名</th><th>タイプ</th><th>コスト</th><th>キャラ</th>
     </tr></thead>
     <tbody>      <tr>
         <td class="col-name"><a href="../../cards/regent/COMET.html" class="card-name-link">Comet</a><span class="card-name-ja">彗星</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/DECISIONS_DECISIONS.html" class="card-name-link">Decisions, Decisions</a><span class="card-name-ja">悩ましい選択</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/DYING_STAR.html" class="card-name-link">Dying Star</a><span class="card-name-ja">星の終わり</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/NEUTRON_AEGIS.html" class="card-name-link">Neutron Aegis</a><span class="card-name-ja">ニュートロン・イージス</span></td>
         <td class="col-type"><span class="badge type-power">Power</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/SEVEN_STARS.html" class="card-name-link">Seven Stars</a><span class="card-name-ja">セブンスターズ</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">2</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/THE_SMITH.html" class="card-name-link">The Smith</a><span class="card-name-ja">鍛冶師</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr></tbody>
   </table>
 </section><section class="section">
@@ -467,16 +498,18 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   </h2>
   <table class="card-table">
     <thead><tr>
-      <th>カード名</th><th>タイプ</th><th>コスト</th>
+      <th>カード名</th><th>タイプ</th><th>コスト</th><th>キャラ</th>
     </tr></thead>
     <tbody>      <tr>
         <td class="col-name"><a href="../../cards/regent/METEOR_SHOWER.html" class="card-name-link">Meteor Shower</a><span class="card-name-ja">流星群</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/THE_SEALED_THRONE.html" class="card-name-link">The Sealed Throne</a><span class="card-name-ja">封印されし玉座</span></td>
         <td class="col-type"><span class="badge type-power">Power</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr></tbody>
   </table>
 </section>

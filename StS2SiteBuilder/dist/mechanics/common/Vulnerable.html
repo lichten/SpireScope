@@ -263,7 +263,16 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
 .tab-btn.active { border-color: #4a90d9; color: #1a5799; background: #eef3fc; }
 .tab-panel.hidden { display: none; }
   </style>
-  
+  <style>
+.col-char { white-space: nowrap; }
+.char-ironclad{background:#fde8e8;color:#c0392b}
+.char-silent{background:#e8f8f0;color:#1a7a4a}
+.char-defect{background:#e8f0fc;color:#1a5799}
+.char-necrobinder{background:#f4ecf7;color:#6c3483}
+.char-regent{background:#fdf8e8;color:#7d6608}
+
+.char-shared { background: #f0f0f0; color: #888; }
+</style>
 </head>
 <body>
   <div class="layout">
@@ -335,16 +344,18 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   </h2>
   <table class="card-table">
     <thead><tr>
-      <th>カード名</th><th>タイプ</th><th>コスト</th>
+      <th>カード名</th><th>タイプ</th><th>コスト</th><th>キャラ</th>
     </tr></thead>
     <tbody>      <tr>
         <td class="col-name"><a href="../../cards/ironclad/BASH.html" class="card-name-link">Bash</a><span class="card-name-ja">強打</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">2</span></td>
+        <td class="col-char"><span class="badge char-ironclad">アイアンクラッド</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/FALLING_STAR.html" class="card-name-link">Falling Star</a><span class="card-name-ja">落星</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr></tbody>
   </table>
 </section><section class="section">
@@ -354,32 +365,38 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   </h2>
   <table class="card-table">
     <thead><tr>
-      <th>カード名</th><th>タイプ</th><th>コスト</th>
+      <th>カード名</th><th>タイプ</th><th>コスト</th><th>キャラ</th>
     </tr></thead>
     <tbody>      <tr>
         <td class="col-name"><a href="../../cards/defect/BEAM_CELL.html" class="card-name-link">Beam Cell</a><span class="card-name-ja">ビームセル</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/necrobinder/FEAR.html" class="card-name-link">Fear</a><span class="card-name-ja">畏怖</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-necrobinder">ネクロバインダー</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/KNOW_THY_PLACE.html" class="card-name-link">Know Thy Place</a><span class="card-name-ja">身の程を知れ</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/ironclad/MOLTEN_FIST.html" class="card-name-link">Molten Fist</a><span class="card-name-ja">溶岩の拳</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-ironclad">アイアンクラッド</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/ironclad/THUNDERCLAP.html" class="card-name-link">Thunderclap</a><span class="card-name-ja">サンダークラップ</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-ironclad">アイアンクラッド</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/ironclad/TREMBLE.html" class="card-name-link">Tremble</a><span class="card-name-ja">身震い</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-ironclad">アイアンクラッド</span></td>
       </tr></tbody>
   </table>
 </section><section class="section">
@@ -389,60 +406,73 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   </h2>
   <table class="card-table">
     <thead><tr>
-      <th>カード名</th><th>タイプ</th><th>コスト</th>
+      <th>カード名</th><th>タイプ</th><th>コスト</th><th>キャラ</th>
     </tr></thead>
     <tbody>      <tr>
         <td class="col-name"><a href="../../cards/ironclad/BULLY.html" class="card-name-link">Bully</a><span class="card-name-ja">ごろつき</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-ironclad">アイアンクラッド</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/ironclad/COLOSSUS.html" class="card-name-link">Colossus</a><span class="card-name-ja">巨人</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-ironclad">アイアンクラッド</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/necrobinder/DEBILITATE.html" class="card-name-link">Debilitate</a><span class="card-name-ja">衰弱</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-necrobinder">ネクロバインダー</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/ironclad/DISMANTLE.html" class="card-name-link">Dismantle</a><span class="card-name-ja">解体</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-ironclad">アイアンクラッド</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/ironclad/DOMINATE.html" class="card-name-link">Dominate</a><span class="card-name-ja">威圧</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-ironclad">アイアンクラッド</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/silent/EXPOSE.html" class="card-name-link">Expose</a><span class="card-name-ja">暴露</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-silent">サイレント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/GAMMA_BLAST.html" class="card-name-link">Gamma Blast</a><span class="card-name-ja">ガンマブラスト</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/necrobinder/HIGH_FIVE.html" class="card-name-link">High Five</a><span class="card-name-ja">ハイタッチ</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">2</span></td>
+        <td class="col-char"><span class="badge char-necrobinder">ネクロバインダー</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/necrobinder/PUTREFY.html" class="card-name-link">Putrefy</a><span class="card-name-ja">化膿</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-necrobinder">ネクロバインダー</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/shared/SHOCKWAVE.html" class="card-name-link">Shockwave</a><span class="card-name-ja">衝撃波</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">2</span></td>
+        <td class="col-char"><span class="badge char-shared">共有・特殊</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/ironclad/TAUNT.html" class="card-name-link">Taunt</a><span class="card-name-ja">挑発</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-ironclad">アイアンクラッド</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/ironclad/UPPERCUT.html" class="card-name-link">Uppercut</a><span class="card-name-ja">アッパーカット</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">2</span></td>
+        <td class="col-char"><span class="badge char-ironclad">アイアンクラッド</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/ironclad/VICIOUS.html" class="card-name-link">Vicious</a><span class="card-name-ja">残忍</span></td>
         <td class="col-type"><span class="badge type-power">Power</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-ironclad">アイアンクラッド</span></td>
       </tr></tbody>
   </table>
 </section><section class="section">
@@ -452,20 +482,23 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   </h2>
   <table class="card-table">
     <thead><tr>
-      <th>カード名</th><th>タイプ</th><th>コスト</th>
+      <th>カード名</th><th>タイプ</th><th>コスト</th><th>キャラ</th>
     </tr></thead>
     <tbody>      <tr>
         <td class="col-name"><a href="../../cards/silent/ASSASSINATE.html" class="card-name-link">Assassinate</a><span class="card-name-ja">暗殺</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-silent">サイレント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/COMET.html" class="card-name-link">Comet</a><span class="card-name-ja">彗星</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/ironclad/CRUELTY.html" class="card-name-link">Cruelty</a><span class="card-name-ja">無慈悲</span></td>
         <td class="col-type"><span class="badge type-power">Power</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-ironclad">アイアンクラッド</span></td>
       </tr></tbody>
   </table>
 </section><section class="section">
@@ -475,16 +508,18 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   </h2>
   <table class="card-table">
     <thead><tr>
-      <th>カード名</th><th>タイプ</th><th>コスト</th>
+      <th>カード名</th><th>タイプ</th><th>コスト</th><th>キャラ</th>
     </tr></thead>
     <tbody>      <tr>
         <td class="col-name"><a href="../../cards/shared/MAD_SCIENCE.html" class="card-name-link">Mad Science</a><span class="card-name-ja">マッド・サイエンス</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-shared">共有・特殊</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/shared/SQUASH.html" class="card-name-link">Squash</a><span class="card-name-ja">踏み潰し</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-shared">共有・特殊</span></td>
       </tr></tbody>
   </table>
 </section><section class="section">
@@ -494,16 +529,18 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   </h2>
   <table class="card-table">
     <thead><tr>
-      <th>カード名</th><th>タイプ</th><th>コスト</th>
+      <th>カード名</th><th>タイプ</th><th>コスト</th><th>キャラ</th>
     </tr></thead>
     <tbody>      <tr>
         <td class="col-name"><a href="../../cards/ironclad/BREAK.html" class="card-name-link">Break</a><span class="card-name-ja">破砕</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-ironclad">アイアンクラッド</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/regent/METEOR_SHOWER.html" class="card-name-link">Meteor Shower</a><span class="card-name-ja">流星群</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-regent">リージェント</span></td>
       </tr></tbody>
   </table>
 </section>

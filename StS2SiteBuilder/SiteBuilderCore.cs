@@ -127,7 +127,11 @@ chars = chars.Select(ch =>
 File.WriteAllText(Path.Combine(distDir, "index.html"),      BuildIndex(chars),         System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "characters.html"), BuildCharListPage(chars),  System.Text.Encoding.UTF8);
 var aboutPath     = Path.Combine(distDir, "about.html");
-File.WriteAllText(aboutPath, BuildAboutPage(chars, ExtractReview(aboutPath)), System.Text.Encoding.UTF8);
+File.WriteAllText(aboutPath,
+    BuildAboutPage(chars,
+        ExtractMarker(aboutPath, "REVIEW"),
+        ExtractMarker(aboutPath, "BIO")),
+    System.Text.Encoding.UTF8);
 var changelogPath = Path.Combine(distDir, "changelog.html");
 File.WriteAllText(changelogPath, BuildChangelogPage(chars, ExtractReview(changelogPath)), System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "pages.html"),
@@ -230,7 +234,7 @@ static string GetCardDir(string cardId, CharData[] chars)
 
 // ── page builders ─────────────────────────────────────────────────────────────
 
-static string BuildAboutPage(CharData[] chars, string review = "")
+static string BuildAboutPage(CharData[] chars, string review = "", string bioReview = "")
 {
     const string OVERVIEW_DEFAULT = """
 
@@ -242,7 +246,30 @@ static string BuildAboutPage(CharData[] chars, string review = "")
 
         """;
 
-    var overviewContent = review == "" ? OVERVIEW_DEFAULT : review;
+    const string BIO_DEFAULT = """
+
+        <!-- プロフィールテキストをここに入力してください -->
+        <!-- このコメントを削除して任意のHTMLを記述できます  -->
+
+        """;
+
+    const string AUTHOR_NAME = "（表示名）";
+
+    var overviewContent = review    == "" ? OVERVIEW_DEFAULT : review;
+    var bioContent      = bioReview == "" ? BIO_DEFAULT      : bioReview;
+
+    const string AUTHOR_CSS = """
+        <style>
+        .author-card { display: flex; gap: 16px; align-items: flex-start; }
+        .author-avatar { width: 72px; height: 72px; border-radius: 50%; flex-shrink: 0;
+                         object-fit: cover; border: 2px solid #e0e0e0; }
+        .author-body { display: flex; flex-direction: column; gap: 4px; }
+        .author-name { font-size: 16px; font-weight: 700; }
+        .author-handle { font-size: 13px; color: #1d9bf0; text-decoration: none; }
+        .author-handle:hover { text-decoration: underline; }
+        .author-bio { font-size: 13px; color: #555; margin-top: 6px; }
+        </style>
+        """;
 
     return Layout("このサイトについて", "about", "#4a90d9", chars, $"""
         <div class="page-hero">
@@ -272,7 +299,20 @@ static string BuildAboutPage(CharData[] chars, string review = "")
             公式情報については <a href="https://store.steampowered.com/app/646570/Slay_the_Spire_2/" class="wiki-link" target="_blank" rel="noopener">Steam ストアページ</a> をご確認ください。
           </p>
         </section>
-        """);
+        <section class="section">
+          <h2 class="section-title">作者</h2>
+          <div class="author-card">
+            <img src="images/author/avatar.jpg" class="author-avatar" alt="@Plover2064"
+                 onerror="this.style.display='none'">
+            <div class="author-body">
+              <div class="author-name">{AUTHOR_NAME}</div>
+              <a href="https://x.com/Plover2064" target="_blank" rel="noopener noreferrer"
+                 class="author-handle">@Plover2064</a>
+              <div class="author-bio"><!-- BIO_START -->{bioContent}<!-- BIO_END --></div>
+            </div>
+          </div>
+        </section>
+        """, extraHead: AUTHOR_CSS);
 }
 
 static string BuildChangelogPage(CharData[] chars, string review = "") =>
@@ -648,13 +688,7 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
         </div>
         """;
 
-    var charCss = $$"""
-        <style>
-        .col-char { white-space: nowrap; }
-        {{string.Concat(chars.Select(ch => $".char-{ch.Id}{{background:{ch.LightBg};color:{ch.Accent}}}\n"))}}
-        .char-shared { background: #f0f0f0; color: #888; }
-        </style>
-        """;
+    var charCss = BuildCharCss(chars);
 
     const string FILTER_CSS = """
         <style>
@@ -1861,13 +1895,15 @@ static string BuildMechanicPage(CharGroup group, MechanicDef mec, string[] allCa
         .Where(id => mec.Filter(id))
         .Select(id =>
         {
-            var nameEn  = CardDatabaseService.GetName(id);
-            var nameJa  = CardDatabaseService.GetName(id, japanese: true);
-            var type    = CardDatabaseService.GetCardType(id);
-            var rarity  = CardDatabaseService.GetCardRarity(id);
-            var cost    = CardDatabaseService.GetCardCost(id);
-            var cDir    = GetCardDir(id, chars);
-            return (Id: id, NameEn: nameEn, NameJa: nameJa, Type: type, Rarity: rarity, Cost: cost, CDir: cDir);
+            var nameEn   = CardDatabaseService.GetName(id);
+            var nameJa   = CardDatabaseService.GetName(id, japanese: true);
+            var type     = CardDatabaseService.GetCardType(id);
+            var rarity   = CardDatabaseService.GetCardRarity(id);
+            var cost     = CardDatabaseService.GetCardCost(id);
+            var cDir     = GetCardDir(id, chars);
+            var chData   = chars.FirstOrDefault(c => c.Id == cDir);
+            var charLabel = chData?.JaName ?? (cDir == "shared" ? "共有・特殊" : cDir);
+            return (Id: id, NameEn: nameEn, NameJa: nameJa, Type: type, Rarity: rarity, Cost: cost, CDir: cDir, CharId: cDir, CharLabel: charLabel);
         })
         .OrderBy(c => RarityOrd(c.Rarity))
         .ThenBy(c => c.NameEn)
@@ -1885,12 +1921,14 @@ static string BuildMechanicPage(CharGroup group, MechanicDef mec, string[] allCa
                     var jaSpan    = c.NameJa != c.NameEn ? $"""<span class="card-name-ja">{c.NameJa}</span>""" : "";
                     var typeBadge = c.Type   != ""       ? $"""<span class="badge type-{c.Type.ToLower()}">{c.Type}</span>""" : "";
                     var costBadge = c.Cost   != ""       ? $"""<span class="badge cost-badge">{c.Cost}</span>""" : "";
+                    var charBadge = $"""<span class="badge char-{c.CharId}">{c.CharLabel}</span>""";
                     var href      = $"{basePath}cards/{c.CDir}/{RawId(c.Id)}.html";
                     return $"""
                               <tr>
                                 <td class="col-name"><a href="{href}" class="card-name-link">{c.NameEn}</a>{jaSpan}</td>
                                 <td class="col-type">{typeBadge}</td>
                                 <td class="col-cost">{costBadge}</td>
+                                <td class="col-char">{charBadge}</td>
                               </tr>
                         """;
                 }));
@@ -1903,7 +1941,7 @@ static string BuildMechanicPage(CharGroup group, MechanicDef mec, string[] allCa
                       </h2>
                       <table class="card-table">
                         <thead><tr>
-                          <th>カード名</th><th>タイプ</th><th>コスト</th>
+                          <th>カード名</th><th>タイプ</th><th>コスト</th><th>キャラ</th>
                         </tr></thead>
                         <tbody>{rows}</tbody>
                       </table>
@@ -1952,7 +1990,8 @@ static string BuildMechanicPage(CharGroup group, MechanicDef mec, string[] allCa
         {noCards}
         """;
 
-    return Layout(mec.JaLabel, "mechanics", accent, chars, content, basePath);
+    return Layout(mec.JaLabel, "mechanics", accent, chars, content, basePath,
+                  extraHead: BuildCharCss(chars));
 }
 
 static HashSet<string> ComputeFlags(string id)
@@ -1978,6 +2017,14 @@ static int RarityOrder(string rarity) => rarity switch
     "Ancient" => 4, "Event"  => 5, "Shop"     => 6,
     _ => 99,
 };
+
+static string BuildCharCss(CharData[] chars) => $$"""
+    <style>
+    .col-char { white-space: nowrap; }
+    {{string.Concat(chars.Select(ch => $".char-{ch.Id}{{background:{ch.LightBg};color:{ch.Accent}}}\n"))}}
+    .char-shared { background: #f0f0f0; color: #888; }
+    </style>
+    """;
 
 static string Layout(string title, string activeId, string accent, CharData[] chars, string content,
                      string basePath = "", string extraHead = "", string extraFoot = "")
@@ -2535,17 +2582,19 @@ static ISRgba32 DecodeBc7(byte[] data, int hdr, int w, int h)
     return ISImage.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Rgba32>(bytes, w, h);
 }
 
-static string ExtractReview(string filePath)
+static string ExtractMarker(string filePath, string marker)
 {
-    const string START = "<!-- REVIEW_START -->";
-    const string END   = "<!-- REVIEW_END -->";
+    var start = $"<!-- {marker}_START -->";
+    var end   = $"<!-- {marker}_END -->";
     if (!File.Exists(filePath)) return "";
     var content = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
-    var s = content.IndexOf(START, StringComparison.Ordinal);
-    var e = content.IndexOf(END,   StringComparison.Ordinal);
+    var s = content.IndexOf(start, StringComparison.Ordinal);
+    var e = content.IndexOf(end,   StringComparison.Ordinal);
     if (s < 0 || e <= s) return "";
-    return content[(s + START.Length)..e];
+    return content[(s + start.Length)..e];
 }
+
+static string ExtractReview(string filePath) => ExtractMarker(filePath, "REVIEW");
 
 public static string? ExtractReviewPublic(string filePath)
 {

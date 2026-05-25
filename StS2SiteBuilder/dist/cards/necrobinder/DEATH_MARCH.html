@@ -320,8 +320,18 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
 </div>
 <section class="section">
   <h2 class="section-title">効果テキスト</h2>
-  <p class="desc-main">Deal [CalculatedDamage] damage.<br>Deals 3 additional damage for each card drawn during your turn.</p>
-  <p class="desc-sub">[CalculatedDamage]ダメージを与える。<br>自分のターン中に引いたカード1枚につき、追加で3ダメージを与える。</p>
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="base">通常</button>
+    <button class="tab-btn" data-tab="upgraded">アップグレード後</button>
+  </div>
+  <div class="tab-panel" data-panel="base">
+    <p class="desc-main">Deal [CalculatedDamage] damage.<br>Deals [ExtraDamage] additional damage for each card drawn during your turn.</p>
+    <p class="desc-sub">[CalculatedDamage]ダメージを与える。<br>自分のターン中に引いたカード1枚につき、追加で[ExtraDamage]ダメージを与える。</p>
+  </div>
+  <div class="tab-panel hidden" data-panel="upgraded">
+    <p class="desc-main">Deal [CalculatedDamage] damage.<br>Deals 2 additional damage for each card drawn during your turn.</p>
+    <p class="desc-sub">[CalculatedDamage]ダメージを与える。<br>自分のターン中に引いたカード1枚につき、追加で2ダメージを与える。</p>
+  </div>
 </section>
 
 <!-- REVIEW_START -->
@@ -355,7 +365,7 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
 <!-- REVIEW_END -->
 <section class="section">
   <h2 class="section-title">基本値</h2>
-  <table class="stat-table"><tbody><tr><td class="stat-key">CalculationBase</td><td class="stat-val">8</td></tr><tr><td class="stat-key">ExtraDamage</td><td class="stat-val">3</td></tr></tbody></table>
+  <table class="stat-table"><tbody><tr><td class="stat-key">UpgradedExtraDamage</td><td class="stat-val">2</td></tr></tbody></table>
 </section>
 
     </main>
@@ -394,6 +404,23 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
 })();
 </script>
   <script src="../../wiki-link.js"></script>
-  
+  <script>
+(function() {
+  document.querySelectorAll('.tab-bar').forEach(function(bar) {
+    bar.querySelectorAll('.tab-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var section = bar.closest('.section');
+        var tab = btn.dataset.tab;
+        bar.querySelectorAll('.tab-btn').forEach(function(b) {
+          b.classList.toggle('active', b === btn);
+        });
+        section.querySelectorAll('.tab-panel').forEach(function(p) {
+          p.classList.toggle('hidden', p.dataset.panel !== tab);
+        });
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>

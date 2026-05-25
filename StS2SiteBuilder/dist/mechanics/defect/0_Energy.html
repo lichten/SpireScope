@@ -263,7 +263,16 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
 .tab-btn.active { border-color: #4a90d9; color: #1a5799; background: #eef3fc; }
 .tab-panel.hidden { display: none; }
   </style>
-  
+  <style>
+.col-char { white-space: nowrap; }
+.char-ironclad{background:#fde8e8;color:#c0392b}
+.char-silent{background:#e8f8f0;color:#1a7a4a}
+.char-defect{background:#e8f0fc;color:#1a5799}
+.char-necrobinder{background:#f4ecf7;color:#6c3483}
+.char-regent{background:#fdf8e8;color:#7d6608}
+
+.char-shared { background: #f0f0f0; color: #888; }
+</style>
 </head>
 <body>
   <div class="layout">
@@ -335,36 +344,43 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   </h2>
   <table class="card-table">
     <thead><tr>
-      <th>カード名</th><th>タイプ</th><th>コスト</th>
+      <th>カード名</th><th>タイプ</th><th>コスト</th><th>キャラ</th>
     </tr></thead>
     <tbody>      <tr>
         <td class="col-name"><a href="../../cards/defect/BEAM_CELL.html" class="card-name-link">Beam Cell</a><span class="card-name-ja">ビームセル</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/defect/BOOST_AWAY.html" class="card-name-link">Boost Away</a><span class="card-name-ja">緊急回避</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/defect/CLAW.html" class="card-name-link">Claw</a><span class="card-name-ja">爪</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/defect/GO_FOR_THE_EYES.html" class="card-name-link">Go for the Eyes</a><span class="card-name-ja">目潰し</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/defect/HOTFIX.html" class="card-name-link">Hotfix</a><span class="card-name-ja">ホットフィックス</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/defect/MOMENTUM_STRIKE.html" class="card-name-link">Momentum Strike</a><span class="card-name-ja">モメンタムストライク</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/defect/TURBO.html" class="card-name-link">TURBO</a><span class="card-name-ja">加速！</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr></tbody>
   </table>
 </section><section class="section">
@@ -374,36 +390,43 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   </h2>
   <table class="card-table">
     <thead><tr>
-      <th>カード名</th><th>タイプ</th><th>コスト</th>
+      <th>カード名</th><th>タイプ</th><th>コスト</th><th>キャラ</th>
     </tr></thead>
     <tbody>      <tr>
         <td class="col-name"><a href="../../cards/defect/BOOT_SEQUENCE.html" class="card-name-link">Boot Sequence</a><span class="card-name-ja">起動シーケンス</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/defect/CHILL.html" class="card-name-link">Chill</a><span class="card-name-ja">寒気</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/defect/FERAL.html" class="card-name-link">Feral</a><span class="card-name-ja">野性</span></td>
         <td class="col-type"><span class="badge type-power">Power</span></td>
         <td class="col-cost"><span class="badge cost-badge">2</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/defect/FTL.html" class="card-name-link">FTL</a></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/defect/OVERCLOCK.html" class="card-name-link">Overclock</a><span class="card-name-ja">オーバークロック</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/defect/SCRAPE.html" class="card-name-link">Scrape</a><span class="card-name-ja">スクレイプ</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">1</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/defect/TESLA_COIL.html" class="card-name-link">Tesla Coil</a><span class="card-name-ja">テスラコイル</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr></tbody>
   </table>
 </section><section class="section">
@@ -413,32 +436,38 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   </h2>
   <table class="card-table">
     <thead><tr>
-      <th>カード名</th><th>タイプ</th><th>コスト</th>
+      <th>カード名</th><th>タイプ</th><th>コスト</th><th>キャラ</th>
     </tr></thead>
     <tbody>      <tr>
         <td class="col-name"><a href="../../cards/defect/ADAPTIVE_STRIKE.html" class="card-name-link">Adaptive Strike</a><span class="card-name-ja">アダプティブストライク</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">2</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/defect/ALL_FOR_ONE.html" class="card-name-link">All for One</a><span class="card-name-ja">オール・フォー・ワン</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">2</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/defect/HELIX_DRILL.html" class="card-name-link">Helix Drill</a><span class="card-name-ja">螺旋ドリル</span></td>
         <td class="col-type"><span class="badge type-attack">Attack</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/defect/MODDED.html" class="card-name-link">Modded</a><span class="card-name-ja">改造</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/defect/REBOOT.html" class="card-name-link">Reboot</a><span class="card-name-ja">再起動</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr>      <tr>
         <td class="col-name"><a href="../../cards/defect/SUPERCRITICAL.html" class="card-name-link">Supercritical</a><span class="card-name-ja">超臨界</span></td>
         <td class="col-type"><span class="badge type-skill">Skill</span></td>
         <td class="col-cost"><span class="badge cost-badge">0</span></td>
+        <td class="col-char"><span class="badge char-defect">ディフェクト</span></td>
       </tr></tbody>
   </table>
 </section>
