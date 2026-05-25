@@ -2418,6 +2418,34 @@ static HashSet<string> CopyCardImages(string toolsRoot, string dstDir, string[] 
                 if (File.Exists(p)) { srcPng = p; break; }
             }
         }
+        // fallback: packed/card_portraits/ から ctex 変換
+        if (srcPng is null)
+        {
+            var packedBase = Path.Combine(toolsRoot, "images", "packed", "card_portraits");
+            string? importPath = null;
+            foreach (var sub in (charDir != "shared" ? new[] { charDir } : Array.Empty<string>()).Concat(fallbackDirs))
+            {
+                var p = Path.Combine(packedBase, sub, rawId + ".png.import");
+                if (File.Exists(p)) { importPath = p; break; }
+            }
+            if (importPath is not null)
+            {
+                var ctexRel = ParseCtexPath(importPath);
+                if (ctexRel is not null)
+                {
+                    var ctexFull = Path.Combine(toolsRoot, ctexRel.Replace('/', Path.DirectorySeparatorChar));
+                    if (File.Exists(ctexFull))
+                    {
+                        var cacheSubDir = charDir != "shared" ? charDir : fallbackDirs[0];
+                        var cacheDir = Path.Combine(portBaseDir, cacheSubDir);
+                        Directory.CreateDirectory(cacheDir);
+                        var cachePng = Path.Combine(cacheDir, rawId + ".png");
+                        try { ConvertCtex(ctexFull, cachePng); srcPng = cachePng; }
+                        catch { /* 変換失敗は無視 */ }
+                    }
+                }
+            }
+        }
         if (srcPng is null) continue;
 
         var outDir = Path.Combine(dstDir, charDir);
