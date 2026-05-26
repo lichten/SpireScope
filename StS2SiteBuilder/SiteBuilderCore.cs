@@ -483,30 +483,32 @@ static string BuildRunPage(RunHistoryData run, CharData[] chars)
     }
 
     // ── 最終デッキ ──
-    var deckRows = player.Deck
-        .GroupBy(c => CardDatabaseService.GetCardRarity(c.Id))
-        .OrderBy(g => RarityOrder(g.Key))
+    var deckTags = player.Deck
+        .GroupBy(c => (c.Id, c.CurrentUpgradeLevel, c.FloorAddedToDeck))
+        .OrderBy(g => g.Key.FloorAddedToDeck)
+        .ThenBy(g => g.Key.Id)
         .Select(g =>
         {
-            var rows = g.Select(c =>
-            {
-                var name    = CardDatabaseService.GetName(c.Id, japanese: true);
-                var upg     = c.CurrentUpgradeLevel > 0
-                    ? $"""<span style="color:#1a5799;font-size:11px"> +{c.CurrentUpgradeLevel}</span>"""
-                    : "";
-                var cardDir = GetCardDir(c.Id, chars);
-                var href    = $"../cards/{cardDir}/{RawId(c.Id)}.html";
-                return $"""<a class="mec-tag" href="{href}">{name}{upg}</a>""";
-            });
-            var rarityBadge = $"""<span class="badge rarity-{g.Key.ToLower()}">{g.Key}</span>""";
-            return $"""
-                <div style="margin-bottom:8px">{rarityBadge} {string.Join(" ", rows)}</div>
-                """;
+            var c          = g.First();
+            var count      = g.Count();
+            var name       = CardDatabaseService.GetName(c.Id, japanese: true);
+            var upg        = c.CurrentUpgradeLevel > 0
+                ? $"""<span style="color:#1a5799;font-size:11px"> +{c.CurrentUpgradeLevel}</span>"""
+                : "";
+            var floor      = c.FloorAddedToDeck > 0
+                ? $"""<span style="color:#aaa;font-size:11px"> F{c.FloorAddedToDeck}</span>"""
+                : "";
+            var countBadge = count > 1
+                ? $"""<span style="color:#888;font-size:11px"> ×{count}</span>"""
+                : "";
+            var cardDir    = GetCardDir(c.Id, chars);
+            var href       = $"../cards/{cardDir}/{RawId(c.Id)}.html";
+            return $"""<a class="mec-tag" href="{href}">{name}{upg}{floor}{countBadge}</a>""";
         });
     var deckHtml = $"""
         <section class="section">
           <h2 class="section-title">最終デッキ <span class="section-meta">{player.Deck.Count}枚</span></h2>
-          {string.Join("", deckRows)}
+          <div class="mec-tags">{string.Join(" ", deckTags)}</div>
         </section>
         """;
 
@@ -543,6 +545,7 @@ static string BuildRunPage(RunHistoryData run, CharData[] chars)
             <span class="badge" style="background:#eee;color:#555">{dateStr}</span>
             <span class="badge" style="background:#eee;color:#555">⏱ {durStr}</span>
             <span class="badge" style="background:#eee;color:#555">Seed: {run.Seed}</span>
+            {(run.BuildId is { Length: > 0 } bid ? $"""<span class="badge" style="background:#eee;color:#555">v{bid}</span>""" : "")}
           </div>
         </div>
         <section class="section">
