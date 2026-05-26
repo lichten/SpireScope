@@ -45,7 +45,7 @@ public class RunRelicData
 public class RunMapPoint
 {
     [JsonPropertyName("map_point_type")] public string MapPointType { get; init; } = "";
-    [JsonPropertyName("rooms")]          public RunMapPointRoom? Rooms { get; init; }
+    [JsonPropertyName("rooms")]          public List<RunMapPointRoom>? Rooms { get; init; }
     [JsonPropertyName("player_stats")]   public List<RunFloorStats>? PlayerStats { get; init; }
 }
 

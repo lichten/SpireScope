@@ -20,10 +20,7 @@ public partial class MainForm : Form
         _revertReviewButton.Click += (_, _) => RevertReview();
         _changelogAddButton.Click += ChangelogAddButton_Click;
 
-        _tabControl.SelectedIndexChanged += (_, _) =>
-        {
-            if (_tabControl.SelectedTab == _tabHistory) RefreshHistoryList();
-        };
+        _tabHistory.Enter += (_, _) => RefreshHistoryList();
         _refreshHistoryButton.Click += (_, _) => RefreshHistoryList();
         _generateRunButton.Click    += GenerateRunButton_Click;
         _historyList.SelectedIndexChanged += HistoryList_SelectedIndexChanged;
@@ -177,32 +174,39 @@ public partial class MainForm : Form
 
     private void RefreshHistoryList()
     {
-        _historyList.Items.Clear();
-        var dir = RunHistoryService.GetHistoryDir();
-        if (!Directory.Exists(dir))
+        try
         {
-            _statusLabel.Text = "history フォルダが見つかりません";
-            return;
+            _historyList.Items.Clear();
+            var dir = RunHistoryService.GetHistoryDir();
+            if (!Directory.Exists(dir))
+            {
+                _statusLabel.Text = $"history フォルダが見つかりません: {dir}";
+                return;
+            }
+            var distDir   = SiteBuilderCore.GetDistDir();
+            var summaries = RunHistoryService.LoadSummaries(dir);
+            foreach (var s in summaries)
+            {
+                var date       = DateTimeOffset.FromUnixTimeSeconds(s.StartTime).LocalDateTime.ToString("yyyy-MM-dd HH:mm");
+                var charJa     = _baseChars.FirstOrDefault(c => c.Id == s.CharacterId)?.JaName ?? s.CharacterId;
+                var resultText = s.Win ? "勝利" : s.WasAbandoned ? "離脱" : "敗北";
+                var time       = $"{s.RunTime / 60}:{s.RunTime % 60:D2}";
+                var item       = new ListViewItem(date);
+                item.SubItems.Add(charJa);
+                item.SubItems.Add(resultText);
+                item.SubItems.Add($"A{s.Ascension}");
+                item.SubItems.Add(time);
+                item.Tag = s;
+                var existing = Path.Combine(distDir, "run", $"{s.StartTime}.html");
+                item.ForeColor = File.Exists(existing) ? Color.Black : Color.Gray;
+                _historyList.Items.Add(item);
+            }
+            _statusLabel.Text = $"ラン履歴: {summaries.Count} 件";
         }
-        var distDir   = SiteBuilderCore.GetDistDir();
-        var summaries = RunHistoryService.LoadSummaries(dir);
-        foreach (var s in summaries)
+        catch (Exception ex)
         {
-            var date       = DateTimeOffset.FromUnixTimeSeconds(s.StartTime).LocalDateTime.ToString("yyyy-MM-dd HH:mm");
-            var charJa     = _baseChars.FirstOrDefault(c => c.Id == s.CharacterId)?.JaName ?? s.CharacterId;
-            var resultText = s.Win ? "勝利" : s.WasAbandoned ? "離脱" : "敗北";
-            var time       = $"{s.RunTime / 60}:{s.RunTime % 60:D2}";
-            var item       = new ListViewItem(date);
-            item.SubItems.Add(charJa);
-            item.SubItems.Add(resultText);
-            item.SubItems.Add($"A{s.Ascension}");
-            item.SubItems.Add(time);
-            item.Tag = s;
-            var existing = Path.Combine(distDir, "run", $"{s.StartTime}.html");
-            item.ForeColor = File.Exists(existing) ? Color.Black : Color.Gray;
-            _historyList.Items.Add(item);
+            _statusLabel.Text = $"[エラー] {ex.GetType().Name}: {ex.Message}";
         }
-        _statusLabel.Text = $"ラン履歴: {summaries.Count} 件";
     }
 
     private void HistoryList_SelectedIndexChanged(object? sender, EventArgs e)

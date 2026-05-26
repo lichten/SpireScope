@@ -403,11 +403,12 @@ static string BuildRunPage(RunHistoryData run, CharData[] chars)
             var ps = mp.PlayerStats?.FirstOrDefault();
 
             var badge = NodeBadge(mp.MapPointType);
-            var encName = mp.Rooms?.ModelId is { Length: > 0 } mid
+            var room = mp.Rooms?.FirstOrDefault();
+            var encName = room?.ModelId is { Length: > 0 } mid
                 ? EncounterDatabaseService.GetEncounterName(mid, japanese: true)
                 : "";
-            var turns = mp.Rooms?.TurnsTaken > 0
-                ? $"""<span style="color:#aaa;font-size:11px">{mp.Rooms.TurnsTaken}T</span>"""
+            var turns = room?.TurnsTaken > 0
+                ? $"""<span style="color:#aaa;font-size:11px">{room.TurnsTaken}T</span>"""
                 : "";
 
             var hpStr = ps is not null
@@ -489,11 +490,13 @@ static string BuildRunPage(RunHistoryData run, CharData[] chars)
         {
             var rows = g.Select(c =>
             {
-                var name = CardDatabaseService.GetName(c.Id, japanese: true);
-                var upg  = c.CurrentUpgradeLevel > 0
+                var name    = CardDatabaseService.GetName(c.Id, japanese: true);
+                var upg     = c.CurrentUpgradeLevel > 0
                     ? $"""<span style="color:#1a5799;font-size:11px"> +{c.CurrentUpgradeLevel}</span>"""
                     : "";
-                return $"""<span class="mec-tag">{name}{upg}</span>""";
+                var cardDir = GetCardDir(c.Id, chars);
+                var href    = $"../cards/{cardDir}/{RawId(c.Id)}.html";
+                return $"""<a class="mec-tag" href="{href}">{name}{upg}</a>""";
             });
             var rarityBadge = $"""<span class="badge rarity-{g.Key.ToLower()}">{g.Key}</span>""";
             return $"""
@@ -510,9 +513,11 @@ static string BuildRunPage(RunHistoryData run, CharData[] chars)
     // ── 最終レリック ──
     var relicItems = player.Relics.Select(r =>
     {
-        var name = CardDatabaseService.GetRelicTitle(RawId(r.Id), japanese: true);
-        var floor = r.FloorAddedToDeck > 0 ? $"""<span style="color:#aaa;font-size:11px"> F{r.FloorAddedToDeck}</span>""" : "";
-        return $"""<span class="mec-tag">{name}{floor}</span>""";
+        var bareId = RawId(r.Id);
+        var name   = CardDatabaseService.GetRelicTitle(bareId, japanese: true);
+        var floor  = r.FloorAddedToDeck > 0 ? $"""<span style="color:#aaa;font-size:11px"> F{r.FloorAddedToDeck}</span>""" : "";
+        var href   = $"../relics/{bareId}.html";
+        return $"""<a class="mec-tag" href="{href}">{name}{floor}</a>""";
     });
     var relicsHtml = $"""
         <section class="section">
@@ -544,14 +549,14 @@ static string BuildRunPage(RunHistoryData run, CharData[] chars)
           <h2 class="section-title">サマリー</h2>
           {summaryHtml}
         </section>
-        {killedSection}
-        {timelineHtml}
         {deckHtml}
         {relicsHtml}
+        {killedSection}
+        {timelineHtml}
         """;
 
     var title = $"{charJa} {(run.Win ? "勝利" : run.WasAbandoned ? "離脱" : "敗北")} {dateStr}";
-    return Layout(title, "runs", accent, chars, content, basePath: "../");
+    return Layout(title, "runs", accent, chars, content, basePath: "../", wikiLink: false);
 }
 
 internal static string WriteRunPage(RunHistoryData run, CharData[] chars, string distDir)
@@ -650,7 +655,7 @@ static string BuildRunListPage(CharData[] chars, string runDir)
         </section>
         """;
 
-    return Layout("ラン一覧", "runs", "#4a90d9", chars, content, basePath: "");
+    return Layout("ラン一覧", "runs", "#4a90d9", chars, content, basePath: "", wikiLink: false);
 }
 
 // RUN_META コメントのデシリアライズ用
@@ -2389,7 +2394,7 @@ static string BuildCharCss(CharData[] chars) => $$"""
     """;
 
 static string Layout(string title, string activeId, string accent, CharData[] chars, string content,
-                     string basePath = "", string extraHead = "", string extraFoot = "")
+                     string basePath = "", string extraHead = "", string extraFoot = "", bool wikiLink = true)
 {
     const string CSS = """
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -2806,7 +2811,7 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
             </main>
           </div>
           {MD_JS}
-          <script src="{basePath}wiki-link.js"></script>
+          {(wikiLink ? $"""<script src="{basePath}wiki-link.js"></script>""" : "")}
           {extraFoot}
         </body>
         </html>
