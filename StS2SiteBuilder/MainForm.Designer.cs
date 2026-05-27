@@ -17,12 +17,10 @@ partial class MainForm
         _tabPreview           = new TabPage();
         _tabBuild             = new TabPage();
         _tabHistory           = new TabPage();
-        _historySplit         = new SplitContainer();
         _historyToolbar       = new FlowLayoutPanel();
         _refreshHistoryButton = new Button();
         _generateRunButton    = new Button();
         _historyList          = new ListView();
-        _historyWebView2      = new Microsoft.Web.WebView2.WinForms.WebView2();
         _previewSplit         = new SplitContainer();
         _webView2             = new Microsoft.Web.WebView2.WinForms.WebView2();
         _reviewPanel          = new Panel();
@@ -44,10 +42,7 @@ partial class MainForm
         _tabPreview.SuspendLayout();
         _tabBuild.SuspendLayout();
         _tabHistory.SuspendLayout();
-        ((System.ComponentModel.ISupportInitialize)_historySplit).BeginInit();
-        _historySplit.SuspendLayout();
         _historyToolbar.SuspendLayout();
-        ((System.ComponentModel.ISupportInitialize)_historyWebView2).BeginInit();
         ((System.ComponentModel.ISupportInitialize)_previewSplit).BeginInit();
         _previewSplit.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)_webView2).BeginInit();
@@ -105,23 +100,13 @@ partial class MainForm
         //
         // _tabHistory
         //
-        _tabHistory.Controls.Add(_historySplit);
+        _tabHistory.Controls.Add(_historyList);
+        _tabHistory.Controls.Add(_historyToolbar);
         _tabHistory.Dock = DockStyle.Fill;
         _tabHistory.Name = "_tabHistory";
         _tabHistory.Padding = new Padding(0);
         _tabHistory.TabIndex = 2;
         _tabHistory.Text = "ラン履歴";
-        //
-        // _historySplit
-        //
-        _historySplit.Dock = DockStyle.Fill;
-        _historySplit.Name = "_historySplit";
-        _historySplit.Orientation = Orientation.Vertical;
-        _historySplit.SplitterDistance = 520;
-        _historySplit.TabIndex = 0;
-        _historySplit.Panel1.Controls.Add(_historyList);
-        _historySplit.Panel1.Controls.Add(_historyToolbar);
-        _historySplit.Panel2.Controls.Add(_historyWebView2);
         //
         // _historyToolbar
         //
@@ -170,16 +155,6 @@ partial class MainForm
             new ColumnHeader { Text = "A#",     Width = 45  },
             new ColumnHeader { Text = "時間",   Width = 75  },
         });
-        //
-        // _historyWebView2
-        //
-        _historyWebView2.AllowExternalDrop = true;
-        _historyWebView2.CreationProperties = null;
-        _historyWebView2.DefaultBackgroundColor = Color.White;
-        _historyWebView2.Dock = DockStyle.Fill;
-        _historyWebView2.Name = "_historyWebView2";
-        _historyWebView2.TabIndex = 0;
-        _historyWebView2.ZoomFactor = 1D;
         //
         // _previewSplit  (horizontal: left=webview, right=review panel, Panel2 collapsed)
         //
@@ -361,11 +336,8 @@ partial class MainForm
         _tabPreview.ResumeLayout(false);
         _tabBuild.ResumeLayout(false);
         _tabHistory.ResumeLayout(false);
-        ((System.ComponentModel.ISupportInitialize)_historySplit).EndInit();
-        _historySplit.ResumeLayout(false);
         _historyToolbar.ResumeLayout(false);
         _historyToolbar.PerformLayout();
-        ((System.ComponentModel.ISupportInitialize)_historyWebView2).EndInit();
         ((System.ComponentModel.ISupportInitialize)_previewSplit).EndInit();
         _previewSplit.ResumeLayout(false);
         ((System.ComponentModel.ISupportInitialize)_webView2).EndInit();
@@ -403,10 +375,8 @@ partial class MainForm
     private Button               _openDistButton;
     private TextBox              _logBox;
     private TabPage              _tabHistory;
-    private SplitContainer       _historySplit;
     private FlowLayoutPanel      _historyToolbar;
     private Button               _refreshHistoryButton;
     private Button               _generateRunButton;
     private ListView             _historyList;
-    private Microsoft.Web.WebView2.WinForms.WebView2 _historyWebView2;
 }

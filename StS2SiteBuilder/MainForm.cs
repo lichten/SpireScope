@@ -65,8 +65,6 @@ public partial class MainForm : Form
         _webView2.CoreWebView2.NavigationCompleted += WebView_NavigationCompleted;
         var indexPath = Path.Combine(SiteBuilderCore.GetDistDir(), "index.html");
         _webView2.CoreWebView2.Navigate(new Uri(indexPath).AbsoluteUri);
-
-        await _historyWebView2.EnsureCoreWebView2Async(null);
     }
 
     private void WebView_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
@@ -217,8 +215,6 @@ public partial class MainForm : Form
         var existing = Path.Combine(distDir, "run", $"{summary.StartTime}.html");
         _generateRunButton.Enabled = true;
         _generateRunButton.Text    = File.Exists(existing) ? "HTMLを再生成" : "HTMLを生成";
-        if (File.Exists(existing) && _historyWebView2.CoreWebView2 != null)
-            _historyWebView2.CoreWebView2.Navigate(new Uri(existing).AbsoluteUri);
     }
 
     private async void GenerateRunButton_Click(object? sender, EventArgs e)
@@ -238,8 +234,9 @@ public partial class MainForm : Form
             // update color in list
             if (_historyList.SelectedItems.Count > 0)
                 _historyList.SelectedItems[0].ForeColor = Color.Black;
-            if (_historyWebView2.CoreWebView2 != null)
-                _historyWebView2.CoreWebView2.Navigate(new Uri(htmlPath).AbsoluteUri);
+            _tabControl.SelectedTab = _tabPreview;
+            if (_webView2.CoreWebView2 != null)
+                _webView2.CoreWebView2.Navigate(new Uri(htmlPath).AbsoluteUri);
         }
         catch (Exception ex)
         {
