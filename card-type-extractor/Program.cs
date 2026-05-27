@@ -21,8 +21,13 @@ var gameVersion = File.Exists(releaseInfoPath)
 // 4階層上がるとリポジトリルート
 var defaultOut = Path.GetFullPath(
     Path.Combine(AppContext.BaseDirectory, $@"..\..\..\..\StS2Shared\Resources\{gameVersion}\card_types.json"));
-var outPath = args.Length > 1 ? args[1] : defaultOut;
-Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
+// 特殊調査モード（--dump-* / --list-* など）は outPath 不要なので、args[1] をそのまま使わない
+bool isDebugMode = args.Length > 0 && args[0].StartsWith("--");
+var outPath = isDebugMode
+    ? defaultOut
+    : (args.Length > 1 ? args[1] : defaultOut);
+if (!isDebugMode)
+    Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
 
 using var stream = File.OpenRead(dllPath);
 using var peReader = new PEReader(stream);
@@ -677,9 +682,11 @@ foreach (var typeHandle in mr.TypeDefinitions)
         varNameByCtorToken.TryAdd(MetadataTokens.GetToken(mr, mhv), varName);
     }
 }
-// フェーズB: TypeSpec Var (Vulnerable, Doom 等) — DynamicVarSet の castclass トークンから逆引き
+// フェーズB: TypeSpec/TypeRef Var — DynamicVarSet の castclass トークンから逆引き
+// TypeSpec: ジェネリック型パラメータ付きの Var（Vulnerable 等）
+// TypeRef: 外部アセンブリに定義された Var（VigorPower 等）— Akabeko で使用
 {
-    var typeSpecToPropName = new Dictionary<int, string>();
+    var typeTokToPropName = new Dictionary<int, string>();
     foreach (var th in mr.TypeDefinitions)
     {
         var td = mr.GetTypeDefinition(th);
@@ -694,10 +701,11 @@ foreach (var typeHandle in mr.TypeDefinitions)
             var iv = bv.GetILBytes();
             for (int i = 0; i + 4 < iv.Length; i++)
             {
-                if (iv[i] != 0x74) continue;
+                if (iv[i] != 0x74) continue; // castclass
                 int castTok = iv[i+1]|(iv[i+2]<<8)|(iv[i+3]<<16)|(iv[i+4]<<24);
-                if (MetadataTokens.EntityHandle(castTok).Kind == HandleKind.TypeSpecification)
-                    typeSpecToPropName.TryAdd(castTok, mn[4..]);
+                var kind = MetadataTokens.EntityHandle(castTok).Kind;
+                if (kind is HandleKind.TypeSpecification or HandleKind.TypeReference)
+                    typeTokToPropName.TryAdd(castTok, mn[4..]);
                 break;
             }
         }
@@ -707,10 +715,52 @@ foreach (var typeHandle in mr.TypeDefinitions)
     {
         var memberRef = mr.GetMemberReference(mrh);
         if (mr.GetString(memberRef.Name) != ".ctor") continue;
-        if (memberRef.Parent.Kind != HandleKind.TypeSpecification) continue;
+        var parentKind = memberRef.Parent.Kind;
+        if (parentKind is not (HandleKind.TypeSpecification or HandleKind.TypeReference)) continue;
         int parentTok = MetadataTokens.GetToken(memberRef.Parent);
-        if (!typeSpecToPropName.TryGetValue(parentTok, out var propName)) continue;
+        if (!typeTokToPropName.TryGetValue(parentTok, out var propName)) continue;
         varNameByCtorToken.TryAdd(MetadataTokens.GetToken(mr, mrh), propName);
+    }
+}
+// フェーズC: TypeSpec 親の MemberRef .ctor で DynamicVarSet に未登録のものを TypeSpec blob デコードで解決
+// TypeSpec blob: GENERICINST (0x15) + CLASS/VALUETYPE + base-type-token + arg-count + arg-type-token
+// 引数型が TypeRef 名 "XxxVar" なら propName = "Xxx" として登録
+{
+    foreach (var mrh in mr.MemberReferences)
+    {
+        var memberRef = mr.GetMemberReference(mrh);
+        if (mr.GetString(memberRef.Name) != ".ctor") continue;
+        if (memberRef.Parent.Kind != HandleKind.TypeSpecification) continue;
+        // 既に登録済みはスキップ
+        int ctorTok = MetadataTokens.GetToken(mr, mrh);
+        if (varNameByCtorToken.ContainsKey(ctorTok)) continue;
+
+        try
+        {
+            var typeSpec = mr.GetTypeSpecification((TypeSpecificationHandle)memberRef.Parent);
+            var sig = mr.GetBlobReader(typeSpec.Signature);
+            if (sig.ReadByte() != 0x15) continue; // GENERICINST
+            sig.ReadByte(); // CLASS or VALUETYPE
+            sig.ReadCompressedInteger(); // base type token (encoded)
+            int argCount = sig.ReadCompressedInteger();
+            if (argCount < 1) continue;
+            // 最初の型引数を読む
+            byte argTypeCode = sig.ReadByte();
+            if (argTypeCode is not (0x11 or 0x12)) continue; // CLASS or VALUETYPE
+            int argTypeToken = sig.ReadCompressedInteger();
+            int tag = argTypeToken & 3;
+            int row = argTypeToken >> 2;
+            string argTypeName = tag switch
+            {
+                0 => mr.GetString(mr.GetTypeDefinition(MetadataTokens.TypeDefinitionHandle(row)).Name),
+                1 => mr.GetString(mr.GetTypeReference(MetadataTokens.TypeReferenceHandle(row)).Name),
+                _ => ""
+            };
+            if (string.IsNullOrEmpty(argTypeName)) continue;
+            // 型引数名をそのまま変数名として使う（"VigorPower", "Poison" 等）
+            varNameByCtorToken.TryAdd(ctorTok, argTypeName);
+        }
+        catch { /* blob デコード失敗はスキップ */ }
     }
 }
 
@@ -974,6 +1024,8 @@ Console.Error.WriteLine($"Found {relicClasses.Count} relic classes.");
 // 各 relic クラスから get_Rarity と get_CanonicalVars を抽出
 var relicRarities = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 var relicStats    = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
+int dbgCanonVars = 0;
+int dbgCtorFields = 0;
 
 foreach (var typeHandle in mr.TypeDefinitions)
 {
@@ -998,7 +1050,60 @@ foreach (var typeHandle in mr.TypeDefinitions)
         break;
     }
 
-    // get_CanonicalVars → カードと同じパターン: ldc.i4 N → newobj Decimal → newobj XxxVar
+    // パスR1: .ctor からフィールド代入 (stfld) とプロパティセッター (call set_Xxx) を取得
+    // カードの "パス2" と同じアプローチ。{MaxHp} などの変数名はフィールド/プロパティ名と一致する想定。
+    foreach (var mh in typeDef.GetMethods())
+    {
+        var method = mr.GetMethodDefinition(mh);
+        if (mr.GetString(method.Name) != ".ctor") continue;
+        if (method.RelativeVirtualAddress == 0) continue;
+        var body = peReader.GetMethodBody(method.RelativeVirtualAddress);
+        if (body == null) continue;
+        var il = body.GetILBytes();
+
+        int? lastInt = null;
+        var ctorFields = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < il.Length;)
+        {
+            byte op = il[i];
+            if ((op == 0x7D || op == 0x28 || op == 0x6F) && i + 4 < il.Length)
+            {
+                if (lastInt.HasValue)
+                {
+                    int token = il[i+1] | (il[i+2]<<8) | (il[i+3]<<16) | (il[i+4]<<24);
+                    string? name = null;
+                    if (op == 0x7D)
+                        name = ResolveFieldToken(mr, token);
+                    else
+                    {
+                        var rawName = ResolveMethodName(mr, token);
+                        if (rawName.StartsWith("set_", StringComparison.Ordinal))
+                            name = rawName[4..];
+                    }
+                    if (!string.IsNullOrEmpty(name))
+                        ctorFields.TryAdd(name, lastInt.Value);
+                }
+                lastInt = null;
+                i += 5;
+                continue;
+            }
+            var (val2, size2) = ReadLdcI4(il, i);
+            if (val2.HasValue) lastInt = val2;
+            else if (op != 0x02) lastInt = null;
+            i += size2;
+        }
+        if (ctorFields.Count > 0)
+        {
+            relicStats[relicId] = ctorFields;
+            dbgCtorFields++;
+        }
+        break;
+    }
+
+    // パスR2: get_CanonicalVars → 「最後の ldc.i4 N」を次の newobj XxxVar の値として使う
+    // カードは ldc.i4 N → newobj Decimal(0x1317) → newobj XxxVar だが、
+    // レリックは別のDecimalトークン(0x134D等)や Decimal なしの直接 int を使う場合がある。
+    // いずれも「Var コンストラクタ直前の最後の ldc.i4」が実値なので、柔軟パターンで対応。
     foreach (var mh in typeDef.GetMethods())
     {
         var method = mr.GetMethodDefinition(mh);
@@ -1008,8 +1113,7 @@ foreach (var typeHandle in mr.TypeDefinitions)
         if (body == null) continue;
         var il = body.GetILBytes();
 
-        int? lastIntR = null;
-        int? pendingDecimalR = null;
+        int? pendingValR = null;
         var canonFields = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         for (int i = 0; i < il.Length; )
         {
@@ -1017,30 +1121,32 @@ foreach (var typeHandle in mr.TypeDefinitions)
             if (op == 0x73 && i + 4 < il.Length) // newobj
             {
                 int tok = il[i+1]|(il[i+2]<<8)|(il[i+3]<<16)|(il[i+4]<<24);
-                if (tok == decimalIntCtorToken)
+                if (pendingValR.HasValue && varNameByCtorToken.TryGetValue(tok, out var vname))
                 {
-                    pendingDecimalR = lastIntR;
-                    lastIntR = null;
+                    canonFields.TryAdd(vname, pendingValR.Value);
+                    pendingValR = null;
                 }
-                else if (pendingDecimalR.HasValue && varNameByCtorToken.TryGetValue(tok, out var vname))
-                {
-                    canonFields.TryAdd(vname, pendingDecimalR.Value);
-                    pendingDecimalR = null;
-                    lastIntR = null;
-                }
+                // 非Var ctor (Decimal等) では pendingValR を維持して次の Var ctor に引き継ぐ
                 i += 5;
                 continue;
             }
             var (valR, sizeR) = ReadLdcI4(il, i);
-            if (valR.HasValue) lastIntR = valR;
-            else if (op is not (0x02 or 0x25)) lastIntR = null;
+            if (valR.HasValue) pendingValR = valR; // ldc.i4 を見るたびに更新（最後の値を保持）
             i += sizeR;
         }
         if (canonFields.Count > 0)
-            relicStats[relicId] = canonFields;
+        {
+            if (!relicStats.ContainsKey(relicId))
+                relicStats[relicId] = canonFields;
+            else
+                foreach (var (k, v) in canonFields)
+                    relicStats[relicId].TryAdd(k, v);
+            dbgCanonVars++;
+        }
         break;
     }
 }
+Console.Error.WriteLine($"Relics: ctor-fields={dbgCtorFields}, canonicalVars={dbgCanonVars}, total-with-stats={relicStats.Count}");
 
 // relic_rarities.json 出力 → StS2Shared/Resources/
 var relicRaritiesOutPath = Path.Combine(Path.GetDirectoryName(outPath)!, "relic_rarities.json");

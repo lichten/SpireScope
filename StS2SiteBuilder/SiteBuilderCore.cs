@@ -9,6 +9,9 @@ using ISRgba32 = SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rg
 
 public static class SiteBuilderCore
 {
+    // DescriptionFormatter が解決できなかった変数 [VarName] をスタイル付きスパンに変換するための正規表現
+    static readonly Regex UnresolvedVarRegex = new(@"\[([A-Za-z][A-Za-z0-9]*)\]", RegexOptions.Compiled);
+
     public static string GetDistDir()
     {
         var projectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
@@ -1955,6 +1958,11 @@ static string FormatLoss(string raw, string encName, bool japanese = false)
     return DescriptionFormatter.Clean(s, japanese);
 }
 
+// DescriptionFormatter が解決できなかった [VarName] をホバーで変数名が分かるスパンに変換する
+static string WrapUnresolvedVars(string html) =>
+    UnresolvedVarRegex.Replace(html,
+        m => $"<span class=\"game-var\" title=\"ゲームデータ変数: {m.Groups[1].Value}\">?</span>");
+
 static string BuildRelicPage(string relicId, CharData[] chars, bool hasImage = false, string review = "", string lastUpdated = "")
 {
     const string basePath = "../";
@@ -1963,8 +1971,8 @@ static string BuildRelicPage(string relicId, CharData[] chars, bool hasImage = f
     var rarity  = CardDatabaseService.GetRelicRarity(relicId);
     var stats   = CardDatabaseService.GetRelicStats(relicId);
     var (rawDescEn, rawDescJa) = CardDatabaseService.GetDescription("RELIC." + relicId);
-    var descEn = DescriptionFormatter.Resolve(rawDescEn, stats).Replace("\n", "<br>");
-    var descJa = DescriptionFormatter.Resolve(rawDescJa, stats, japanese: true).Replace("\n", "<br>");
+    var descEn = WrapUnresolvedVars(DescriptionFormatter.Resolve(rawDescEn, stats).Replace("\n", "<br>"));
+    var descJa = WrapUnresolvedVars(DescriptionFormatter.Resolve(rawDescJa, stats, japanese: true).Replace("\n", "<br>"));
     var flavor = CardDatabaseService.GetFlavor("RELIC." + relicId);
 
     const string accent  = "#a0600c";
@@ -2627,6 +2635,7 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
         .run-stat-label { font-size:11px; color:#888; }
         .desc-main   { font-size: 14px; color: #333; line-height: 1.75; }
         .desc-sub   { font-size: 13px; color: #777; line-height: 1.75; margin-top: 12px; }
+        .game-var   { font-style: italic; color: #aaa; background: rgba(0,0,0,0.05); padding: 0 3px; border-radius: 3px; cursor: help; font-size: 0.9em; }
         .stat-table     { border-collapse: collapse; }
         .stat-key { font-size: 13px; color: #666; padding: 3px 20px 3px 0; }
         .stat-val { font-size: 13px; font-weight: 600; color: #222; }
