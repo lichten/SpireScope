@@ -21,6 +21,30 @@ partial class MainForm
         _refreshHistoryButton = new Button();
         _generateRunButton    = new Button();
         _historyList          = new ListView();
+        _tabArticles              = new TabPage();
+        _articleSplit             = new SplitContainer();
+        _articleToolbar           = new FlowLayoutPanel();
+        _newArticleButton         = new Button();
+        _deleteArticleButton      = new Button();
+        _articleList              = new ListBox();
+        _articleFieldPanel        = new Panel();
+        _articleFieldTable        = new TableLayoutPanel();
+        _articleTitleLabel        = new Label();
+        _articleTitleBox          = new TextBox();
+        _articleDateLabel         = new Label();
+        _articleDatePanel         = new Panel();
+        _articleDateBox           = new TextBox();
+        _todayButton              = new Button();
+        _articleDescLabel         = new Label();
+        _articleDescBox           = new TextBox();
+        _articleSlugLabel         = new Label();
+        _articleSlugBox           = new TextBox();
+        _articleBodyLabel         = new Label();
+        _articleBodyBox           = new TextBox();
+        _articleActionBar         = new FlowLayoutPanel();
+        _saveArticleButton        = new Button();
+        _savePreviewArticleButton = new Button();
+        _revertArticleButton      = new Button();
         _previewSplit         = new SplitContainer();
         _webView2             = new Microsoft.Web.WebView2.WinForms.WebView2();
         _reviewPanel          = new Panel();
@@ -43,6 +67,14 @@ partial class MainForm
         _tabBuild.SuspendLayout();
         _tabHistory.SuspendLayout();
         _historyToolbar.SuspendLayout();
+        _tabArticles.SuspendLayout();
+        ((System.ComponentModel.ISupportInitialize)_articleSplit).BeginInit();
+        _articleSplit.SuspendLayout();
+        _articleToolbar.SuspendLayout();
+        _articleFieldPanel.SuspendLayout();
+        _articleFieldTable.SuspendLayout();
+        _articleDatePanel.SuspendLayout();
+        _articleActionBar.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)_previewSplit).BeginInit();
         _previewSplit.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)_webView2).BeginInit();
@@ -74,6 +106,7 @@ partial class MainForm
         _tabControl.Controls.Add(_tabPreview);
         _tabControl.Controls.Add(_tabBuild);
         _tabControl.Controls.Add(_tabHistory);
+        _tabControl.Controls.Add(_tabArticles);
         _tabControl.Dock = DockStyle.Fill;
         _tabControl.Name = "_tabControl";
         _tabControl.SelectedIndex = 0;
@@ -317,6 +350,230 @@ partial class MainForm
         _logBox.ScrollBars = ScrollBars.Vertical;
         _logBox.TabIndex = 1;
         //
+        // _tabArticles
+        //
+        _tabArticles.Controls.Add(_articleSplit);
+        _tabArticles.Dock = DockStyle.Fill;
+        _tabArticles.Name = "_tabArticles";
+        _tabArticles.Padding = new Padding(0);
+        _tabArticles.TabIndex = 3;
+        _tabArticles.Text = "記事";
+        //
+        // _articleSplit
+        //
+        _articleSplit.Dock = DockStyle.Fill;
+        _articleSplit.Name = "_articleSplit";
+        _articleSplit.Orientation = Orientation.Vertical;
+        _articleSplit.SplitterDistance = 230;
+        _articleSplit.TabIndex = 0;
+        _articleSplit.Panel1.Controls.Add(_articleList);
+        _articleSplit.Panel1.Controls.Add(_articleToolbar);
+        _articleSplit.Panel2.Controls.Add(_articleBodyBox);
+        _articleSplit.Panel2.Controls.Add(_articleFieldPanel);
+        _articleSplit.Panel2.Controls.Add(_articleActionBar);
+        //
+        // _articleToolbar
+        //
+        _articleToolbar.Controls.Add(_newArticleButton);
+        _articleToolbar.Controls.Add(_deleteArticleButton);
+        _articleToolbar.Dock = DockStyle.Top;
+        _articleToolbar.Name = "_articleToolbar";
+        _articleToolbar.Padding = new Padding(8, 6, 8, 6);
+        _articleToolbar.Size = new Size(230, 44);
+        _articleToolbar.TabIndex = 0;
+        //
+        // _newArticleButton
+        //
+        _newArticleButton.AutoSize = true;
+        _newArticleButton.Margin = new Padding(0, 0, 8, 0);
+        _newArticleButton.Name = "_newArticleButton";
+        _newArticleButton.Padding = new Padding(12, 4, 12, 4);
+        _newArticleButton.TabIndex = 0;
+        _newArticleButton.Text = "新規";
+        //
+        // _deleteArticleButton
+        //
+        _deleteArticleButton.AutoSize = true;
+        _deleteArticleButton.Enabled = false;
+        _deleteArticleButton.Name = "_deleteArticleButton";
+        _deleteArticleButton.Padding = new Padding(12, 4, 12, 4);
+        _deleteArticleButton.TabIndex = 1;
+        _deleteArticleButton.Text = "削除";
+        //
+        // _articleList
+        //
+        _articleList.Dock = DockStyle.Fill;
+        _articleList.Name = "_articleList";
+        _articleList.TabIndex = 1;
+        //
+        // _articleFieldPanel
+        //
+        _articleFieldPanel.Controls.Add(_articleFieldTable);
+        _articleFieldPanel.Controls.Add(_articleBodyLabel);
+        _articleFieldPanel.Dock = DockStyle.Top;
+        _articleFieldPanel.Name = "_articleFieldPanel";
+        _articleFieldPanel.Padding = new Padding(8, 6, 8, 2);
+        _articleFieldPanel.Size = new Size(0, 162);
+        _articleFieldPanel.TabIndex = 1;
+        //
+        // _articleBodyLabel
+        //
+        _articleBodyLabel.Dock = DockStyle.Bottom;
+        _articleBodyLabel.Font = new Font("Yu Gothic UI", 8.5F, FontStyle.Bold);
+        _articleBodyLabel.ForeColor = Color.FromArgb(110, 110, 110);
+        _articleBodyLabel.Name = "_articleBodyLabel";
+        _articleBodyLabel.Padding = new Padding(0, 4, 0, 2);
+        _articleBodyLabel.Size = new Size(0, 22);
+        _articleBodyLabel.TabIndex = 1;
+        _articleBodyLabel.Text = "HTML本文:";
+        //
+        // _articleFieldTable
+        //
+        _articleFieldTable.ColumnCount = 2;
+        _articleFieldTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 68F));
+        _articleFieldTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        _articleFieldTable.Controls.Add(_articleTitleLabel, 0, 0);
+        _articleFieldTable.Controls.Add(_articleTitleBox,   1, 0);
+        _articleFieldTable.Controls.Add(_articleDateLabel,  0, 1);
+        _articleFieldTable.Controls.Add(_articleDatePanel,  1, 1);
+        _articleFieldTable.Controls.Add(_articleDescLabel,  0, 2);
+        _articleFieldTable.Controls.Add(_articleDescBox,    1, 2);
+        _articleFieldTable.Controls.Add(_articleSlugLabel,  0, 3);
+        _articleFieldTable.Controls.Add(_articleSlugBox,    1, 3);
+        _articleFieldTable.Dock = DockStyle.Fill;
+        _articleFieldTable.Name = "_articleFieldTable";
+        _articleFieldTable.RowCount = 4;
+        _articleFieldTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 32F));
+        _articleFieldTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 32F));
+        _articleFieldTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 32F));
+        _articleFieldTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 32F));
+        _articleFieldTable.TabIndex = 0;
+        //
+        // _articleTitleLabel
+        //
+        _articleTitleLabel.Dock = DockStyle.Fill;
+        _articleTitleLabel.Name = "_articleTitleLabel";
+        _articleTitleLabel.TabIndex = 0;
+        _articleTitleLabel.Text = "タイトル";
+        _articleTitleLabel.TextAlign = ContentAlignment.MiddleLeft;
+        //
+        // _articleTitleBox
+        //
+        _articleTitleBox.Dock = DockStyle.Fill;
+        _articleTitleBox.Name = "_articleTitleBox";
+        _articleTitleBox.TabIndex = 1;
+        //
+        // _articleDateLabel
+        //
+        _articleDateLabel.Dock = DockStyle.Fill;
+        _articleDateLabel.Name = "_articleDateLabel";
+        _articleDateLabel.TabIndex = 0;
+        _articleDateLabel.Text = "日付";
+        _articleDateLabel.TextAlign = ContentAlignment.MiddleLeft;
+        //
+        // _articleDatePanel
+        //
+        _articleDatePanel.Controls.Add(_articleDateBox);
+        _articleDatePanel.Controls.Add(_todayButton);
+        _articleDatePanel.Dock = DockStyle.Fill;
+        _articleDatePanel.Name = "_articleDatePanel";
+        _articleDatePanel.TabIndex = 1;
+        //
+        // _articleDateBox
+        //
+        _articleDateBox.Dock = DockStyle.Fill;
+        _articleDateBox.Name = "_articleDateBox";
+        _articleDateBox.TabIndex = 0;
+        //
+        // _todayButton
+        //
+        _todayButton.Dock = DockStyle.Right;
+        _todayButton.Name = "_todayButton";
+        _todayButton.Size = new Size(54, 0);
+        _todayButton.TabIndex = 1;
+        _todayButton.Text = "今日";
+        //
+        // _articleDescLabel
+        //
+        _articleDescLabel.Dock = DockStyle.Fill;
+        _articleDescLabel.Name = "_articleDescLabel";
+        _articleDescLabel.TabIndex = 0;
+        _articleDescLabel.Text = "説明";
+        _articleDescLabel.TextAlign = ContentAlignment.MiddleLeft;
+        //
+        // _articleDescBox
+        //
+        _articleDescBox.Dock = DockStyle.Fill;
+        _articleDescBox.Name = "_articleDescBox";
+        _articleDescBox.TabIndex = 1;
+        //
+        // _articleSlugLabel
+        //
+        _articleSlugLabel.Dock = DockStyle.Fill;
+        _articleSlugLabel.Name = "_articleSlugLabel";
+        _articleSlugLabel.TabIndex = 0;
+        _articleSlugLabel.Text = "スラッグ";
+        _articleSlugLabel.TextAlign = ContentAlignment.MiddleLeft;
+        //
+        // _articleSlugBox
+        //
+        _articleSlugBox.Dock = DockStyle.Fill;
+        _articleSlugBox.Name = "_articleSlugBox";
+        _articleSlugBox.ReadOnly = true;
+        _articleSlugBox.TabIndex = 1;
+        //
+        // _articleBodyBox
+        //
+        _articleBodyBox.BackColor = Color.FromArgb(30, 30, 30);
+        _articleBodyBox.Dock = DockStyle.Fill;
+        _articleBodyBox.Font = new Font("Consolas", 9.5F);
+        _articleBodyBox.ForeColor = Color.FromArgb(220, 220, 220);
+        _articleBodyBox.Multiline = true;
+        _articleBodyBox.Name = "_articleBodyBox";
+        _articleBodyBox.ScrollBars = ScrollBars.Both;
+        _articleBodyBox.TabIndex = 2;
+        _articleBodyBox.WordWrap = false;
+        //
+        // _articleActionBar
+        //
+        _articleActionBar.Controls.Add(_saveArticleButton);
+        _articleActionBar.Controls.Add(_savePreviewArticleButton);
+        _articleActionBar.Controls.Add(_revertArticleButton);
+        _articleActionBar.Dock = DockStyle.Bottom;
+        _articleActionBar.Name = "_articleActionBar";
+        _articleActionBar.Padding = new Padding(8, 6, 8, 6);
+        _articleActionBar.Size = new Size(0, 44);
+        _articleActionBar.TabIndex = 3;
+        //
+        // _saveArticleButton
+        //
+        _saveArticleButton.AutoSize = true;
+        _saveArticleButton.Enabled = false;
+        _saveArticleButton.Margin = new Padding(0, 0, 8, 0);
+        _saveArticleButton.Name = "_saveArticleButton";
+        _saveArticleButton.Padding = new Padding(12, 4, 12, 4);
+        _saveArticleButton.TabIndex = 0;
+        _saveArticleButton.Text = "保存";
+        //
+        // _savePreviewArticleButton
+        //
+        _savePreviewArticleButton.AutoSize = true;
+        _savePreviewArticleButton.Enabled = false;
+        _savePreviewArticleButton.Margin = new Padding(0, 0, 8, 0);
+        _savePreviewArticleButton.Name = "_savePreviewArticleButton";
+        _savePreviewArticleButton.Padding = new Padding(12, 4, 12, 4);
+        _savePreviewArticleButton.TabIndex = 1;
+        _savePreviewArticleButton.Text = "保存してプレビュー";
+        //
+        // _revertArticleButton
+        //
+        _revertArticleButton.AutoSize = true;
+        _revertArticleButton.Enabled = false;
+        _revertArticleButton.Name = "_revertArticleButton";
+        _revertArticleButton.Padding = new Padding(12, 4, 12, 4);
+        _revertArticleButton.TabIndex = 2;
+        _revertArticleButton.Text = "元に戻す";
+        //
         // MainForm
         //
         AutoScaleDimensions = new SizeF(10F, 25F);
@@ -338,6 +595,18 @@ partial class MainForm
         _tabHistory.ResumeLayout(false);
         _historyToolbar.ResumeLayout(false);
         _historyToolbar.PerformLayout();
+        _tabArticles.ResumeLayout(false);
+        ((System.ComponentModel.ISupportInitialize)_articleSplit).EndInit();
+        _articleSplit.ResumeLayout(false);
+        _articleToolbar.ResumeLayout(false);
+        _articleToolbar.PerformLayout();
+        _articleFieldPanel.ResumeLayout(false);
+        _articleFieldTable.ResumeLayout(false);
+        _articleFieldTable.PerformLayout();
+        _articleDatePanel.ResumeLayout(false);
+        _articleDatePanel.PerformLayout();
+        _articleActionBar.ResumeLayout(false);
+        _articleActionBar.PerformLayout();
         ((System.ComponentModel.ISupportInitialize)_previewSplit).EndInit();
         _previewSplit.ResumeLayout(false);
         ((System.ComponentModel.ISupportInitialize)_webView2).EndInit();
@@ -379,4 +648,28 @@ partial class MainForm
     private Button               _refreshHistoryButton;
     private Button               _generateRunButton;
     private ListView             _historyList;
+    private TabPage              _tabArticles;
+    private SplitContainer       _articleSplit;
+    private FlowLayoutPanel      _articleToolbar;
+    private Button               _newArticleButton;
+    private Button               _deleteArticleButton;
+    private ListBox              _articleList;
+    private Panel                _articleFieldPanel;
+    private TableLayoutPanel     _articleFieldTable;
+    private Label                _articleTitleLabel;
+    private TextBox              _articleTitleBox;
+    private Label                _articleDateLabel;
+    private Panel                _articleDatePanel;
+    private TextBox              _articleDateBox;
+    private Button               _todayButton;
+    private Label                _articleDescLabel;
+    private TextBox              _articleDescBox;
+    private Label                _articleSlugLabel;
+    private TextBox              _articleSlugBox;
+    private Label                _articleBodyLabel;
+    private TextBox              _articleBodyBox;
+    private FlowLayoutPanel      _articleActionBar;
+    private Button               _saveArticleButton;
+    private Button               _savePreviewArticleButton;
+    private Button               _revertArticleButton;
 }

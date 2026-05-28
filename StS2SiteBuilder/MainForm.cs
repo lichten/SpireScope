@@ -24,6 +24,19 @@ public partial class MainForm : Form
         _refreshHistoryButton.Click += (_, _) => RefreshHistoryList();
         _generateRunButton.Click    += GenerateRunButton_Click;
         _historyList.SelectedIndexChanged += HistoryList_SelectedIndexChanged;
+
+        _tabArticles.Enter += (_, _) => RefreshArticleList();
+        _newArticleButton.Click    += NewArticle_Click;
+        _deleteArticleButton.Click += DeleteArticle_Click;
+        _saveArticleButton.Click         += SaveArticle_Click;
+        _savePreviewArticleButton.Click  += SavePreviewArticle_Click;
+        _revertArticleButton.Click       += (_, _) => RevertArticle();
+        _todayButton.Click += (_, _) => _articleDateBox.Text = DateTime.Today.ToString("yyyy-MM-dd");
+        _articleList.SelectedIndexChanged += ArticleList_SelectedIndexChanged;
+        _articleTitleBox.TextChanged += ArticleTitle_TextChanged;
+        _articleBodyBox.TextChanged  += (_, _) => MarkArticleDirty();
+        _articleDescBox.TextChanged  += (_, _) => MarkArticleDirty();
+        _articleDateBox.TextChanged  += (_, _) => MarkArticleDirty();
     }
 
     private async void BuildButton_Click(object? sender, EventArgs e)
@@ -164,6 +177,212 @@ public partial class MainForm : Form
         _reviewEditor.TextChanged += ReviewEditor_TextChanged;
         _isDirty = false;
         UpdateReviewButtons();
+    }
+
+    // ── 記事タブ ────────────────────────────────────────────────────────────────
+
+    private bool   _articleIsDirty;
+    private bool   _articleIsNew;
+    private bool   _articleSuppressDirty;
+    private string _articleSavedTitle = "";
+    private string _articleSavedDate  = "";
+    private string _articleSavedDesc  = "";
+    private string _articleSavedBody  = "";
+
+    private static string TitleToSlug(string title) =>
+        System.Text.RegularExpressions.Regex.Replace(title.ToLowerInvariant(), @"[^\p{L}\p{N}]+", "-").Trim('-');
+
+    private void RefreshArticleList()
+    {
+        var selectedSlug = (_articleList.SelectedItem as ArticleItem)?.Slug;
+        _articleList.SelectedIndexChanged -= ArticleList_SelectedIndexChanged;
+        _articleList.Items.Clear();
+        var dir = SiteBuilderCore.GetOrCreateArticlesDir();
+        foreach (var f in Directory.GetFiles(dir, "*.html").OrderBy(f => f))
+        {
+            var meta = SiteBuilderCore.ParseArticlePublic(f);
+            _articleList.Items.Add(new ArticleItem(Path.GetFileNameWithoutExtension(f), meta.Title));
+        }
+        _articleList.SelectedIndexChanged += ArticleList_SelectedIndexChanged;
+        if (selectedSlug != null)
+        {
+            for (int i = 0; i < _articleList.Items.Count; i++)
+                if (((ArticleItem)_articleList.Items[i]).Slug == selectedSlug)
+                { _articleList.SelectedIndex = i; break; }
+        }
+        _statusLabel.Text = $"記事: {_articleList.Items.Count} 件";
+    }
+
+    private void ArticleList_SelectedIndexChanged(object? sender, EventArgs e)
+    {
+        if (_articleList.SelectedItem is not ArticleItem item) return;
+        if (_articleIsDirty && MessageBox.Show(
+                "変更を破棄して別の記事を開きますか?",
+                "確認", MessageBoxButtons.OKCancel) != DialogResult.OK) return;
+        LoadArticle(item.Slug);
+        _deleteArticleButton.Enabled = true;
+    }
+
+    private void LoadArticle(string slug)
+    {
+        var dir  = SiteBuilderCore.GetOrCreateArticlesDir();
+        var path = Path.Combine(dir, slug + ".html");
+        var meta = SiteBuilderCore.ParseArticlePublic(path);
+        _articleIsNew = false;
+        _articleSlugBox.ReadOnly  = true;
+        _articleSlugBox.BackColor = SystemColors.Control;
+        SetArticleFields(meta.Title, meta.Date, meta.Desc, slug, meta.BodyHtml);
+        SaveArticleSnapshot();
+        _articleIsDirty = false;
+        UpdateArticleButtons();
+    }
+
+    private void NewArticle_Click(object? sender, EventArgs e)
+    {
+        if (_articleIsDirty && MessageBox.Show(
+                "変更を破棄して新規作成しますか?",
+                "確認", MessageBoxButtons.OKCancel) != DialogResult.OK) return;
+        _articleList.SelectedIndexChanged -= ArticleList_SelectedIndexChanged;
+        _articleList.ClearSelected();
+        _articleList.SelectedIndexChanged += ArticleList_SelectedIndexChanged;
+        _articleIsNew = true;
+        _articleSlugBox.ReadOnly  = false;
+        _articleSlugBox.BackColor = SystemColors.Window;
+        SetArticleFields("", DateTime.Today.ToString("yyyy-MM-dd"), "", "", "");
+        SaveArticleSnapshot();
+        _articleIsDirty = false;
+        _deleteArticleButton.Enabled = false;
+        UpdateArticleButtons();
+        _articleTitleBox.Focus();
+    }
+
+    private void SetArticleFields(string title, string date, string desc, string slug, string body)
+    {
+        _articleSuppressDirty = true;
+        try
+        {
+            _articleTitleBox.Text = title;
+            _articleDateBox.Text  = date;
+            _articleDescBox.Text  = desc;
+            _articleSlugBox.Text  = slug;
+            _articleBodyBox.Text  = body.Replace("\r\n", "\n").Replace("\n", "\r\n");
+        }
+        finally
+        {
+            _articleSuppressDirty = false;
+        }
+    }
+
+    private void SaveArticleSnapshot()
+    {
+        _articleSavedTitle = _articleTitleBox.Text;
+        _articleSavedDate  = _articleDateBox.Text;
+        _articleSavedDesc  = _articleDescBox.Text;
+        _articleSavedBody  = _articleBodyBox.Text;
+    }
+
+    private void ArticleTitle_TextChanged(object? sender, EventArgs e)
+    {
+        if (_articleIsNew && !_articleSuppressDirty)
+            _articleSlugBox.Text = TitleToSlug(_articleTitleBox.Text);
+        MarkArticleDirty();
+    }
+
+    private void MarkArticleDirty()
+    {
+        if (_articleSuppressDirty || _articleIsDirty) return;
+        _articleIsDirty = true;
+        UpdateArticleButtons();
+    }
+
+    private void UpdateArticleButtons()
+    {
+        var hasSlug  = !string.IsNullOrWhiteSpace(_articleSlugBox.Text);
+        var hasTitle = !string.IsNullOrWhiteSpace(_articleTitleBox.Text);
+        var canSave  = _articleIsDirty && hasSlug && hasTitle;
+        _saveArticleButton.Enabled        = canSave;
+        _savePreviewArticleButton.Enabled = canSave;
+        _revertArticleButton.Enabled      = _articleIsDirty;
+    }
+
+    private void RevertArticle()
+    {
+        SetArticleFields(_articleSavedTitle, _articleSavedDate, _articleSavedDesc,
+                         _articleSlugBox.Text, _articleSavedBody);
+        _articleIsDirty = false;
+        UpdateArticleButtons();
+    }
+
+    private bool DoSaveArticle()
+    {
+        var slug  = _articleSlugBox.Text.Trim();
+        var title = _articleTitleBox.Text.Trim();
+        var date  = _articleDateBox.Text.Trim();
+        var desc  = _articleDescBox.Text.Trim();
+        var body  = _articleBodyBox.Text.Replace("\r\n", "\n");
+        if (string.IsNullOrEmpty(slug) || string.IsNullOrEmpty(title)) return false;
+        var dir = SiteBuilderCore.GetOrCreateArticlesDir();
+        SiteBuilderCore.SaveArticle(dir, slug, title, date, desc, body);
+        _articleIsNew            = false;
+        _articleSlugBox.ReadOnly  = true;
+        _articleSlugBox.BackColor = SystemColors.Control;
+        SaveArticleSnapshot();
+        _articleIsDirty = false;
+        UpdateArticleButtons();
+        RefreshArticleList();
+        _statusLabel.Text = "保存しました";
+        return true;
+    }
+
+    private void SaveArticle_Click(object? sender, EventArgs e) => DoSaveArticle();
+
+    private async void SavePreviewArticle_Click(object? sender, EventArgs e)
+    {
+        if (!DoSaveArticle()) return;
+        _savePreviewArticleButton.Enabled = false;
+        _statusLabel.Text = "記事ビルド中...";
+        try
+        {
+            var distDir = SiteBuilderCore.GetDistDir();
+            await Task.Run(() => SiteBuilderCore.BuildArticlesOnly(distDir, AppendLog));
+            _statusLabel.Text = "記事ビルド完了";
+            var slug     = _articleSlugBox.Text.Trim();
+            var htmlPath = Path.Combine(distDir, "articles", slug + ".html");
+            _tabControl.SelectedTab = _tabPreview;
+            if (_webView2.CoreWebView2 != null && File.Exists(htmlPath))
+                _webView2.CoreWebView2.Navigate(new Uri(htmlPath).AbsoluteUri);
+        }
+        catch (Exception ex)
+        {
+            _statusLabel.Text = $"エラー: {ex.Message}";
+        }
+        finally
+        {
+            UpdateArticleButtons();
+        }
+    }
+
+    private void DeleteArticle_Click(object? sender, EventArgs e)
+    {
+        if (_articleList.SelectedItem is not ArticleItem item) return;
+        if (MessageBox.Show($"「{item.Title}」を削除しますか?",
+                "削除確認", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK) return;
+        var dir = SiteBuilderCore.GetOrCreateArticlesDir();
+        SiteBuilderCore.DeleteArticle(dir, item.Slug, SiteBuilderCore.GetDistDir());
+        _articleIsDirty = false;
+        SetArticleFields("", "", "", "", "");
+        SaveArticleSnapshot();
+        _deleteArticleButton.Enabled = false;
+        UpdateArticleButtons();
+        RefreshArticleList();
+        _statusLabel.Text = "削除しました";
+    }
+
+    private sealed class ArticleItem(string slug, string title)
+    {
+        public string Slug  { get; } = slug;
+        public string Title { get; } = title;
+        public override string ToString() => string.IsNullOrEmpty(Title) ? Slug : Title;
     }
 
     // ── ラン履歴タブ ────────────────────────────────────────────────────────────

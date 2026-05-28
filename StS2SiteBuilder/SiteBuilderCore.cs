@@ -18,6 +18,52 @@ public static class SiteBuilderCore
         return Path.Combine(projectDir, "dist");
     }
 
+    public static string GetOrCreateArticlesDir()
+    {
+        var dir = FindArticlesDir(GetDistDir())
+               ?? Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(GetDistDir())!)!, "articles");
+        Directory.CreateDirectory(dir);
+        return dir;
+    }
+
+    public static void SaveArticle(string articlesDir, string slug, string title, string date, string desc, string bodyHtml)
+    {
+        var meta    = $"<!-- title: {title}; date: {date}; desc: {desc} -->";
+        var content = meta + "\n" + bodyHtml.TrimStart('\r', '\n');
+        File.WriteAllText(Path.Combine(articlesDir, slug + ".html"), content, System.Text.Encoding.UTF8);
+    }
+
+    public static void DeleteArticle(string articlesDir, string slug, string distDir)
+    {
+        var src  = Path.Combine(articlesDir, slug + ".html");
+        var dist = Path.Combine(distDir, "articles", slug + ".html");
+        if (File.Exists(src))  File.Delete(src);
+        if (File.Exists(dist)) File.Delete(dist);
+    }
+
+    public static (string Title, string Date, string Desc, string BodyHtml) ParseArticlePublic(string filePath)
+    {
+        var a = ParseArticle(filePath);
+        return (a.Title, a.Date, a.Desc, a.BodyHtml);
+    }
+
+    public static void BuildArticlesOnly(string distDir, Action<string> log)
+    {
+        var chars  = GetBaseChars();
+        var srcDir = FindArticlesDir(distDir);
+        var metas  = srcDir is not null
+            ? Directory.GetFiles(srcDir, "*.html").Select(ParseArticle)
+                       .OrderByDescending(a => a.Date).ToArray()
+            : [];
+        Directory.CreateDirectory(Path.Combine(distDir, "articles"));
+        foreach (var a in metas)
+            File.WriteAllText(Path.Combine(distDir, "articles", $"{a.Slug}.html"),
+                BuildArticlePage(a, chars), System.Text.Encoding.UTF8);
+        File.WriteAllText(Path.Combine(distDir, "articles.html"),
+            BuildArticleListPage(metas, chars), System.Text.Encoding.UTF8);
+        log($"記事: {metas.Length} 件生成");
+    }
+
     public static void Build(string distDir, Action<string> log)
     {
         Directory.CreateDirectory(distDir);
