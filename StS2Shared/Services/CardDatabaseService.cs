@@ -160,6 +160,7 @@ public static class CardDatabaseService
     static readonly HashSet<string> _regentStarGain   = ComputeRegentStarGain();
     static readonly HashSet<string> _regentStarSpend  = ComputeRegentStarSpend();
     static readonly HashSet<string> _defectZeroEnergy = BuildDefectZeroEnergy();
+    static readonly HashSet<string> _allEnemiesAttack = ComputeByPlainText("damage to ALL enemies", "hit ALL enemies");
 
     static HashSet<string> ComputeBlockGivers()
     {
@@ -444,6 +445,7 @@ public static class CardDatabaseService
     public static bool IsRelicBlockGiver(string id) => _blockRelicGivers.Contains(ToRawId(id));
     public static bool IsDrawRelated(string id) => _drawRelated.Contains(ToRawId(id));
     public static bool IsRelicDrawRelated(string id) => _drawRelicRelated.Contains(ToRawId(id));
+    public static bool IsAllEnemiesAttack(string id) => _allEnemiesAttack.Contains(ToRawId(id));
 
     static LocData LoadLoc() => new(
         LoadLocJson("eng.cards"),

@@ -450,13 +450,18 @@ namespace StS2Toys
                 cards.Where(c => CardDatabaseService.IsBlockGiver(c.Id)).OrderBy(c => ja ? c.NameJa : c.NameEn).ToList(),
                 blockRelics));
 
-            // 4. 召喚 (Necrobinder only)
+            // 4. 全体攻撃
+            sections.Add(new OverviewSection("Attacks All Enemies", "全体攻撃",
+                cards.Where(c => CardDatabaseService.IsAllEnemiesAttack(c.Id)).OrderBy(c => ja ? c.NameJa : c.NameEn).ToList(),
+                []));
+
+            // 5. 召喚 (Necrobinder only)
             if (isNecro)
                 sections.Add(new OverviewSection("Summon", "召喚",
                     cards.Where(c => CardDatabaseService.IsNecroSummon(c.Id)).OrderBy(c => ja ? c.NameJa : c.NameEn).ToList(),
                     []));
 
-            // 5. 共通キーワード（レリックも振り分ける）
+            // 6. 共通キーワード（レリックも振り分ける）
             var claimedRelics = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var m in CharacterMechanics.MechanicsFor("Common"))
             {
@@ -467,7 +472,7 @@ namespace StS2Toys
                     kwRelics));
             }
 
-            // 6. その他のレリック（共通キーワードに振り分け済みのものは除外）
+            // 7. その他のレリック（共通キーワードに振り分け済みのものは除外）
             var finalOtherRelics = otherRelics.Where(r => !claimedRelics.Contains(r.Id)).ToList();
             sections.Add(new OverviewSection("Other Relics", "その他のレリック", [], finalOtherRelics));
 
