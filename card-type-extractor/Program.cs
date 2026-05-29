@@ -650,6 +650,20 @@ var costs         = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase
 var rarities      = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 var cardStats     = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
 var starCostCards = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+var cardKeywords  = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+// get_CanonicalKeywords が返す int → キーワード名 のマッピング
+// (DLLのenum値を実験的に特定)
+var keywordNameById = new Dictionary<int, string>
+{
+    { 1, "EXHAUST"    },
+    { 2, "ETHEREAL"   },
+    { 3, "INNATE"     },
+    { 4, "UNPLAYABLE" },
+    { 5, "RETAIN"     },
+    { 6, "ETERNAL"    },
+    { 7, "SLY"        },
+};
 
 // コンストラクタトークン → DynamicVar 名 のマップを構築
 // フェーズA: 具体 *Var クラス（ldstr で名前を持つもの）
@@ -991,6 +1005,30 @@ foreach (var typeHandle in mr.TypeDefinitions)
         }
         break;
     }
+
+    // パス6: get_CanonicalKeywords から int[] を取得してキーワード名リストに変換
+    foreach (var mh in typeDef.GetMethods())
+    {
+        var method = mr.GetMethodDefinition(mh);
+        if (mr.GetString(method.Name) != "get_CanonicalKeywords") continue;
+        if (method.RelativeVirtualAddress == 0) break;
+        var body = peReader.GetMethodBody(method.RelativeVirtualAddress);
+        if (body == null) break;
+        var il = body.GetILBytes();
+
+        var kwValues = ParseCanonicalKeywords(il);
+        if (kwValues.Count > 0)
+        {
+            var kwNames = kwValues
+                .Select(v => keywordNameById.TryGetValue(v, out var n) ? n : null)
+                .Where(n => n != null)
+                .Select(n => n!)
+                .ToList();
+            if (kwNames.Count > 0)
+                cardKeywords[cardId] = kwNames;
+        }
+        break;
+    }
 }
 
 // ── Relic 抽出 ──────────────────────────────────────────────────────────────
@@ -1218,6 +1256,17 @@ var starCostLines = starCostCards.OrderBy(id => id).Select(id => $"  \"{id}\"");
 File.WriteAllText(starCostsOutPath, "[\n" + string.Join(",\n", starCostLines) + "\n]\n");
 Console.WriteLine(starCostsOutPath);
 
+// card_keywords.json 出力 (カードID → キーワード名リスト)
+var kwOutPath = Path.Combine(Path.GetDirectoryName(outPath)!, "card_keywords.json");
+Console.Error.WriteLine($"Extracted {cardKeywords.Count} card keyword mappings.");
+var kwEntries = cardKeywords.OrderBy(kv => kv.Key).Select(kv =>
+{
+    var kwList = string.Join(", ", kv.Value.Select(k => $"\"{k}\""));
+    return $"  \"{kv.Key}\": [{kwList}]";
+});
+File.WriteAllText(kwOutPath, "{\n" + string.Join(",\n", kwEntries) + "\n}\n");
+Console.WriteLine(kwOutPath);
+
 // ancient_options.json 出力
 // Ancient イベントクラスのオプションプールを IL から抽出する
 {
@@ -1324,6 +1373,52 @@ Console.WriteLine(starCostsOutPath);
 }
 
 // ---- helpers ----
+
+// get_CanonicalKeywords の IL を解析してキーワード int 値のリストを返す
+// パターンA (1件): ldc.i4 N + newobj + ret
+// パターンB (N件): ldc.i4 count + newarr(5byte) + [dup + ldc_idx + ldc_val + stelem.i4]* + newobj + ret
+// パターンC (InitializeArray): 未対応 (0xD0 で始まるケース) → 空リストを返す
+static List<int> ParseCanonicalKeywords(byte[] il)
+{
+    var result = new List<int>();
+    if (il.Length < 2) return result;
+
+    int pos = 0;
+    var (first, firstSize) = ReadLdcI4(il, pos);
+    if (!first.HasValue) return result;
+    pos += firstSize;
+
+    if (pos >= il.Length) return result;
+
+    if (il[pos] == 0x73) // newobj → パターンA: single keyword
+    {
+        result.Add(first.Value);
+        return result;
+    }
+
+    if (il[pos] == 0x8D) // newarr → パターンB: keyword array
+    {
+        pos += 5; // newarr opcode (1) + type token (4)
+        int count = first.Value;
+
+        for (int elem = 0; elem < count && pos < il.Length; elem++)
+        {
+            if (pos < il.Length && il[pos] == 0x25) pos++; // dup
+            // index
+            var (idx, idxSize) = ReadLdcI4(il, pos);
+            if (!idx.HasValue) break;
+            pos += idxSize;
+            // value
+            var (val, valSize) = ReadLdcI4(il, pos);
+            if (!val.HasValue) break;
+            pos += valSize;
+            result.Add(val.Value);
+            if (pos < il.Length && il[pos] == 0x9E) pos++; // stelem.i4
+        }
+    }
+
+    return result;
+}
 
 static string CamelToUpperSnake(string name)
 {

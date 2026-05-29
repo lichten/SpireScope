@@ -514,7 +514,7 @@ namespace StS2Toys
 
         void UpdateDisappearanceOverviewButton(bool visible)
         {
-            btnDisappearanceOverview.Text = visible ? "● 消滅概観" : "○ 消滅概観";
+            btnDisappearanceOverview.Text = visible ? "● デッキ枚数理論値" : "○ デッキ枚数理論値";
             btnDisappearanceOverview.ForeColor = visible ? Color.DarkSlateBlue : SystemColors.ControlText;
         }
 
@@ -529,7 +529,10 @@ namespace StS2Toys
             int deckTotal = cards.Sum(c => c.Count);
 
             bool IsDisposable(DeckCard c) =>
-                c.Type == "Power" || CardDatabaseService.IsExhaustAction(c.Id);
+                c.Type == "Power"
+                || CardDatabaseService.IsExhaustKeyword(c.Id)
+                || CardDatabaseService.IsEtherealKeyword(c.Id)
+                || CardDatabaseService.IsExhaustGainingEnchantment(c.EnchantmentId);
 
             var sections = new List<OverviewSection>
             {
@@ -588,6 +591,7 @@ namespace StS2Toys
                 if (_combinedOverview is null || _combinedOverview.IsDisposed)
                 {
                     _combinedOverview = new DeckOverviewForm();
+                    _combinedOverview.SetTitle("Deck Overview", "デッキ概観");
                     ApplySubWindowSettings(_combinedOverview, _combinedOverviewSettings, new Point(Right + 4, Top));
                     _combinedOverview.FormClosed += (_, _) =>
                     {
@@ -608,7 +612,7 @@ namespace StS2Toys
 
         void UpdateCombinedOverviewButton(bool visible)
         {
-            btnCombinedOverview.Text = visible ? "● デッキ枚数理論値" : "○ デッキ枚数理論値";
+            btnCombinedOverview.Text = visible ? "● デッキ概観" : "○ デッキ概観";
             btnCombinedOverview.ForeColor = visible ? Color.DarkRed : SystemColors.ControlText;
         }
 

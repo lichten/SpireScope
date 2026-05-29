@@ -141,6 +141,9 @@ public static class CardDatabaseService
     static readonly HashSet<string> _ironcladStr    = ComputeByTag("[gold]Strength[/gold]");
     static readonly HashSet<string> _ironcladEx    = ComputeByTag("[gold]Exhaust[/gold]", "[gold]Exhausted[/gold]", "[gold]Exhaust Pile[/gold]");
     static readonly HashSet<string> _exhaustAction  = ComputeExhaustAction();
+    static readonly HashSet<string> _etherealRelated = ComputeByTag("[gold]Ethereal[/gold]");
+    static readonly HashSet<string> _cardExhaustKeyword  = LoadKeywordSet("EXHAUST");
+    static readonly HashSet<string> _cardEtherealKeyword = LoadKeywordSet("ETHEREAL");
     static readonly HashSet<string> _ironcladStrike = ComputeByNameContaining("Strike");
     static readonly HashSet<string> _silentPoison  = ComputeByTag("[gold]Poison[/gold]");
     static readonly HashSet<string> _silentShiv    = ComputeByGoldTagContaining("Shiv");
@@ -356,6 +359,26 @@ public static class CardDatabaseService
         }
     }
 
+    // card_keywords.json から指定キーワードを持つカードIDセットを構築
+    static HashSet<string> LoadKeywordSet(string keyword)
+    {
+        var asm = Assembly.GetExecutingAssembly();
+        var name = asm.GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith("card_keywords.json", StringComparison.OrdinalIgnoreCase));
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (name is null) return result;
+        using var stream = asm.GetManifestResourceStream(name)!;
+        var doc = JsonDocument.Parse(stream);
+        foreach (var prop in doc.RootElement.EnumerateObject())
+            foreach (var kw in prop.Value.EnumerateArray())
+                if (kw.GetString()?.Equals(keyword, StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    result.Add(ToRawId(prop.Name));
+                    break;
+                }
+        return result;
+    }
+
     static HashSet<string> BuildDefectZeroEnergy()
     {
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -399,6 +422,7 @@ public static class CardDatabaseService
     public static bool IsIroncladStrength(string id) => _ironcladStr.Contains(ToRawId(id));
     public static bool IsIroncladExhaust(string id)  => _ironcladEx.Contains(ToRawId(id));
     public static bool IsExhaustAction(string id)    => _exhaustAction.Contains(ToRawId(id));
+    public static bool IsEtherealRelated(string id)  => _etherealRelated.Contains(ToRawId(id));
     public static bool IsIroncladStrike(string id)   => _ironcladStrike.Contains(ToRawId(id));
     public static bool IsSilentPoison(string id)   => _silentPoison.Contains(ToRawId(id));
     public static bool IsSilentShiv(string id)     => _silentShiv.Contains(ToRawId(id));
@@ -452,6 +476,35 @@ public static class CardDatabaseService
 
     static readonly IReadOnlyDictionary<string, string> _enchantEng = LoadLocJson("eng.enchantments");
     static readonly IReadOnlyDictionary<string, string> _enchantJpn = LoadLocJson("jpn.enchantments");
+
+    // "gains [gold]Exhaust[/gold]" を含むエンチャントID（= そのカードに廃棄を付与するエンチャント）
+    static readonly HashSet<string> _exhaustGainingEnchantments = ComputeExhaustGainingEnchantments();
+
+    static HashSet<string> ComputeExhaustGainingEnchantments()
+    {
+        const string suffix  = ".description";
+        const string marker  = "[gold]Exhaust[/gold]";
+        const string gainStr = "gains ";
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, desc) in _enchantEng)
+        {
+            if (!key.EndsWith(suffix, StringComparison.Ordinal)) continue;
+            int idx = desc.IndexOf(marker, StringComparison.Ordinal);
+            if (idx < 0) continue;
+            // "gains [gold]Exhaust[/gold]" のみ（"loses" は除外）
+            if (idx >= gainStr.Length &&
+                desc[(idx - gainStr.Length)..idx].Equals(gainStr, StringComparison.OrdinalIgnoreCase))
+                result.Add(key[..^suffix.Length]);
+        }
+        return result;
+    }
+
+    public static bool IsExhaustGainingEnchantment(string enchantmentId) =>
+        !string.IsNullOrEmpty(enchantmentId) && _exhaustGainingEnchantments.Contains(ToRawId(enchantmentId));
+
+    // DLL の get_CanonicalKeywords から抽出した正確なキーワード判定
+    public static bool IsExhaustKeyword(string id)  => _cardExhaustKeyword.Contains(ToRawId(id));
+    public static bool IsEtherealKeyword(string id) => _cardEtherealKeyword.Contains(ToRawId(id));
 
     // ---- card stats (card_stats.json) ----
 
