@@ -7,9 +7,16 @@ public partial class MainForm : Form
     private string _savedReviewContent = "";
     private bool   _isDirty;
 
+    private static string WindowSettingsPath =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                     "StS2SiteBuilder", "window.json");
+
+    private record WindowSettings(int X, int Y, int Width, int Height, bool Maximized);
+
     public MainForm()
     {
         InitializeComponent();
+        FormClosed += (_, _) => SaveWindowState();
         _buildButton.Click += BuildButton_Click;
         _openDistButton.Click += (_, _) =>
         {
@@ -72,8 +79,46 @@ public partial class MainForm : Form
         _logBox.AppendText(message + Environment.NewLine);
     }
 
+    private void RestoreWindowState()
+    {
+        try
+        {
+            if (!File.Exists(WindowSettingsPath)) return;
+            var s = System.Text.Json.JsonSerializer.Deserialize<WindowSettings>(
+                        File.ReadAllText(WindowSettingsPath));
+            if (s == null) return;
+            var rect = new Rectangle(s.X, s.Y, s.Width, s.Height);
+            bool visible = Screen.AllScreens.Any(sc => sc.WorkingArea.IntersectsWith(rect));
+            if (visible)
+            {
+                StartPosition = FormStartPosition.Manual;
+                Location = new Point(s.X, s.Y);
+                Size = new Size(s.Width, s.Height);
+            }
+            if (s.Maximized)
+                WindowState = FormWindowState.Maximized;
+        }
+        catch { }
+    }
+
+    private void SaveWindowState()
+    {
+        try
+        {
+            var bounds = WindowState == FormWindowState.Maximized ? RestoreBounds : Bounds;
+            var s = new WindowSettings(bounds.X, bounds.Y, bounds.Width, bounds.Height,
+                                       WindowState == FormWindowState.Maximized);
+            var dir = Path.GetDirectoryName(WindowSettingsPath)!;
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(WindowSettingsPath,
+                System.Text.Json.JsonSerializer.Serialize(s));
+        }
+        catch { }
+    }
+
     private async void MainForm_Load(object? sender, EventArgs e)
     {
+        RestoreWindowState();
         await _webView2.EnsureCoreWebView2Async(null);
         _webView2.CoreWebView2.NavigationCompleted += WebView_NavigationCompleted;
         var indexPath = Path.Combine(SiteBuilderCore.GetDistDir(), "index.html");

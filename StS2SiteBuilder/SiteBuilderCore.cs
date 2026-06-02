@@ -261,6 +261,9 @@ var mecOutDir = Path.Combine(distDir, "mechanics");
 Directory.CreateDirectory(mecOutDir);
 File.WriteAllText(Path.Combine(distDir, "mechanics.html"),
     BuildMechanicListPage(chars), System.Text.Encoding.UTF8);
+var keywordsPath = Path.Combine(distDir, "keywords.html");
+File.WriteAllText(keywordsPath,
+    BuildKeywordsPage(chars, ExtractReview(keywordsPath)), System.Text.Encoding.UTF8);
 foreach (var group in CharacterMechanics.All.Where(g => g.Mechanics.Length > 0))
 {
     var groupDir = Path.Combine(mecOutDir, group.EnLabel.ToLowerInvariant());
@@ -317,7 +320,7 @@ foreach (var article in articleMetas)
 File.WriteAllText(Path.Combine(distDir, "articles.html"),
     BuildArticleListPage(articleMetas, chars), System.Text.Encoding.UTF8);
 
-        log($"Generated {9 + chars.Length + allCardIds.Length + allRelicIds.Length + allEventIds.Length + allEncounterIds.Length + 1 + totalMecs + runCount + 1 + articleMetas.Length} files -> {distDir}");
+        log($"Generated {10 + chars.Length + allCardIds.Length + allRelicIds.Length + allEventIds.Length + allEncounterIds.Length + 1 + totalMecs + runCount + 1 + articleMetas.Length} files -> {distDir}");
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────────
@@ -2369,6 +2372,91 @@ static string BuildMechanicListPage(CharData[] chars)
         """, basePath);
 }
 
+static string BuildKeywordsPage(CharData[] chars, string review = "")
+{
+    const string basePath = "./";
+    const string accent   = "#4a5568";
+
+    static string RenderSection(string titleJa, string titleEn, string borderColor,
+                                IReadOnlyList<StS2Shared.Services.KeywordEntry> entries)
+    {
+        var rows = string.Concat(entries.Select(e =>
+        {
+            var descJa  = DescriptionFormatter.Clean(e.DescJa,  japanese: true);
+            var extraJa = string.IsNullOrEmpty(e.ExtraCardTextJa) ? ""
+                          : $"""<div class="kw-extra">{System.Net.WebUtility.HtmlEncode(DescriptionFormatter.Clean(e.ExtraCardTextJa, japanese: true))}</div>""";
+            return $"""
+                <div class="kw-entry">
+                  <div class="kw-title">{System.Net.WebUtility.HtmlEncode(e.TitleJa)} <span class="kw-en">({System.Net.WebUtility.HtmlEncode(e.TitleEn)})</span></div>
+                  <div class="kw-desc">{System.Net.WebUtility.HtmlEncode(descJa)}</div>
+                  {extraJa}
+                </div>
+                """;
+        }));
+        return $"""
+            <section class="section" style="border-left:3px solid {borderColor}">
+              <h2 class="section-title">{titleJa} <span style="font-size:0.7em;color:#888;font-weight:400">{titleEn}</span></h2>
+              <div class="kw-grid">{rows}</div>
+            </section>
+            """;
+    }
+
+    var cardKwSection   = RenderSection("カードキーワード", "Card Keywords", "#4a90d9",
+                              KeywordDatabaseService.GetCardKeywords());
+    var afflicSection   = RenderSection("アフリクション",   "Afflictions",   "#8b2222",
+                              KeywordDatabaseService.GetAfflictions());
+    var enchantSection  = RenderSection("エンチャント",      "Enchantments",  "#7d6608",
+                              KeywordDatabaseService.GetEnchantments());
+
+    var total = KeywordDatabaseService.GetCardKeywords().Count
+              + KeywordDatabaseService.GetAfflictions().Count
+              + KeywordDatabaseService.GetEnchantments().Count;
+
+    const string kwCss = """
+        .kw-grid   { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .kw-entry  { background: #fff; border: 1px solid #e8e8e8; border-radius: 6px;
+                     padding: 10px 14px; min-width: 220px; flex: 1 1 220px; }
+        .kw-title  { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+        .kw-en     { font-weight: 400; font-size: 12px; color: #888; }
+        .kw-desc   { font-size: 13px; color: #444; line-height: 1.5; }
+        .kw-extra  { font-size: 12px; color: #777; margin-top: 4px; border-top: 1px solid #f0f0f0;
+                     padding-top: 4px; font-style: italic; }
+        """;
+
+    const string REVIEW_GUIDE = """
+        <!-- REVIEW_START --><script type="text/plain" class="review-src" id="REVIEW_SRC">
+        <!--
+          【メモ】
+          このコメントブロック全体を削除し、Markdown で書いてください。
+          ビルド後も上書きされません。
+        -->
+        </script><!-- REVIEW_END -->
+        """;
+
+    var trimmedReview = review.Trim();
+    var isPlaceholder = trimmedReview.StartsWith("<!--") && trimmedReview.EndsWith("-->");
+    var reviewZone    = (string.IsNullOrWhiteSpace(trimmedReview) || isPlaceholder)
+        ? REVIEW_GUIDE
+        : $"""
+        <!-- REVIEW_START --><script type="text/plain" class="review-src" id="REVIEW_SRC">{trimmedReview}</script>
+        <section class="section">
+        {RenderMarkdown(trimmedReview)}
+        </section><!-- REVIEW_END -->
+        """;
+
+    return Layout("キーワード一覧", "keywords", accent, chars, $"""
+        <div class="page-hero">
+          <div class="hero-title">キーワード一覧</div>
+          <div class="hero-sub">Keyword List</div>
+          <div class="hero-desc">全{total}件のキーワード・アフリクション・エンチャントを掲載。</div>
+        </div>
+        {cardKwSection}
+        {afflicSection}
+        {enchantSection}
+        {reviewZone}
+        """, basePath, extraHead: $"<style>{kwCss}</style>");
+}
+
 static string BuildMechanicPage(CharGroup group, MechanicDef mec, string[] allCardIds, CharData[] chars, string review = "", string lastUpdated = "")
 {
     const string basePath = "../../";
@@ -2883,9 +2971,12 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
     var encountersActive = activeId == "encounters";
     var encountersStyle  = encountersActive ? " style=\"border-left-color:#8b2222\"" : "";
     var encountersClass  = encountersActive ? " active" : "";
-    var mecsActive  = activeId == "mechanics";
-    var mecsStyle   = mecsActive  ? " style=\"border-left-color:#4a5568\"" : "";
-    var mecsClass   = mecsActive  ? " active" : "";
+    var mecsActive     = activeId == "mechanics";
+    var mecsStyle      = mecsActive     ? " style=\"border-left-color:#4a5568\"" : "";
+    var mecsClass      = mecsActive     ? " active" : "";
+    var keywordsActive = activeId == "keywords";
+    var keywordsStyle  = keywordsActive ? " style=\"border-left-color:#4a5568\"" : "";
+    var keywordsClass  = keywordsActive ? " active" : "";
     var runsActive  = activeId == "runs";
     var runsStyle   = runsActive  ? " style=\"border-left-color:#4a90d9\"" : "";
     var runsClass   = runsActive  ? " active" : "";
@@ -2951,6 +3042,9 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
                 </a>
                 <a href="{basePath}mechanics.html" class="nav-link{mecsClass}"{mecsStyle}>
                   <span class="nav-icon">&#9881;</span>メカニクス一覧
+                </a>
+                <a href="{basePath}keywords.html" class="nav-link{keywordsClass}"{keywordsStyle}>
+                  <span class="nav-icon">&#128216;</span>キーワード一覧
                 </a>
                 <a href="{basePath}runs.html" class="nav-link{runsClass}"{runsStyle}>
                   <span class="nav-icon">&#9654;</span>ラン一覧
@@ -3383,7 +3477,7 @@ public static void AppendChangelogEntry(string reviewedFilePath)
     if (fileContent.Contains(marker, StringComparison.Ordinal)) return;
 
     var pageTitle = ExtractPageTitle(reviewedFilePath);
-    var newEntry  = $"{marker}\n      <li class=\"cl-entry\"><span class=\"cl-date\">{today}</span><a href=\"{relPath}\" class=\"cl-link\">{pageTitle}</a> のレビューを更新しました。</li>";
+    var newEntry  = $"{marker}\n      <li class=\"cl-entry\"><span class=\"cl-date\">{today}</span><a href=\"{relPath}\" class=\"cl-link\">{pageTitle}</a> を更新しました。</li>";
     InsertChangelogEntry(changelogPath, newEntry);
     UpdatePageLastUpdated(reviewedFilePath, today);
 }
