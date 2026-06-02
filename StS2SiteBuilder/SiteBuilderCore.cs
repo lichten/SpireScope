@@ -3328,6 +3328,21 @@ public static void SaveReview(string filePath, string reviewMarkdown)
     File.WriteAllText(filePath, newContent, System.Text.Encoding.UTF8);
 }
 
+static void SaveRawHtmlReview(string filePath, string rawHtml)
+{
+    const string START = "<!-- REVIEW_START -->";
+    const string END   = "<!-- REVIEW_END -->";
+    if (!File.Exists(filePath)) return;
+    var content = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
+    var s = content.IndexOf(START, StringComparison.Ordinal);
+    var e = content.IndexOf(END,   StringComparison.Ordinal);
+    if (s < 0 || e <= s) return;
+    var scriptBlock = $"""<script type="text/plain" class="review-src" id="REVIEW_SRC">{rawHtml}</script>""";
+    var zone        = scriptBlock + "\n" + rawHtml;
+    var newContent  = content[..(s + START.Length)] + zone + content[e..];
+    File.WriteAllText(filePath, newContent, System.Text.Encoding.UTF8);
+}
+
 static void UpdatePageLastUpdated(string filePath, string date)
 {
     const string START = "<!-- LAST_UPDATED_START -->";
@@ -3388,7 +3403,7 @@ static void InsertChangelogEntry(string changelogPath, string newEntry)
     {
         newReview = $"\n    <ul class=\"changelog-list\">\n      {newEntry}\n    </ul>\n  ";
     }
-    SaveReview(changelogPath, newReview);
+    SaveRawHtmlReview(changelogPath, newReview);
 }
 
 static (IReadOnlyDictionary<string, string> map, Regex regex, HashSet<string> eventIds) BuildAutoLinkMap(CharData[] chars)
