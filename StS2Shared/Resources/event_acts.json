@@ -1,7 +1,22 @@
 [
   {
+    "id": "OVERGROWTH",
+    "nameJp": "第一幕：繁茂の地",
+    "nameEn": "Act 1: Overgrowth",
+    "events": [
+      "BYRDONIS_NEST",
+      "COLOSSAL_FLOWER",
+      "DENSE_VEGETATION",
+      "HUNGRY_FOR_MUSHROOMS",
+      "JUNGLE_MAZE_ADVENTURE",
+      "MORPHIC_GROVE",
+      "WELLSPRING",
+      "WOOD_CARVINGS"
+    ]
+  },
+  {
     "id": "UNDERDOCKS",
-    "nameJp": "第一幕：アンダードックス",
+    "nameJp": "第一幕：地下水路",
     "nameEn": "Act 1: Underdocks",
     "events": [
       "ABYSSAL_BATHS",
@@ -16,24 +31,9 @@
     ]
   },
   {
-    "id": "OVERGROWTH",
-    "nameJp": "第二幕：オーバーグロース",
-    "nameEn": "Act 2: Overgrowth",
-    "events": [
-      "BYRDONIS_NEST",
-      "COLOSSAL_FLOWER",
-      "DENSE_VEGETATION",
-      "HUNGRY_FOR_MUSHROOMS",
-      "JUNGLE_MAZE_ADVENTURE",
-      "MORPHIC_GROVE",
-      "WELLSPRING",
-      "WOOD_CARVINGS"
-    ]
-  },
-  {
     "id": "HIVE",
-    "nameJp": "第三幕：ハイブ",
-    "nameEn": "Act 3: Hive",
+    "nameJp": "第二幕：魔窟",
+    "nameEn": "Act 2: Hive",
     "events": [
       "BRAIN_LEECH",
       "BUGSLAYER",
