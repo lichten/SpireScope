@@ -1311,21 +1311,15 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
           bindGroup('.filter-btn[data-filter]');
           bindGroup('.filter-btn[data-type]');
           bindGroup('.filter-btn[data-rarity]');
-          var BASE = '../../tools/extracted/images/card_portraits_png/';
+          var BASE = 'images/cards/';
           var on = false;
           function portraitSrc(row) {
             var lnk = row.querySelector('.card-name-link');
             if (!lnk) return null;
             var p = lnk.getAttribute('href').split('/');
             if (p.length < 3) return null;
-            var dir = p[1], file = p[2].replace('.html','').toLowerCase(), folder;
-            if (dir !== 'shared') { folder = dir; } else {
-              var tb = row.querySelector('.col-type .badge');
-              var tc = tb ? Array.from(tb.classList).find(function(c){return c.startsWith('type-');}) : '';
-              folder = tc === 'type-curse' ? 'curse' : tc === 'type-quest' ? 'quest'
-                     : tc === 'type-status' ? 'status' : 'colorless';
-            }
-            return BASE + folder + '/' + file + '.png';
+            var dir = p[1], file = p[2].replace('.html','').toLowerCase();
+            return BASE + dir + '/' + file + '.png';
           }
           document.getElementById('thumb-toggle').addEventListener('click', function () {
             on = !on;
