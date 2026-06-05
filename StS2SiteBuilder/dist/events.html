@@ -308,6 +308,14 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   vertical-align: middle; margin-right: 8px; display: inline-block;
   background: #f0f0f0;
 }
+.event-act-bar { display: flex; gap: 7px; flex-wrap: wrap; }
+.eabtn {
+  padding: 4px 12px; border: 1.5px solid #b0ccd4; border-radius: 20px;
+  font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  background: #fff; color: #1a6678; font-family: inherit;
+}
+.eabtn:hover { background: #eef6f8; }
+.eabtn.active { background: #1a6678; color: #fff; border-color: #1a6678; }
 </style>
 </head>
 <body>
@@ -349,6 +357,9 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
         <a href="encounters.html" class="nav-link">
           <span class="nav-icon">&#9876;</span>エンカウンター一覧
         </a>
+        <a href="ancients.html" class="nav-link">
+          <span class="nav-icon">&#10022;</span>Ancient 一覧
+        </a>
         <a href="mechanics.html" class="nav-link">
           <span class="nav-icon">&#9881;</span>メカニクス一覧
         </a>
@@ -373,237 +384,244 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
     <span class="event-count" id="event-count">57件</span>
     <button class="filter-btn" id="event-thumb-toggle" style="margin-left:4px">サムネイル表示</button>
   </div>
+  <div class="event-filter-section" style="margin-top:10px">
+    <span class="relic-filter-label">Act</span>
+    <div class="event-act-bar">
+      <button class="eabtn active" data-act="">すべて</button>
+      <button class="eabtn" data-act="OVERGROWTH">Act 1: Overgrowth</button><button class="eabtn" data-act="UNDERDOCKS">Act 1: Underdocks</button><button class="eabtn" data-act="HIVE">Act 2: Hive</button><button class="eabtn" data-act="ALL_ACTS">All Acts</button>
+    </div>
+  </div>
 </div>
 <section class="section">
   <table class="card-table" id="event-table">
     <thead>
       <tr><th>イベント名</th></tr>
     </thead>
-    <tbody>      <tr data-has-img="true">
+    <tbody>      <tr data-has-img="true" data-act="UNDERDOCKS">
         <td class="col-name">
           <a href="events/ABYSSAL_BATHS.html" class="card-name-link">Abyssal Baths</a><span class="card-name-ja">深淵の浴場</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/AMALGAMATOR.html" class="card-name-link">Amalgamator</a><span class="card-name-ja">アマルガメーター</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/AROMA_OF_CHAOS.html" class="card-name-link">Aroma of Chaos</a><span class="card-name-ja">混沌の香り</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/BATTLEWORN_DUMMY.html" class="card-name-link">Battleworn Dummy</a><span class="card-name-ja">歴戦の訓練人形</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="HIVE">
         <td class="col-name">
           <a href="events/BRAIN_LEECH.html" class="card-name-link">Brain Leech</a><span class="card-name-ja">脳ヒル</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="HIVE">
         <td class="col-name">
           <a href="events/BUGSLAYER.html" class="card-name-link">Bugslayer</a><span class="card-name-ja">虫殺し</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="OVERGROWTH">
         <td class="col-name">
           <a href="events/BYRDONIS_NEST.html" class="card-name-link">Byrdonis Nest</a><span class="card-name-ja">ビャードニスの巣</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/COLORFUL_PHILOSOPHERS.html" class="card-name-link">Colorful Philosophers</a><span class="card-name-ja">色とりどりの哲学者たち</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="OVERGROWTH">
         <td class="col-name">
           <a href="events/COLOSSAL_FLOWER.html" class="card-name-link">Colossal Flower</a><span class="card-name-ja">巨大な花</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/CRYSTAL_SPHERE.html" class="card-name-link">Crystal Sphere</a><span class="card-name-ja">水晶玉</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="OVERGROWTH">
         <td class="col-name">
           <a href="events/DENSE_VEGETATION.html" class="card-name-link">Dense Vegetation</a><span class="card-name-ja">密林</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/DOLL_ROOM.html" class="card-name-link">Doll Room</a><span class="card-name-ja">ドール・ルーム</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/DOORS_OF_LIGHT_AND_DARK.html" class="card-name-link">Doors of Light and Dark</a><span class="card-name-ja">光と闇の扉</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="UNDERDOCKS">
         <td class="col-name">
           <a href="events/DROWNING_BEACON.html" class="card-name-link">Drowning Beacon</a><span class="card-name-ja">沈みゆく灯台</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="UNDERDOCKS">
         <td class="col-name">
           <a href="events/ENDLESS_CONVEYOR.html" class="card-name-link">Endless Conveyor</a><span class="card-name-ja">無限コンベア</span>
         </td>
-      </tr>      <tr data-has-img="false">
+      </tr>      <tr data-has-img="false" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/FAKE_MERCHANT.html" class="card-name-link">The Merchant???</a><span class="card-name-ja">商人（？ ）</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/FIELD_OF_MAN_SIZED_HOLES.html" class="card-name-link">Field of Man-Sized Holes</a><span class="card-name-ja">人型の穴</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/GRAVE_OF_THE_FORGOTTEN.html" class="card-name-link">Grave of the Forgotten</a><span class="card-name-ja">忘れられた者の墓</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="OVERGROWTH">
         <td class="col-name">
           <a href="events/HUNGRY_FOR_MUSHROOMS.html" class="card-name-link">Hungry for Mushrooms</a><span class="card-name-ja">キノコに夢中</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="HIVE">
         <td class="col-name">
           <a href="events/INFESTED_AUTOMATON.html" class="card-name-link">Infested Automaton</a><span class="card-name-ja">寄生されたオートマトン</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="OVERGROWTH">
         <td class="col-name">
           <a href="events/JUNGLE_MAZE_ADVENTURE.html" class="card-name-link">Jungle Maze Adventure</a><span class="card-name-ja">ジャングル大迷宮のクエスト</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="UNDERDOCKS">
         <td class="col-name">
           <a href="events/LOST_WISP.html" class="card-name-link">The Lost Wisp</a><span class="card-name-ja">迷子のウィスプ</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="HIVE">
         <td class="col-name">
           <a href="events/LUMINOUS_CHOIR.html" class="card-name-link">Luminous Choir</a><span class="card-name-ja">輝く合唱団</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="OVERGROWTH">
         <td class="col-name">
           <a href="events/MORPHIC_GROVE.html" class="card-name-link">Morphic Grove</a><span class="card-name-ja">モーフィックの木立</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/POTION_COURIER.html" class="card-name-link">Potion Courier</a><span class="card-name-ja">ポーションの運び屋</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/PUNCH_OFF.html" class="card-name-link">Punch Off</a><span class="card-name-ja">パンチ対決</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/RANWID_THE_ELDER.html" class="card-name-link">Ranwid the Elder</a><span class="card-name-ja">長老、ランウィッド</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/REFLECTIONS.html" class="card-name-link">Reflections snoitcelfeR</a><span class="card-name-ja">鏡の反射　射反の鏡</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/RELIC_TRADER.html" class="card-name-link">Relic Trader</a><span class="card-name-ja">レリック商人</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/ROOM_FULL_OF_CHEESE.html" class="card-name-link">Room Full of Cheese</a><span class="card-name-ja">チーズまみれの部屋</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/ROUND_TEA_PARTY.html" class="card-name-link">The Round Tea Party</a><span class="card-name-ja">円卓のティーパーティー</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/SAPPHIRE_SEED.html" class="card-name-link">Sapphire Seed</a><span class="card-name-ja">サファイアの種</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/SELF_HELP_BOOK.html" class="card-name-link">Self-Help Book</a><span class="card-name-ja">自己啓発本</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="UNDERDOCKS">
         <td class="col-name">
           <a href="events/SLIPPERY_BRIDGE.html" class="card-name-link">Slippery Bridge</a><span class="card-name-ja">滑りやすい橋</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="UNDERDOCKS">
         <td class="col-name">
           <a href="events/SPIRALING_WHIRLPOOL.html" class="card-name-link">Spiraling Whirlpool</a><span class="card-name-ja">らせんの渦巻き</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/SPIRIT_GRAFTER.html" class="card-name-link">Spirit Grafter</a><span class="card-name-ja">スピリット・グラフター</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/STONE_OF_ALL_TIME.html" class="card-name-link">Stone of All Time</a><span class="card-name-ja">悠久の石</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="UNDERDOCKS">
         <td class="col-name">
           <a href="events/SUNKEN_STATUE.html" class="card-name-link">The Sunken Statue</a><span class="card-name-ja">沈んだ像</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="UNDERDOCKS">
         <td class="col-name">
           <a href="events/SUNKEN_TREASURY.html" class="card-name-link">Sunken Treasury</a><span class="card-name-ja">水没した宝物庫</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="HIVE">
         <td class="col-name">
           <a href="events/SYMBIOTE.html" class="card-name-link">Symbiote</a><span class="card-name-ja">シンビオート</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/TABLET_OF_TRUTH.html" class="card-name-link">Tablet of Truth</a><span class="card-name-ja">真実の石板</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/TEA_MASTER.html" class="card-name-link">Tea Master</a><span class="card-name-ja">茶人</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/THE_FUTURE_OF_POTIONS.html" class="card-name-link">The Future of Potions?</a><span class="card-name-ja">未来のポーション？</span>
         </td>
-      </tr>      <tr data-has-img="false">
+      </tr>      <tr data-has-img="false" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/THE_LANTERN_KEY.html" class="card-name-link">The Lantern Key</a><span class="card-name-ja">ランタンの鍵</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/THE_LEGENDS_WERE_TRUE.html" class="card-name-link">The Legends Were True</a><span class="card-name-ja">伝説は本当だった</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/THIS_OR_THAT.html" class="card-name-link">This or That?</a><span class="card-name-ja">こっちか、そっちか？</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/TINKER_TIME.html" class="card-name-link">Tinker Time</a><span class="card-name-ja">発明の時間だ</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/TRASH_HEAP.html" class="card-name-link">Trash Heap</a><span class="card-name-ja">ガラクタの山</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/TRIAL.html" class="card-name-link">The Trial</a><span class="card-name-ja">裁判</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/UNREST_SITE.html" class="card-name-link">Unrest Site</a><span class="card-name-ja">休まらない場所</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/WAR_HISTORIAN_REPY.html" class="card-name-link">War Historian, Repy</a><span class="card-name-ja">戦史家、レピー</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="UNDERDOCKS">
         <td class="col-name">
           <a href="events/WATERLOGGED_SCRIPTORIUM.html" class="card-name-link">Waterlogged Scriptorium</a><span class="card-name-ja">水浸しの写字室</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/WELCOME_TO_WONGOS.html" class="card-name-link">Welcome to Wongo's</a><span class="card-name-ja">ウォンゴズへようこそ</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="OVERGROWTH">
         <td class="col-name">
           <a href="events/WELLSPRING.html" class="card-name-link">Wellspring</a><span class="card-name-ja">癒やしの泉</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/WHISPERING_HOLLOW.html" class="card-name-link">Whispering Hollow</a><span class="card-name-ja">囁きの窪地</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="OVERGROWTH">
         <td class="col-name">
           <a href="events/WOOD_CARVINGS.html" class="card-name-link">Wood Carvings</a><span class="card-name-ja">木彫り</span>
         </td>
-      </tr>      <tr data-has-img="true">
+      </tr>      <tr data-has-img="true" data-act="ALL_ACTS">
         <td class="col-name">
           <a href="events/ZEN_WEAVER.html" class="card-name-link">Zen Weaver</a><span class="card-name-ja">禅蜘蛛</span>
         </td>
@@ -651,20 +669,35 @@ a.mec-tag:hover { background: #eaecf0; border-color: #c8ccd2; }
   var input   = document.getElementById('event-search');
   var countEl = document.getElementById('event-count');
   var allRows = document.querySelectorAll('#event-table tbody tr');
+  function getActiveAct() {
+    var b = document.querySelector('.eabtn.active');
+    return b ? b.getAttribute('data-act') : '';
+  }
   function update() {
-    var q = input.value.trim().toLowerCase();
+    var q   = input.value.trim().toLowerCase();
+    var act = getActiveAct();
     var n = 0;
     allRows.forEach(function (row) {
       var lnk = row.querySelector('.card-name-link');
       var ja  = row.querySelector('.card-name-ja');
-      var ok = q === '' || (lnk && lnk.textContent.toLowerCase().includes(q))
-                        || (ja  && ja.textContent.toLowerCase().includes(q));
+      var nameOk = q === '' || (lnk && lnk.textContent.toLowerCase().includes(q))
+                            || (ja  && ja.textContent.toLowerCase().includes(q));
+      var rowAct = row.getAttribute('data-act') || '__none__';
+      var actOk  = act === '' || rowAct === act;
+      var ok = nameOk && actOk;
       row.style.display = ok ? '' : 'none';
       if (ok) n++;
     });
     countEl.textContent = n + '件';
   }
   input.addEventListener('input', update);
+  document.querySelectorAll('.eabtn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.eabtn').forEach(function (b) { b.classList.remove('active'); });
+      this.classList.add('active');
+      update();
+    });
+  });
 
   var BASE = 'images/events/';
   var on = false;
