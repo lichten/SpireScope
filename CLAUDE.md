@@ -42,6 +42,7 @@ $pck = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\SlayTheSp
 | `StS2Toys` | セーブデータビューア（デッキ・レリック表示） |
 | `StS2CardBrowser` | カードブラウザ（キャラクター・メカニクスフィルタ付き） |
 | `card-type-extractor` | ゲーム DLL の IL を解析してカードメタデータ JSON を生成するCLIツール |
+| `SpineRuntime` | spine-csharp の pure C# ランタイム（データ構造のみ、描画なし） |
 
 ### StS2Shared — 共有ライブラリ
 
@@ -91,24 +92,20 @@ $pck = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\SlayTheSp
 - サムネイル画像は `tools/extracted/images/card_portraits_png/{character}/{id}.png` から読み込み
 - コスト表示は `GetCardCost()` が返す文字列（"0"〜"3+"・"X"・"-"）。スターコストは現在エネルギーコストと同じ数値で表示される（区別なし）
 
-### StS2MonsterBrowser — モンスターアニメーションビューア
-
-- Spine スケルタルアニメーション（tools/extracted/animations/monsters/{name}/）を読み込んで表示
-- 「全スナップショット生成」ボタンで全モンスターの idle ポーズを 256×256 PNG として `tools/extracted/images/monsters/` に出力する
-
 ### StS2SiteBuilder — 静的サイトジェネレータ
 
 ビルドは「生成」ボタンまたは `dotnet run --project StS2SiteBuilder` で実行。
 
-**エンカウンターページのモンスター画像ワークフロー（git 管理外のため要手順）：**
-1. `StS2MonsterBrowser` を起動して「全スナップショット生成」をクリック
-   → `tools/extracted/images/monsters/*.png` が生成される
-2. `StS2SiteBuilder` でビルドを実行
-   → `dist/images/monsters/` にコピーされ、エンカウンターページにモンスターグリッドが表示される
+**モンスター GIF アニメーション生成（ビルド時自動）：**
+- `--build` 実行時に `tools/extracted/animations/monsters/` から Spine アニメーションを読み込み、
+  idle アニメーションの GIF（192×192、10fps）を自動生成して `tools/extracted/images/monsters/` にキャッシュする。
+- キャッシュ済みの GIF はスキップされる（`.skel.import` より新しければ再生成不要）。
+- PNG スナップショット（256×256）は以前と同様に同ディレクトリに残る。
 
-モンスター画像が未生成の場合はエンカウンターページに `?` プレースホルダーが表示される。
 エンカウンター→モンスターの対応は `StS2Shared/Resources/encounter_monsters.json` で管理。
 モンスターの EN/JA 名は `StS2Shared/Resources/monster_names.json` で管理。
+Spine レンダリングには `SpineLoader.cs` / `SpineRenderer.cs`（StS2SiteBuilder 内）と
+`SpineRuntime` プロジェクト（spine-csharp の pure C# ランタイム）を使用する。
 
 **デプロイ（rsync でレンタルサーバーへ転送）：**
 

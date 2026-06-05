@@ -1,8 +1,6 @@
 using SkiaSharp;
 using Spine;
 
-namespace StS2MonsterBrowser;
-
 static class SpineRenderer
 {
     public static SKBitmap Render(MonsterData data, string animationName, float time, int width, int height)
@@ -31,7 +29,7 @@ static class SpineRenderer
 
         canvas.Save();
         canvas.Translate(width / 2f, height / 2f);
-        canvas.Scale(scale, -scale);   // Y-flip: Spine Y-up → screen Y-down
+        canvas.Scale(scale, -scale);
         canvas.Translate(-bounds.MidX, -bounds.MidY);
 
         using var shader = SKShader.CreateBitmap(
@@ -96,8 +94,7 @@ static class SpineRenderer
         paint.Shader = shader;
         paint.BlendMode = blend;
         var skVerts = SKVertices.CreateCopy(SKVertexMode.Triangles, positions, texCoords, colors, indices);
-        // Modulate: 頂点カラーでテクスチャを乗算（ティント・アルファ反映）。
-        // blend は paint.BlendMode としてキャンバスへの合成に使う（SrcOver / Plus / Multiply）。
+        // Modulate: 頂点カラーでテクスチャを乗算（ティント・アルファ反映）
         canvas.DrawVertices(skVerts, SKBlendMode.Modulate, paint);
     }
 

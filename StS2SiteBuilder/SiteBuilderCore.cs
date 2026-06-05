@@ -1,6 +1,11 @@
 using BCnEncoder.Decoder;
 using BCnEncoder.Shared;
+using SkiaSharp;
+using Spine;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Gif;
 using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
 using StS2Shared.Services;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
@@ -122,28 +127,35 @@ var ancientsWithImg  = toolsRoot is not null
     ? ConvertImages(toolsRoot, "ancients", ancientImgDstDir, allAncientIds, "Ancient", log, filenameSuffix: "_placeholder")
     : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-// モンスタースナップショットを dist/images/monsters/ にコピー
+// モンスター画像・GIFを dist/images/monsters/ にコピー（GIFはビルド時自動生成）
 var monsterImgDstDir = Path.Combine(distDir, "images", "monsters");
 Directory.CreateDirectory(monsterImgDstDir);
 var monstersWithImg = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+var monstersWithGif = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 if (toolsRoot is not null)
 {
-    var monsterSrcDir = Path.Combine(toolsRoot, "images", "monsters");
+    var monsterSrcDir = Path.Combine(toolsRoot, "images",     "monsters");
+    var animationsDir = Path.Combine(toolsRoot, "animations", "monsters");
+    if (Directory.Exists(animationsDir))
+        monstersWithGif = GenerateMonsterGifs(animationsDir, monsterSrcDir, toolsRoot, log);
     if (Directory.Exists(monsterSrcDir))
     {
-        foreach (var src in Directory.GetFiles(monsterSrcDir, "*.png"))
+        foreach (var src in Directory.GetFiles(monsterSrcDir, "*.*")
+                     .Where(f => f.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
+                                 f.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)))
         {
             var fname = Path.GetFileName(src);
-            var dst = Path.Combine(monsterImgDstDir, fname);
+            var dst   = Path.Combine(monsterImgDstDir, fname);
             if (!File.Exists(dst) || File.GetLastWriteTimeUtc(src) > File.GetLastWriteTimeUtc(dst))
                 File.Copy(src, dst, overwrite: true);
-            monstersWithImg.Add(Path.GetFileNameWithoutExtension(fname));
+            if (fname.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                monstersWithImg.Add(Path.GetFileNameWithoutExtension(fname));
         }
-        log($"モンスター画像: {monstersWithImg.Count} 件コピー");
+        log($"モンスター画像: PNG {monstersWithImg.Count} 件 / GIF {monstersWithGif.Count} 件");
     }
     else
     {
-        log("モンスター画像: tools/extracted/images/monsters/ が見つかりません（MonsterBrowserで生成してください）");
+        log("モンスター画像: tools/extracted/images/monsters/ が見つかりません");
     }
 }
 
@@ -168,6 +180,8 @@ PageEntry[] pages =
         $"全{allEncounterIds.Length}件のエンカウンターをタイプ別に一覧表示。", "#8b2222"),
     new PageEntry("Ancient", "ancients.html", "Ancient List", "Ancient 一覧",
         $"全{allAncientIds.Length}人の Ancient の会話・選択肢・報酬候補を一覧表示。", "#6b46c1"),
+    new PageEntry("モンスター", "monsters.html", "Monster List", "モンスター一覧",
+        $"全{MonsterDatabaseService.GetAllMonsters().Count}体のモンスターを GIF アニメーション付きで一覧表示。", "#7a1a1a"),
     new PageEntry("メカニクス", "mechanics.html", "Mechanic List", "メカニクス一覧",
         $"全{CharacterMechanics.All.Sum(g => g.Mechanics.Length)}件のメカニクスをキャラクター別に一覧表示。", "#4a5568"),
 ];
@@ -202,6 +216,7 @@ File.WriteAllText(Path.Combine(distDir, "relics.html"), BuildRelicListPage(allRe
 File.WriteAllText(Path.Combine(distDir, "events.html"),     BuildEventListPage(allEventIds, chars, eventsWithImg), System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "encounters.html"), BuildEncounterListPage(allEncounterIds, chars),        System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "ancients.html"),   BuildAncientListPage(allAncientIds, chars, ancientsWithImg), System.Text.Encoding.UTF8);
+File.WriteAllText(Path.Combine(distDir, "monsters.html"),   BuildMonsterListPage(chars, monstersWithImg), System.Text.Encoding.UTF8);
 foreach (var ch in chars)
 {
     mechanicsMap.TryGetValue(ch.EnName, out var mecs);
@@ -278,6 +293,18 @@ foreach (var ancientId in allAncientIds)
     var lastUpdated = changelogDates.GetValueOrDefault(relPath, "");
     File.WriteAllText(outPath,
         BuildAncientPage(ancientId, chars, ancientsWithImg.Contains(ancientId), review: review, lastUpdated: lastUpdated),
+        System.Text.Encoding.UTF8);
+}
+
+// 個別モンスターページ（dist/monsters/{dirName}.html）
+var monsterOutDir = Path.Combine(distDir, "monsters");
+Directory.CreateDirectory(monsterOutDir);
+foreach (var monster in MonsterDatabaseService.GetAllMonsters())
+{
+    File.WriteAllText(Path.Combine(monsterOutDir, $"{monster.DirName}.html"),
+        BuildMonsterPage(monster.DirName, chars,
+            hasGif: monstersWithGif.Contains(monster.DirName),
+            hasImg: monstersWithImg.Contains(monster.DirName)),
         System.Text.Encoding.UTF8);
 }
 
@@ -2389,11 +2416,11 @@ static string BuildEncounterPage(string encId, CharData[] chars, HashSet<string>
                 ? $"""<img src="{basePath}images/monsters/{dir}.png" alt="{m.EnLabel}" class="monster-thumb">"""
                 : $"""<div class="monster-thumb monster-thumb-missing">?</div>""";
             return $"""
-              <div class="monster-card">
+              <a href="{basePath}monsters/{dir}.html" class="monster-card">
                 {img}
                 <div class="monster-name-ja">{m.JaLabel}</div>
                 <div class="monster-name-en">{m.EnLabel}</div>
-              </div>
+              </a>
             """;
         }));
         monsterSection = $"""
@@ -3402,6 +3429,9 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
     var ancientsActive   = activeId == "ancients";
     var ancientsStyle    = ancientsActive   ? " style=\"border-left-color:#6b46c1\"" : "";
     var ancientsClass    = ancientsActive   ? " active" : "";
+    var monstersActive   = activeId == "monsters";
+    var monstersStyle    = monstersActive   ? " style=\"border-left-color:#7a1a1a\"" : "";
+    var monstersClass    = monstersActive   ? " active" : "";
     var mecsActive     = activeId == "mechanics";
     var mecsStyle      = mecsActive     ? " style=\"border-left-color:#4a5568\"" : "";
     var mecsClass      = mecsActive     ? " active" : "";
@@ -3473,6 +3503,9 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
                 </a>
                 <a href="{basePath}ancients.html" class="nav-link{ancientsClass}"{ancientsStyle}>
                   <span class="nav-icon">&#10022;</span>Ancient 一覧
+                </a>
+                <a href="{basePath}monsters.html" class="nav-link{monstersClass}"{monstersStyle}>
+                  <span class="nav-icon">&#9760;</span>モンスター一覧
                 </a>
                 <a href="{basePath}mechanics.html" class="nav-link{mecsClass}"{mecsStyle}>
                   <span class="nav-icon">&#9881;</span>メカニクス一覧
@@ -4038,6 +4071,302 @@ static string ExtractPageTitle(string filePath)
     var m = Regex.Match(html, @"<title>(.+?)\s*\|");
     return m.Success ? m.Groups[1].Value.Trim() : Path.GetFileNameWithoutExtension(filePath);
 }
+    // ── モンスター GIF 生成 ────────────────────────────────────────────────────────
+
+    static HashSet<string> GenerateMonsterGifs(string animationsDir, string outDir, string toolsRoot, Action<string> log)
+    {
+        Directory.CreateDirectory(outDir);
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var monsterDirs = Directory.GetDirectories(animationsDir);
+        int generated = 0, skipped = 0, failed = 0;
+
+        foreach (var monsterDir in monsterDirs)
+        {
+            var name    = Path.GetFileName(monsterDir);
+            var gifPath = Path.Combine(outDir, $"{name}.gif");
+
+            // キャッシュチェック
+            var skelImport = Directory.GetFiles(monsterDir, "*.skel.import").FirstOrDefault();
+            if (skelImport is not null && File.Exists(gifPath) &&
+                File.GetLastWriteTimeUtc(gifPath) >= File.GetLastWriteTimeUtc(skelImport))
+            {
+                result.Add(name);
+                skipped++;
+                continue;
+            }
+
+            MonsterData? monsterData = null;
+            try
+            {
+                monsterData = SpineLoader.Load(monsterDir, toolsRoot);
+
+                var animName = monsterData.Animations.FirstOrDefault(
+                    a => a.Equals("idle", StringComparison.OrdinalIgnoreCase))
+                    ?? monsterData.Animations.FirstOrDefault();
+                if (animName is null) { failed++; continue; }
+
+                var anim     = monsterData.SkeletonData.FindAnimation(animName)!;
+                float duration = anim.Duration > 0 ? anim.Duration : 1f;
+                int frameCount = Math.Min(50, Math.Max(2, (int)(duration * 10)));
+                const int w = 192, h = 192;
+
+                using var gifImage = new Image<Rgba32>(w, h);
+                gifImage.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay = 10;
+
+                for (int i = 0; i < frameCount; i++)
+                {
+                    float time = i == 0 ? 0f : duration * i / (frameCount - 1);
+                    using var bmp = SpineRenderer.Render(monsterData, animName, time, w, h);
+                    var pixels = bmp.Pixels;
+
+                    if (i == 0)
+                    {
+                        for (int pi = 0; pi < pixels.Length; pi++)
+                        {
+                            var p = pixels[pi];
+                            gifImage.Frames.RootFrame[pi % w, pi / w] = new Rgba32(p.Red, p.Green, p.Blue, p.Alpha);
+                        }
+                    }
+                    else
+                    {
+                        using var frameImg = new Image<Rgba32>(w, h);
+                        frameImg.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay = 10;
+                        for (int pi = 0; pi < pixels.Length; pi++)
+                        {
+                            var p = pixels[pi];
+                            frameImg.Frames.RootFrame[pi % w, pi / w] = new Rgba32(p.Red, p.Green, p.Blue, p.Alpha);
+                        }
+                        gifImage.Frames.AddFrame(frameImg.Frames.RootFrame);
+                    }
+                }
+
+                gifImage.Metadata.GetGifMetadata().RepeatCount = 0;
+                gifImage.SaveAsGif(gifPath);
+
+                result.Add(name);
+                generated++;
+            }
+            catch (Exception ex)
+            {
+                log($"GIF 生成エラー: {name}: {ex.Message}");
+                failed++;
+            }
+            finally
+            {
+                monsterData?.Texture.Dispose();
+            }
+        }
+
+        log($"モンスター GIF: {generated} 件生成 / {skipped} 件スキップ / {failed} 件エラー");
+        return result;
+    }
+
+    // ── モンスター一覧ページ ──────────────────────────────────────────────────────
+
+    static string BuildMonsterListPage(CharData[] chars, HashSet<string> monstersWithImg)
+    {
+        var allMonsters = MonsterDatabaseService.GetAllMonsters();
+
+        var rows = string.Concat(allMonsters.Select(m =>
+        {
+            var jaSpan = m.JaLabel != m.EnLabel ? $"""<span class="card-name-ja">{m.JaLabel}</span>""" : "";
+            var hasImg = monstersWithImg.Contains(m.DirName) ? "true" : "false";
+            return $"""
+                      <tr data-has-img="{hasImg}">
+                        <td class="col-name">
+                          <a href="monsters/{m.DirName}.html" class="card-name-link">{m.EnLabel}</a>{jaSpan}
+                        </td>
+                      </tr>
+                """;
+        }));
+
+        const string MONSTER_FILTER_CSS = """
+            <style>
+            .event-filter-panel {
+              background: #fff; border-radius: 10px; padding: 16px 20px;
+              margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            }
+            .event-filter-section { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+            .event-search-input {
+              flex: 1; min-width: 200px; max-width: 400px; padding: 5px 13px;
+              border: 1.5px solid #ddd; border-radius: 20px; font-size: 13px;
+              color: #333; background: #fff; font-family: inherit;
+              outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+            }
+            .event-search-input:focus { border-color: #7a1a1a; box-shadow: 0 0 0 3px rgba(122,26,26,0.12); }
+            .event-search-input::placeholder { color: #bbb; }
+            .event-count { font-size: 12px; color: #bbb; margin-left: 8px; }
+            .event-thumb {
+              width: 56px; height: 56px; object-fit: cover; border-radius: 3px;
+              vertical-align: middle; margin-right: 8px; display: inline-block;
+              background: #1e1e23;
+            }
+            </style>
+            """;
+
+        const string MONSTER_FILTER_JS = """
+            <script>
+            (function () {
+              var input   = document.getElementById('monster-search');
+              var countEl = document.getElementById('monster-count');
+              var allRows = document.querySelectorAll('#monster-table tbody tr');
+              function update() {
+                var q = input.value.trim().toLowerCase();
+                var n = 0;
+                allRows.forEach(function (row) {
+                  var lnk = row.querySelector('.card-name-link');
+                  var ja  = row.querySelector('.card-name-ja');
+                  var ok = q === '' || (lnk && lnk.textContent.toLowerCase().includes(q))
+                                    || (ja  && ja.textContent.toLowerCase().includes(q));
+                  row.style.display = ok ? '' : 'none';
+                  if (ok) n++;
+                });
+                countEl.textContent = n + '件';
+              }
+              input.addEventListener('input', update);
+
+              var BASE = 'images/monsters/';
+              var on = false;
+              document.getElementById('monster-thumb-toggle').addEventListener('click', function () {
+                on = !on;
+                this.classList.toggle('active', on);
+                allRows.forEach(function (row) {
+                  if (row.getAttribute('data-has-img') !== 'true') return;
+                  var cell = row.querySelector('.col-name');
+                  if (!cell) return;
+                  if (on) {
+                    if (!cell.querySelector('.event-thumb')) {
+                      var lnk = cell.querySelector('.card-name-link');
+                      if (!lnk) return;
+                      var id = lnk.getAttribute('href').replace('monsters/', '').replace('.html', '').toLowerCase();
+                      var img = document.createElement('img');
+                      img.src = BASE + id + '.png'; img.className = 'event-thumb';
+                      img.loading = 'lazy'; img.alt = '';
+                      cell.insertBefore(img, cell.firstChild);
+                    }
+                  } else {
+                    var e = cell.querySelector('.event-thumb');
+                    if (e) e.remove();
+                  }
+                });
+              });
+            })();
+            </script>
+            """;
+
+        var filterPanel = $"""
+            <div class="event-filter-panel">
+              <div class="event-filter-section">
+                <span class="relic-filter-label">モンスター名</span>
+                <input type="text" id="monster-search" class="event-search-input" placeholder="名前で検索…" autocomplete="off">
+                <span class="event-count" id="monster-count">{allMonsters.Count}件</span>
+                <button class="filter-btn" id="monster-thumb-toggle" style="margin-left:4px">サムネイル表示</button>
+              </div>
+            </div>
+            """;
+
+        return Layout("モンスター一覧", "monsters", "#7a1a1a", chars, $"""
+            <div class="page-hero">
+              <h1 class="hero-title">モンスター一覧</h1>
+              <p class="hero-sub">全{allMonsters.Count}体</p>
+            </div>
+            {filterPanel}
+            <section class="section">
+              <table class="card-table" id="monster-table">
+                <thead>
+                  <tr><th>モンスター名</th></tr>
+                </thead>
+                <tbody>{rows}</tbody>
+              </table>
+            </section>
+            """, extraHead: MONSTER_FILTER_CSS, extraFoot: MONSTER_FILTER_JS);
+    }
+
+    // ── モンスター詳細ページ ──────────────────────────────────────────────────────
+
+    static string BuildMonsterPage(string dirName, CharData[] chars, bool hasGif = false, bool hasImg = false)
+    {
+        const string basePath = "../";
+        const string accent   = "#7a1a1a";
+        const string lightBg  = "#fff0f0";
+
+        var m      = MonsterDatabaseService.GetOrCreate(dirName);
+        var nameEn = m.EnLabel;
+        var nameJa = m.JaLabel;
+
+        string imageSection;
+        if (hasGif)
+        {
+            imageSection = $"""
+                <div style="text-align:center;margin-bottom:24px">
+                  <img src="{basePath}images/monsters/{dirName}.gif" alt="{nameEn}" width="192" height="192"
+                       style="border-radius:8px;background:#1e1e23">
+                </div>
+                """;
+        }
+        else if (hasImg)
+        {
+            imageSection = $"""
+                <div style="text-align:center;margin-bottom:24px">
+                  <img src="{basePath}images/monsters/{dirName}.png" alt="{nameEn}" width="192" height="192"
+                       style="border-radius:8px;background:#1e1e23">
+                </div>
+                """;
+        }
+        else
+        {
+            imageSection = """
+                <div style="text-align:center;margin-bottom:24px;color:#bbb;font-size:13px">アニメーション未生成</div>
+                """;
+        }
+
+        var encounterIds = MonsterDatabaseService.GetEncounterIdsForMonster(dirName);
+        string encounterSection;
+        if (encounterIds.Count == 0)
+        {
+            encounterSection = """
+                <section class="section">
+                  <h2 class="section-title">出現エンカウンター</h2>
+                  <p style="color:#999;font-style:italic">データなし</p>
+                </section>
+                """;
+        }
+        else
+        {
+            var items = string.Concat(encounterIds.Select(encId =>
+            {
+                var encNameEn = EncounterDatabaseService.GetEncounterName(encId);
+                var encNameJa = EncounterDatabaseService.GetEncounterName(encId, japanese: true);
+                var jaSpan    = encNameJa != encNameEn
+                    ? $"""<span class="card-name-ja" style="margin-left:8px">{encNameJa}</span>"""
+                    : "";
+                return $"""
+                          <li><a href="{basePath}encounters/{encId}.html" class="card-name-link">{encNameEn}</a>{jaSpan}</li>
+                    """;
+            }));
+            encounterSection = $"""
+                <section class="section">
+                  <h2 class="section-title">出現エンカウンター</h2>
+                  <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px">{items}</ul>
+                </section>
+                """;
+        }
+
+        var content = $"""
+            <div class="card-detail-header" style="border-left:5px solid {accent};background:{lightBg}">
+              <div class="card-breadcrumb">
+                <a href="{basePath}monsters.html" class="char-back-link" style="color:{accent}">モンスター一覧</a>
+              </div>
+              <h1 class="card-title-en" style="color:{accent}">{nameEn}</h1>
+              {(nameJa != nameEn ? $"""<div class="card-title-ja">{nameJa}</div>""" : "")}
+            </div>
+            {imageSection}
+            {encounterSection}
+            """;
+
+        return Layout(nameEn, "monsters", accent, chars, content, basePath);
+    }
+
 } // class SiteBuilderCore
 
 // ── records & flag definitions ────────────────────────────────────────────────

@@ -69,4 +69,11 @@ public static class MonsterDatabaseService
             return [];
         return dirs.Select(GetOrCreate).ToList();
     }
+
+    public static IReadOnlyList<string> GetEncounterIdsForMonster(string dirName) =>
+        _encounterMap
+            .Where(kv => kv.Value.Contains(dirName, StringComparer.OrdinalIgnoreCase))
+            .Select(kv => kv.Key)
+            .OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 }
