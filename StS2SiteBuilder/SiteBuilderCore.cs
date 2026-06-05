@@ -1583,6 +1583,11 @@ static string BuildRelicListPage(string[] allRelicIds, CharData[] chars)
 
 static string BuildEventListPage(string[] allEventIds, CharData[] chars, HashSet<string> eventsWithImg)
 {
+    var actByEvent = EventActService.Groups
+        .SelectMany(g => g.Events.Select(eid => (eid, g.Id)))
+        .ToDictionary(x => x.eid, x => x.Id, StringComparer.OrdinalIgnoreCase);
+    var hasUnclassified = allEventIds.Any(id => !actByEvent.ContainsKey(id));
+
     var rows = string.Concat(allEventIds.Select(id =>
     {
         var nameEn = CardDatabaseService.GetEventTitle(id);
@@ -1590,14 +1595,20 @@ static string BuildEventListPage(string[] allEventIds, CharData[] chars, HashSet
         var href   = $"events/{id}.html";
         var jaSpan = nameJa != nameEn ? $"""<span class="card-name-ja">{nameJa}</span>""" : "";
         var hasImg = eventsWithImg.Contains(id) ? "true" : "false";
+        var actId  = actByEvent.TryGetValue(id, out var a) ? a : "__none__";
         return $"""
-                  <tr data-has-img="{hasImg}">
+                  <tr data-has-img="{hasImg}" data-act="{actId}">
                     <td class="col-name">
                       <a href="{href}" class="card-name-link">{nameEn}</a>{jaSpan}
                     </td>
                   </tr>
             """;
     }));
+
+    var actButtons = string.Concat(EventActService.Groups.Select(g =>
+        $"""<button class="eabtn" data-act="{g.Id}">{g.NameEn}</button>"""));
+    if (hasUnclassified)
+        actButtons += """<button class="eabtn" data-act="__none__">その他</button>""";
 
     const string EVENT_FILTER_CSS = """
         <style>
@@ -1620,6 +1631,14 @@ static string BuildEventListPage(string[] allEventIds, CharData[] chars, HashSet
           vertical-align: middle; margin-right: 8px; display: inline-block;
           background: #f0f0f0;
         }
+        .event-act-bar { display: flex; gap: 7px; flex-wrap: wrap; }
+        .eabtn {
+          padding: 4px 12px; border: 1.5px solid #b0ccd4; border-radius: 20px;
+          font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+          background: #fff; color: #1a6678; font-family: inherit;
+        }
+        .eabtn:hover { background: #eef6f8; }
+        .eabtn.active { background: #1a6678; color: #fff; border-color: #1a6678; }
         </style>
         """;
 
@@ -1629,20 +1648,35 @@ static string BuildEventListPage(string[] allEventIds, CharData[] chars, HashSet
           var input   = document.getElementById('event-search');
           var countEl = document.getElementById('event-count');
           var allRows = document.querySelectorAll('#event-table tbody tr');
+          function getActiveAct() {
+            var b = document.querySelector('.eabtn.active');
+            return b ? b.getAttribute('data-act') : '';
+          }
           function update() {
-            var q = input.value.trim().toLowerCase();
+            var q   = input.value.trim().toLowerCase();
+            var act = getActiveAct();
             var n = 0;
             allRows.forEach(function (row) {
               var lnk = row.querySelector('.card-name-link');
               var ja  = row.querySelector('.card-name-ja');
-              var ok = q === '' || (lnk && lnk.textContent.toLowerCase().includes(q))
-                                || (ja  && ja.textContent.toLowerCase().includes(q));
+              var nameOk = q === '' || (lnk && lnk.textContent.toLowerCase().includes(q))
+                                    || (ja  && ja.textContent.toLowerCase().includes(q));
+              var rowAct = row.getAttribute('data-act') || '__none__';
+              var actOk  = act === '' || rowAct === act;
+              var ok = nameOk && actOk;
               row.style.display = ok ? '' : 'none';
               if (ok) n++;
             });
             countEl.textContent = n + '件';
           }
           input.addEventListener('input', update);
+          document.querySelectorAll('.eabtn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              document.querySelectorAll('.eabtn').forEach(function (b) { b.classList.remove('active'); });
+              this.classList.add('active');
+              update();
+            });
+          });
 
           var BASE = 'images/events/';
           var on = false;
@@ -1680,6 +1714,13 @@ static string BuildEventListPage(string[] allEventIds, CharData[] chars, HashSet
             <input type="text" id="event-search" class="event-search-input" placeholder="名前で検索…" autocomplete="off">
             <span class="event-count" id="event-count">{allEventIds.Length}件</span>
             <button class="filter-btn" id="event-thumb-toggle" style="margin-left:4px">サムネイル表示</button>
+          </div>
+          <div class="event-filter-section" style="margin-top:10px">
+            <span class="relic-filter-label">Act</span>
+            <div class="event-act-bar">
+              <button class="eabtn active" data-act="">すべて</button>
+              {actButtons}
+            </div>
           </div>
         </div>
         """;
