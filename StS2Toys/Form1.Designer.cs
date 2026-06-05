@@ -315,7 +315,7 @@ namespace StS2Toys
             btnDisappearanceOverview.Name = "btnDisappearanceOverview";
             btnDisappearanceOverview.Size = new Size(150, 30);
             btnDisappearanceOverview.TabIndex = 15;
-            btnDisappearanceOverview.Text = "○ 消滅概観";
+            btnDisappearanceOverview.Text = "○ デッキ枚数理論値";
             btnDisappearanceOverview.Click += BtnDisappearanceOverview_Click;
             // 
             // btnCombinedOverview
@@ -325,7 +325,7 @@ namespace StS2Toys
             btnCombinedOverview.Name = "btnCombinedOverview";
             btnCombinedOverview.Size = new Size(150, 30);
             btnCombinedOverview.TabIndex = 2;
-            btnCombinedOverview.Text = "○ デッキ枚数理論値";
+            btnCombinedOverview.Text = "○ デッキ概観";
             btnCombinedOverview.Click += BtnCombinedOverview_Click;
             // 
             // lblGroupOverview
