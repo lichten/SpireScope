@@ -1102,8 +1102,9 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
             var charLabel = g.LabelJa != "" ? g.LabelJa : g.Label;
             var charBadge = $"""<span class="badge char-{g.CharId}">{charLabel}</span>""";
 
+            var cost = CardDatabaseService.GetCardCost(id);
             return $"""
-                      <tr data-desc="{descAttr}">
+                      <tr data-desc="{descAttr}" data-cost="{cost}">
                         <td class="col-name">
                           <a href="{href}" class="card-name-link">{nameEn}</a>{jaSpan}
                         </td>
@@ -1177,6 +1178,17 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
               <button class="filter-btn" data-rarity="shop">Shop</button>
             </div>
           </div>
+          <div class="filter-section">
+            <span class="filter-label">コスト</span>
+            <div class="filter-bar">
+              <button class="filter-btn active" data-cost="all">すべて</button>
+              <button class="filter-btn" data-cost="0">0</button>
+              <button class="filter-btn" data-cost="1">1</button>
+              <button class="filter-btn" data-cost="2">2</button>
+              <button class="filter-btn" data-cost="3p">3+</button>
+              <button class="filter-btn" data-cost="x">X</button>
+            </div>
+          </div>
         </div>
         """;
 
@@ -1245,6 +1257,18 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
         .filter-btn[data-rarity="event"].active     { background: #1a7a4a; color: #fff; }
         .filter-btn[data-rarity="shop"]             { color: #7d1a7d; border-color: #7d1a7d; }
         .filter-btn[data-rarity="shop"].active      { background: #7d1a7d; color: #fff; }
+        .filter-btn[data-cost="all"]   { color: #555; border-color: #ccc; }
+        .filter-btn[data-cost="all"].active   { background: #555; color: #fff; border-color: #555; }
+        .filter-btn[data-cost="0"]     { color: #1a7a4a; border-color: #1a7a4a; }
+        .filter-btn[data-cost="0"].active     { background: #1a7a4a; color: #fff; }
+        .filter-btn[data-cost="1"]     { color: #1a5799; border-color: #1a5799; }
+        .filter-btn[data-cost="1"].active     { background: #1a5799; color: #fff; }
+        .filter-btn[data-cost="2"]     { color: #7d6608; border-color: #7d6608; }
+        .filter-btn[data-cost="2"].active     { background: #7d6608; color: #fff; }
+        .filter-btn[data-cost="3p"]    { color: #c0392b; border-color: #c0392b; }
+        .filter-btn[data-cost="3p"].active    { background: #c0392b; color: #fff; }
+        .filter-btn[data-cost="x"]     { color: #7d1a7d; border-color: #7d1a7d; }
+        .filter-btn[data-cost="x"].active     { background: #7d1a7d; color: #fff; }
         .search-input {
           flex: 1; min-width: 180px; max-width: 320px; padding: 5px 13px;
           border: 1.5px solid #ddd; border-radius: 20px; font-size: 13px;
@@ -1270,11 +1294,11 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
             return b ? b.getAttribute('data-' + a) : 'all';
           }
           function applyFilters() {
-            var cf = getActive('filter'), tf = getActive('type'), rf = getActive('rarity');
+            var cf = getActive('filter'), tf = getActive('type'), rf = getActive('rarity'), cosf = getActive('cost');
             var q  = searchInput.value.trim().toLowerCase();
             sections.forEach(function (sec) {
               if (cf !== 'all' && sec.dataset.char !== cf) { sec.style.display = 'none'; return; }
-              if (tf === 'all' && rf === 'all' && q === '') {
+              if (tf === 'all' && rf === 'all' && cosf === 'all' && q === '') {
                 sec.style.display = '';
                 sec.querySelectorAll('tbody tr').forEach(function (r) { r.style.display = ''; });
                 return;
@@ -1287,8 +1311,14 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
                 var nj = row.querySelector('.card-name-ja');
                 var tc = tb ? Array.from(tb.classList).find(function(c){return c.startsWith('type-');})   : '';
                 var rc = rb ? Array.from(rb.classList).find(function(c){return c.startsWith('rarity-');}) : '';
+                var cv = (row.dataset.cost || '').toLowerCase();
+                var costOk = cosf === 'all'
+                  || (cosf === '3p' && !isNaN(parseInt(cv)) && parseInt(cv) >= 3)
+                  || (cosf === 'x'  && cv === 'x')
+                  || (cosf !== '3p' && cosf !== 'x' && cv === cosf);
                 var ok = (tf === 'all' || tc === 'type-' + tf)
                       && (rf === 'all' || rc === 'rarity-' + rf)
+                      && costOk
                       && (q  === ''   || (nl && nl.textContent.toLowerCase().includes(q))
                                       || (nj && nj.textContent.toLowerCase().includes(q))
                                       || row.dataset.desc.toLowerCase().includes(q));
@@ -1311,6 +1341,7 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
           bindGroup('.filter-btn[data-filter]');
           bindGroup('.filter-btn[data-type]');
           bindGroup('.filter-btn[data-rarity]');
+          bindGroup('.filter-btn[data-cost]');
           var BASE = 'images/cards/';
           var on = false;
           function portraitSrc(row) {
@@ -1350,11 +1381,12 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
               var t = document.querySelector('.filter-btn[data-' + attr + '="' + val + '"]');
               if (t) t.classList.add('active');
             }
-            var cf = p.get('char'), tf = p.get('type'), rf = p.get('rarity'), sq = p.get('search');
-            if (cf || tf || rf || sq) {
+            var cf = p.get('char'), tf = p.get('type'), rf = p.get('rarity'), cosf = p.get('cost'), sq = p.get('search');
+            if (cf || tf || rf || cosf || sq) {
               setActive('filter', cf);
               setActive('type', tf);
               setActive('rarity', rf);
+              setActive('cost', cosf);
               if (sq) searchInput.value = sq;
               applyFilters();
             }
