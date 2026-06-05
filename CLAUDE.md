@@ -8,7 +8,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 dotnet build                                  # ソリューション全体
 dotnet run --project StS2Toys                 # セーブデータビューア
 dotnet run --project StS2CardBrowser          # カードブラウザ
-dotnet run --project StS2EventBrowser         # イベントブラウザ
 dotnet run --project card-type-extractor      # カードメタデータ再生成（要ゲームDLL）
 ```
 
@@ -29,7 +28,7 @@ $pck = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\SlayTheSp
 - `localization/{eng,jpn,deu,...}/*.json` — ゲーム全テキスト
 - `images/events/`, `images/card_portraits_png/` — 画像ファイル（`.png.import` + `.ctex`）
 
-画像は BC7 圧縮テクスチャ（`.ctex`）で、StS2EventBrowser が初回アクセス時に PNG 変換してキャッシュする。
+画像は BC7 圧縮テクスチャ（`.ctex`）で、StS2SiteBuilder のビルド時に PNG 変換してキャッシュする。
 
 ## Architecture
 
@@ -42,7 +41,6 @@ $pck = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\SlayTheSp
 | `StS2Shared` | 全アプリが参照する共有ライブラリ（サービス・メカニクス定義） |
 | `StS2Toys` | セーブデータビューア（デッキ・レリック表示） |
 | `StS2CardBrowser` | カードブラウザ（キャラクター・メカニクスフィルタ付き） |
-| `StS2EventBrowser` | イベントブラウザ（テキスト・画像表示） |
 | `card-type-extractor` | ゲーム DLL の IL を解析してカードメタデータ JSON を生成するCLIツール |
 
 ### StS2Shared — 共有ライブラリ
@@ -92,12 +90,6 @@ $pck = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\SlayTheSp
 - キャラクター選択時はキャラクター帰属フィルタ、メカニクス選択時はメカニクスフィルタに切り替わる（キャラクターフィルタを置換する）
 - サムネイル画像は `tools/extracted/images/card_portraits_png/{character}/{id}.png` から読み込み
 - コスト表示は `GetCardCost()` が返す文字列（"0"〜"3+"・"X"・"-"）。スターコストは現在エネルギーコストと同じ数値で表示される（区別なし）
-
-### StS2EventBrowser — イベントブラウザ
-
-- `events.json` を `{EVENTID}.{subkey}` 形式でパースし、`pages.INITIAL.description` と `pages.INITIAL.options.*` から初期ページを構築
-- イベント画像は `tools/extracted/images/events/{id}.png.import` → `.ctex` パス解決 → BC7 デコードまたは WebP デコードで PNG 変換してキャッシュ
-- 画像キャッシュ先: `tools/extracted/images/events_png/`
 
 ### StS2MonsterBrowser — モンスターアニメーションビューア
 

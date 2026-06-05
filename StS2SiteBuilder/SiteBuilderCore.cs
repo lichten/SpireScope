@@ -94,10 +94,11 @@ var mechanicsMap = CharacterMechanics.All
              .Concat(commonMecs).ToArray(),
         StringComparer.OrdinalIgnoreCase);
 
-var allCardIds   = CardDatabaseService.GetAllCardIds().ToArray();
-var allRelicIds  = CardDatabaseService.GetAllRelicIds().ToArray();
+var allCardIds      = CardDatabaseService.GetAllCardIds().ToArray();
+var allRelicIds     = CardDatabaseService.GetAllRelicIds().ToArray();
 var allEventIds     = CardDatabaseService.GetAllEventIds().ToArray();
 var allEncounterIds = EncounterDatabaseService.GetAllEncounterIds().ToArray();
+var allAncientIds   = AncientDatabaseService.GetAllAncientIds().ToArray();
 
 // レリック画像を dist/images/relics/ に変換・コピー
 var toolsRoot      = FindToolsRoot(Path.GetDirectoryName(distDir)!);
@@ -112,6 +113,13 @@ var eventImgDstDir = Path.Combine(distDir, "images", "events");
 Directory.CreateDirectory(eventImgDstDir);
 var eventsWithImg  = toolsRoot is not null
     ? ConvertImages(toolsRoot, "events", eventImgDstDir, allEventIds, "イベント", log)
+    : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+// Ancient 画像を dist/images/ancients/ に変換・コピー
+var ancientImgDstDir = Path.Combine(distDir, "images", "ancients");
+Directory.CreateDirectory(ancientImgDstDir);
+var ancientsWithImg  = toolsRoot is not null
+    ? ConvertImages(toolsRoot, "ancients", ancientImgDstDir, allAncientIds, "Ancient", log, filenameSuffix: "_placeholder")
     : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 // モンスタースナップショットを dist/images/monsters/ にコピー
@@ -158,6 +166,8 @@ PageEntry[] pages =
         $"全{allEventIds.Length}件のイベントをテキスト・選択肢付きで一覧表示。", "#1a6678"),
     new PageEntry("エンカウンター", "encounters.html", "Encounter List", "エンカウンター一覧",
         $"全{allEncounterIds.Length}件のエンカウンターをタイプ別に一覧表示。", "#8b2222"),
+    new PageEntry("Ancient", "ancients.html", "Ancient List", "Ancient 一覧",
+        $"全{allAncientIds.Length}人の Ancient の会話・選択肢・報酬候補を一覧表示。", "#6b46c1"),
     new PageEntry("メカニクス", "mechanics.html", "Mechanic List", "メカニクス一覧",
         $"全{CharacterMechanics.All.Sum(g => g.Mechanics.Length)}件のメカニクスをキャラクター別に一覧表示。", "#4a5568"),
 ];
@@ -191,6 +201,7 @@ File.WriteAllText(Path.Combine(distDir, "cards.html"),  BuildCardListPage(allCar
 File.WriteAllText(Path.Combine(distDir, "relics.html"), BuildRelicListPage(allRelicIds, chars), System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "events.html"),     BuildEventListPage(allEventIds, chars, eventsWithImg), System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "encounters.html"), BuildEncounterListPage(allEncounterIds, chars),        System.Text.Encoding.UTF8);
+File.WriteAllText(Path.Combine(distDir, "ancients.html"),   BuildAncientListPage(allAncientIds, chars, ancientsWithImg), System.Text.Encoding.UTF8);
 foreach (var ch in chars)
 {
     mechanicsMap.TryGetValue(ch.EnName, out var mecs);
@@ -253,6 +264,20 @@ foreach (var encId in allEncounterIds)
     var lastUpdated = changelogDates.GetValueOrDefault(relPath, "");
     File.WriteAllText(outPath,
         BuildEncounterPage(encId, chars, monstersWithImg, review: review, lastUpdated: lastUpdated),
+        System.Text.Encoding.UTF8);
+}
+
+// 個別 Ancient ページ（dist/ancients/{ANCIENT_ID}.html）
+var ancientOutDir = Path.Combine(distDir, "ancients");
+Directory.CreateDirectory(ancientOutDir);
+foreach (var ancientId in allAncientIds)
+{
+    var outPath     = Path.Combine(ancientOutDir, $"{ancientId}.html");
+    var review      = ExtractReview(outPath);
+    var relPath     = Path.GetRelativePath(distDir, outPath).Replace('\\', '/');
+    var lastUpdated = changelogDates.GetValueOrDefault(relPath, "");
+    File.WriteAllText(outPath,
+        BuildAncientPage(ancientId, chars, ancientsWithImg.Contains(ancientId), review: review, lastUpdated: lastUpdated),
         System.Text.Encoding.UTF8);
 }
 
@@ -1777,6 +1802,342 @@ static string BuildEventPage(string eventId, CharData[] chars, bool hasImage = f
     return Layout(nameEn, "events", accent, chars, content, basePath);
 }
 
+static string BuildAncientListPage(string[] allAncientIds, CharData[] chars, HashSet<string> ancientsWithImg)
+{
+    var rows = string.Concat(allAncientIds.Select(id =>
+    {
+        var nameEn  = AncientDatabaseService.GetAncientTitle(id);
+        var nameJa  = AncientDatabaseService.GetAncientTitle(id, japanese: true);
+        var epithet = AncientDatabaseService.GetAncientEpithet(id);
+        var href    = $"ancients/{id}.html";
+        var jaSpan  = nameJa != nameEn ? $"""<span class="card-name-ja">{nameJa}</span>""" : "";
+        var epithetSpan = epithet != "" ? $"""<span class="card-name-ja" style="margin-left:12px;color:#9a6ec7">{epithet}</span>""" : "";
+        var hasImg  = ancientsWithImg.Contains(id) ? "true" : "false";
+        return $"""
+                  <tr data-has-img="{hasImg}">
+                    <td class="col-name">
+                      <a href="{href}" class="card-name-link">{nameEn}</a>{jaSpan}{epithetSpan}
+                    </td>
+                  </tr>
+            """;
+    }));
+
+    const string ANCIENT_FILTER_CSS = """
+        <style>
+        .event-filter-panel {
+          background: #fff; border-radius: 10px; padding: 16px 20px;
+          margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .event-filter-section { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .event-search-input {
+          flex: 1; min-width: 200px; max-width: 400px; padding: 5px 13px;
+          border: 1.5px solid #ddd; border-radius: 20px; font-size: 13px;
+          color: #333; background: #fff; font-family: inherit;
+          outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .event-search-input:focus { border-color: #6b46c1; box-shadow: 0 0 0 3px rgba(107,70,193,0.12); }
+        .event-search-input::placeholder { color: #bbb; }
+        .event-count { font-size: 12px; color: #bbb; margin-left: 8px; }
+        .event-thumb {
+          width: 56px; height: 56px; object-fit: cover; border-radius: 3px;
+          vertical-align: middle; margin-right: 8px; display: inline-block;
+          background: #f0f0f0;
+        }
+        </style>
+        """;
+
+    const string ANCIENT_FILTER_JS = """
+        <script>
+        (function () {
+          var input   = document.getElementById('ancient-search');
+          var countEl = document.getElementById('ancient-count');
+          var allRows = document.querySelectorAll('#ancient-table tbody tr');
+          function update() {
+            var q = input.value.trim().toLowerCase();
+            var n = 0;
+            allRows.forEach(function (row) {
+              var lnk = row.querySelector('.card-name-link');
+              var ja  = row.querySelector('.card-name-ja');
+              var ok = q === '' || (lnk && lnk.textContent.toLowerCase().includes(q))
+                                || (ja  && ja.textContent.toLowerCase().includes(q));
+              row.style.display = ok ? '' : 'none';
+              if (ok) n++;
+            });
+            countEl.textContent = n + '件';
+          }
+          input.addEventListener('input', update);
+
+          var BASE = 'images/ancients/';
+          var on = false;
+          document.getElementById('ancient-thumb-toggle').addEventListener('click', function () {
+            on = !on;
+            this.classList.toggle('active', on);
+            allRows.forEach(function (row) {
+              if (row.getAttribute('data-has-img') !== 'true') return;
+              var cell = row.querySelector('.col-name');
+              if (!cell) return;
+              if (on) {
+                if (!cell.querySelector('.event-thumb')) {
+                  var lnk = cell.querySelector('.card-name-link');
+                  if (!lnk) return;
+                  var id = lnk.getAttribute('href').replace('ancients/', '').replace('.html', '').toLowerCase();
+                  var img = document.createElement('img');
+                  img.src = BASE + id + '.png'; img.className = 'event-thumb';
+                  img.loading = 'lazy'; img.alt = '';
+                  cell.insertBefore(img, cell.firstChild);
+                }
+              } else {
+                var e = cell.querySelector('.event-thumb');
+                if (e) e.remove();
+              }
+            });
+          });
+        })();
+        </script>
+        """;
+
+    var filterPanel = $"""
+        <div class="event-filter-panel">
+          <div class="event-filter-section">
+            <span class="relic-filter-label">Ancient 名</span>
+            <input type="text" id="ancient-search" class="event-search-input" placeholder="名前で検索…" autocomplete="off">
+            <span class="event-count" id="ancient-count">{allAncientIds.Length}件</span>
+            <button class="filter-btn" id="ancient-thumb-toggle" style="margin-left:4px">サムネイル表示</button>
+          </div>
+        </div>
+        """;
+
+    return Layout("Ancient 一覧", "ancients", "#6b46c1", chars, $"""
+        <div class="page-hero">
+          <h1 class="hero-title">Ancient 一覧</h1>
+          <p class="hero-sub">全{allAncientIds.Length}件</p>
+        </div>
+        {filterPanel}
+        <section class="section">
+          <table class="card-table" id="ancient-table">
+            <thead>
+              <tr><th>Ancient 名</th></tr>
+            </thead>
+            <tbody>{rows}</tbody>
+          </table>
+        </section>
+        """, extraHead: ANCIENT_FILTER_CSS, extraFoot: ANCIENT_FILTER_JS);
+}
+
+static string BuildAncientPage(string ancientId, CharData[] chars, bool hasImage = false, string review = "", string lastUpdated = "")
+{
+    const string basePath = "../";
+    const string accent   = "#6b46c1";
+    const string lightBg  = "#f3eeff";
+
+    var nameEn  = AncientDatabaseService.GetAncientTitle(ancientId);
+    var nameJa  = AncientDatabaseService.GetAncientTitle(ancientId, japanese: true);
+    var epithetEn = AncientDatabaseService.GetAncientEpithet(ancientId);
+    var epithetJa = AncientDatabaseService.GetAncientEpithet(ancientId, japanese: true);
+    var (rawDescEn, rawDescJa) = AncientDatabaseService.GetAncientDescription(ancientId);
+    var descEn = DescriptionFormatter.Clean(rawDescEn).Replace("\n", "<br>");
+    var descJa = DescriptionFormatter.Clean(rawDescJa, japanese: true).Replace("\n", "<br>");
+    var options = AncientDatabaseService.GetAncientOptions(ancientId);
+    var talkGroups = AncientDatabaseService.GetAncientTalk(ancientId);
+
+    var epithetPart = epithetEn != ""
+        ? $"""<div class="card-title-ja" style="color:#9a6ec7;font-style:italic">{epithetEn}{(epithetJa != "" && epithetJa != epithetEn ? $" / {epithetJa}" : "")}</div>"""
+        : "";
+
+    var imgSection = hasImage ? $"""
+        <div class="event-image-wrap">
+          <img src="../images/ancients/{ancientId.ToLowerInvariant()}.png" class="event-image" alt="{nameEn}">
+        </div>
+        """ : "";
+
+    var descSection = descEn != "" ? $"""
+        <section class="section">
+          <h2 class="section-title">テキスト</h2>
+          <p class="desc-main">{descEn}</p>
+          {(descJa != "" && descJa != descEn ? $"""<p class="desc-sub">{descJa}</p>""" : "")}
+        </section>
+        """ : "";
+
+    var optionCards = string.Concat(options
+        .Where(o => o.TitleEn != "")
+        .Select(o =>
+        {
+            var titleJaPart = o.TitleJa != "" && o.TitleJa != o.TitleEn
+                ? $"""<span class="event-option-title-ja">{o.TitleJa}</span>"""
+                : "";
+            var descEnClean = DescriptionFormatter.Clean(o.DescEn).Replace("\n", "<br>");
+            var descJaClean = DescriptionFormatter.Clean(o.DescJa, japanese: true).Replace("\n", "<br>");
+            var descEnPart  = descEnClean != "" ? $"""<div class="event-option-desc">{descEnClean}</div>""" : "";
+            var descJaPart  = descJaClean != "" && descJaClean != descEnClean
+                ? $"""<div class="event-option-desc-ja">{descJaClean}</div>"""
+                : "";
+            return $"""
+                      <div class="event-option">
+                        <div class="event-option-title">{o.TitleEn}{titleJaPart}</div>
+                        {descEnPart}
+                        {descJaPart}
+                      </div>
+                """;
+        }));
+
+    var optionsSection = optionCards != "" ? $"""
+        <section class="section">
+          <h2 class="section-title">選択肢</h2>
+          <div class="event-options">{optionCards}</div>
+        </section>
+        """ : "";
+
+    // 報酬候補セクション
+    var rewardsSection = "";
+    if (AncientOptionService.IsDataAvailable)
+    {
+        var groups = AncientOptionService.GetGroups(ancientId);
+        if (groups is { Count: > 0 })
+        {
+            var groupHtml = string.Concat(groups.Select(kvp =>
+            {
+                var groupLabel = groups.Count > 1
+                    ? $"""<div class="event-option-title" style="color:#7c3aed">{FormatGroupName(kvp.Key)}</div>"""
+                    : "";
+                var items = string.Concat(kvp.Value.Select(itemId =>
+                {
+                    var nameE = GetAncientItemName(itemId);
+                    return $"""<span class="ancient-item">{nameE}</span>""";
+                }));
+                return $"""
+                          <div class="event-option">
+                            {groupLabel}
+                            <div class="ancient-items">{items}</div>
+                          </div>
+                    """;
+            }));
+            rewardsSection = $"""
+                <section class="section">
+                  <h2 class="section-title">報酬候補</h2>
+                  <div class="event-options">{groupHtml}</div>
+                </section>
+                """;
+        }
+    }
+
+    // 会話テキストセクション
+    var talkSection = "";
+    if (talkGroups.Count > 0)
+    {
+        var charBlocks = string.Concat(talkGroups.Select(cg =>
+        {
+            var visitGroups = cg.Lines
+                .GroupBy(l => l.Visit)
+                .OrderBy(g => g.Key)
+                .Select(vg =>
+                {
+                    var hasRandom = vg.Any(l => l.IsRandom);
+                    var visitLabel = $"Visit {vg.Key}{(hasRandom ? " (r)" : "")}";
+                    var lines = string.Concat(vg.OrderBy(l => l.Line).Select(l =>
+                    {
+                        var (cls, prefix) = l.Speaker switch
+                        {
+                            "ancient" => ("speaker-ancient", "[Ancient] "),
+                            "char"    => ("speaker-char",    "[Player]  "),
+                            _         => ("speaker-next",    "→ "),
+                        };
+                        return $"""<div class="talk-line {cls}">{prefix}{System.Web.HttpUtility.HtmlEncode(l.Text)}</div>""";
+                    }));
+                    return $"""
+                              <div class="talk-visit">
+                                <div class="talk-visit-label">{visitLabel}</div>
+                                {lines}
+                              </div>
+                        """;
+                });
+            return $"""
+                      <div class="talk-char-group">
+                        <h3 class="talk-char-name">{cg.Char}</h3>
+                        {string.Concat(visitGroups)}
+                      </div>
+                """;
+        }));
+
+        const string TALK_CSS = """
+            <style>
+            .talk-char-group { margin-bottom: 24px; }
+            .talk-char-name { font-size: 14px; font-weight: 700; color: #6b46c1; border-bottom: 1px solid #e9d8fd; padding-bottom: 4px; margin: 0 0 10px; }
+            .talk-visit { margin-bottom: 14px; }
+            .talk-visit-label { font-size: 11px; font-weight: 600; color: #9a6ec7; margin-bottom: 4px; }
+            .talk-line { font-size: 13px; line-height: 1.6; padding: 2px 0; white-space: pre-wrap; }
+            .speaker-ancient { color: #a05a00; }
+            .speaker-char    { color: #1a4a99; }
+            .speaker-next    { color: #888; font-style: italic; }
+            .ancient-item { display: inline-block; background: #f3eeff; border: 1px solid #d6bcfa; border-radius: 4px; padding: 2px 8px; margin: 2px 3px; font-size: 12px; color: #6b46c1; }
+            .ancient-items { margin-top: 6px; }
+            </style>
+            """;
+
+        talkSection = $"""
+            {TALK_CSS}
+            <section class="section">
+              <h2 class="section-title">会話テキスト</h2>
+              {charBlocks}
+            </section>
+            """;
+    }
+
+    const string REVIEW_GUIDE = """
+        <!-- REVIEW_START --><script type="text/plain" class="review-src" id="REVIEW_SRC">
+        <!--
+          【評価・メモ】
+          このコメントブロック全体を削除し、Markdown で書いてください。
+          ビルド後も上書きされません。
+        -->
+        </script><!-- REVIEW_END -->
+        """;
+
+    var trimmedReview = review.Trim();
+    var isPlaceholder = trimmedReview.StartsWith("<!--") && trimmedReview.EndsWith("-->");
+    var reviewZone = (string.IsNullOrWhiteSpace(trimmedReview) || isPlaceholder)
+        ? REVIEW_GUIDE
+        : $"""
+        <!-- REVIEW_START --><script type="text/plain" class="review-src" id="REVIEW_SRC">{trimmedReview}</script>
+        <section class="section">
+        {RenderMarkdown(trimmedReview)}
+        </section><!-- REVIEW_END -->
+        """;
+
+    var content = $"""
+        <div class="card-detail-header" style="border-left:5px solid {accent};background:{lightBg}">
+          <div class="card-breadcrumb">
+            <a href="{basePath}ancients.html" class="char-back-link" style="color:{accent}">Ancient 一覧</a>
+          </div>
+          <h1 class="card-title-en" style="color:{accent}">{nameEn}</h1>
+          {(nameJa != nameEn ? $"""<div class="card-title-ja">{nameJa}</div>""" : "")}
+          {epithetPart}
+          <!-- LAST_UPDATED_START -->{(lastUpdated != "" ? $"""<div class="page-updated">最終更新: {lastUpdated}</div>""" : "")}<!-- LAST_UPDATED_END -->
+        </div>
+        {imgSection}
+        {descSection}
+        {reviewZone}
+        {optionsSection}
+        {rewardsSection}
+        {talkSection}
+        """;
+
+    return Layout(nameEn, "ancients", accent, chars, content, basePath);
+}
+
+static string FormatGroupName(string raw)
+{
+    var spaced = Regex.Replace(raw, @"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", " ");
+    spaced = Regex.Replace(spaced, @"(?<=[a-zA-Z])(?=\d)", " ");
+    return spaced;
+}
+
+static string GetAncientItemName(string itemId)
+{
+    if (itemId.StartsWith("CARD.", StringComparison.OrdinalIgnoreCase))
+        return CardDatabaseService.GetName(itemId);
+    return CardDatabaseService.GetRelicTitle(itemId);
+}
+
 static string BuildEncounterListPage(string[] allEncounterIds, CharData[] chars)
 {
     var rows = string.Concat(allEncounterIds.Select(id =>
@@ -2997,6 +3358,9 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
     var encountersActive = activeId == "encounters";
     var encountersStyle  = encountersActive ? " style=\"border-left-color:#8b2222\"" : "";
     var encountersClass  = encountersActive ? " active" : "";
+    var ancientsActive   = activeId == "ancients";
+    var ancientsStyle    = ancientsActive   ? " style=\"border-left-color:#6b46c1\"" : "";
+    var ancientsClass    = ancientsActive   ? " active" : "";
     var mecsActive     = activeId == "mechanics";
     var mecsStyle      = mecsActive     ? " style=\"border-left-color:#4a5568\"" : "";
     var mecsClass      = mecsActive     ? " active" : "";
@@ -3065,6 +3429,9 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
                 </a>
                 <a href="{basePath}encounters.html" class="nav-link{encountersClass}"{encountersStyle}>
                   <span class="nav-icon">&#9876;</span>エンカウンター一覧
+                </a>
+                <a href="{basePath}ancients.html" class="nav-link{ancientsClass}"{ancientsStyle}>
+                  <span class="nav-icon">&#10022;</span>Ancient 一覧
                 </a>
                 <a href="{basePath}mechanics.html" class="nav-link{mecsClass}"{mecsStyle}>
                   <span class="nav-icon">&#9881;</span>メカニクス一覧
@@ -3316,7 +3683,7 @@ static HashSet<string> CopyCardImages(string toolsRoot, string dstDir, string[] 
     return copied;
 }
 
-static HashSet<string> ConvertImages(string toolsRoot, string imgSubdir, string dstDir, string[] ids, string label, Action<string> log)
+static HashSet<string> ConvertImages(string toolsRoot, string imgSubdir, string dstDir, string[] ids, string label, Action<string> log, string filenameSuffix = "")
 {
     var converted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     var srcDir    = Path.Combine(toolsRoot, "images", imgSubdir);
@@ -3325,7 +3692,7 @@ static HashSet<string> ConvertImages(string toolsRoot, string imgSubdir, string 
     var total = 0;
     foreach (var id in ids)
     {
-        var importPath = Path.Combine(srcDir, id.ToLowerInvariant() + ".png.import");
+        var importPath = Path.Combine(srcDir, id.ToLowerInvariant() + filenameSuffix + ".png.import");
         if (!File.Exists(importPath)) continue;
 
         var ctexRel = ParseCtexPath(importPath);
