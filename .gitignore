@@ -31,3 +31,6 @@ tools/
 
 # Deploy script with personal server settings
 deploy.sh
+
+# Claude Code local settings (personal permissions/overrides)
+.claude/settings.local.json
