@@ -226,6 +226,11 @@ File.WriteAllText(Path.Combine(distDir, "deploy.sh.example"), """
     fi
 
     rsync -rlzcv --checksum --delete $DRY_RUN \
+      --exclude='deploy.sh.example' \
+      --exclude='.git/' \
+      --exclude='.gitignore' \
+      --exclude='.gitattributes' \
+      --exclude='.gitmodules' \
       "$DIST_DIR" \
       "$REMOTE_HOST:$REMOTE_PATH"
     """, System.Text.Encoding.UTF8);
