@@ -17,16 +17,24 @@ public static class SiteBuilderCore
     // DescriptionFormatter が解決できなかった変数 [VarName] をスタイル付きスパンに変換するための正規表現
     static readonly Regex UnresolvedVarRegex = new(@"\[([A-Za-z][A-Za-z0-9]*)\]", RegexOptions.Compiled);
 
-    public static string GetDistDir()
+    public static string GetDefaultDistDir()
     {
         var projectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
         return Path.Combine(projectDir, "dist");
     }
 
+    public static string GetDistDir()
+    {
+        var saved = SiteBuilderSettings.Load().DistDir;
+        if (!string.IsNullOrEmpty(saved)) return saved;
+        return GetDefaultDistDir();
+    }
+
     public static string GetOrCreateArticlesDir()
     {
+        var projectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
         var dir = FindArticlesDir(GetDistDir())
-               ?? Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(GetDistDir())!)!, "articles");
+               ?? Path.Combine(projectDir, "..", "articles");
         Directory.CreateDirectory(dir);
         return dir;
     }
@@ -106,7 +114,9 @@ var allEncounterIds = EncounterDatabaseService.GetAllEncounterIds().ToArray();
 var allAncientIds   = AncientDatabaseService.GetAllAncientIds().ToArray();
 
 // レリック画像を dist/images/relics/ に変換・コピー
-var toolsRoot      = FindToolsRoot(Path.GetDirectoryName(distDir)!);
+var projectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
+var toolsRoot  = FindToolsRoot(Path.GetDirectoryName(distDir)!)
+             ?? FindToolsRoot(projectDir);
 var relicImgDstDir = Path.Combine(distDir, "images", "relics");
 Directory.CreateDirectory(relicImgDstDir);
 var relicsWithImg  = toolsRoot is not null
@@ -186,10 +196,39 @@ PageEntry[] pages =
         $"全{CharacterMechanics.All.Sum(g => g.Mechanics.Length)}件のメカニクスをキャラクター別に一覧表示。", "#4a5568"),
 ];
 
-// favicon を assets/ から dist/ にコピー
-var faviconSrc = Path.Combine(Path.GetDirectoryName(distDir)!, "assets", "favicon.png");
+// favicon と wiki-link.js を assets/ から dist/ にコピー
+var assetsDir  = Path.Combine(projectDir, "assets");
+var faviconSrc = Path.Combine(assetsDir, "favicon.png");
 var faviconDst = Path.Combine(distDir, "favicon.png");
 if (File.Exists(faviconSrc)) File.Copy(faviconSrc, faviconDst, overwrite: true);
+var wikiLinkSrc = Path.Combine(assetsDir, "wiki-link.js");
+var wikiLinkDst = Path.Combine(distDir, "wiki-link.js");
+if (File.Exists(wikiLinkSrc)) File.Copy(wikiLinkSrc, wikiLinkDst, overwrite: true);
+
+// deploy.sh.example を出力先ルートに生成
+File.WriteAllText(Path.Combine(distDir, "deploy.sh.example"), """
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # ---- 設定（各自の環境に合わせて編集） ----
+    REMOTE_HOST="sts2-server"          # ~/.ssh/config の Host 名
+    REMOTE_PATH="/home/user/public_html/sts2/"
+
+    # ---- パス解決（スクリプト位置から自動決定） ----
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    DIST_DIR="$SCRIPT_DIR/"
+
+    # ---- rsync ----
+    DRY_RUN=""
+    if [[ "${1:-}" == "--dry-run" ]]; then
+      DRY_RUN="--dry-run"
+      echo "[DRY RUN モード] 実際の転送は行いません"
+    fi
+
+    rsync -rlzcv --checksum --delete $DRY_RUN \
+      "$DIST_DIR" \
+      "$REMOTE_HOST:$REMOTE_PATH"
+    """, System.Text.Encoding.UTF8);
 
 chars = chars.Select(ch =>
 {
@@ -3545,12 +3584,14 @@ static string? FindToolsRoot(string startDir)
 
 static string? FindArticlesDir(string distDir)
 {
-    // Try repo root (grandparent of dist) first, then sibling of dist as fallback
     var distParent = Path.GetDirectoryName(distDir)!;
+    var projectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
     string[] candidates =
     [
-        Path.Combine(Path.GetDirectoryName(distParent)!, "articles"),
-        Path.Combine(distParent, "articles"),
+        Path.Combine(Path.GetDirectoryName(distParent)!, "articles"),  // dist の祖父親
+        Path.Combine(distParent, "articles"),                           // dist の親
+        Path.Combine(projectDir, "..", "articles"),                     // exe プロジェクトの親（StS2Toys/）
+        Path.Combine(projectDir, "articles"),                           // exe プロジェクト直下
     ];
     return candidates.FirstOrDefault(Directory.Exists);
 }

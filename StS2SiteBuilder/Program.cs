@@ -8,7 +8,7 @@ static class Program
         if (args.Length > 0)
         {
             NativeMethods.AttachConsole(-1);
-            var distDir = SiteBuilderCore.GetDistDir();
+            var distDir = ParseDistDirArg(args) ?? SiteBuilderCore.GetDistDir();
             SiteBuilderCore.Build(distDir, Console.WriteLine);
         }
         else
@@ -16,6 +16,13 @@ static class Program
             ApplicationConfiguration.Initialize();
             Application.Run(new MainForm());
         }
+    }
+
+    static string? ParseDistDirArg(string[] args)
+    {
+        for (int i = 0; i < args.Length - 1; i++)
+            if (args[i] == "--dist-dir") return args[i + 1];
+        return null;
     }
 }
 

@@ -23,6 +23,7 @@ public partial class MainForm : Form
             var d = SiteBuilderCore.GetDistDir();
             if (Directory.Exists(d)) Process.Start("explorer.exe", d);
         };
+        _changeDistButton.Click += ChangeDistButton_Click;
         _saveReviewButton.Click += SaveReview_Click;
         _revertReviewButton.Click += (_, _) => RevertReview();
         _changelogAddButton.Click += ChangelogAddButton_Click;
@@ -44,6 +45,22 @@ public partial class MainForm : Form
         _articleBodyBox.TextChanged  += (_, _) => MarkArticleDirty();
         _articleDescBox.TextChanged  += (_, _) => MarkArticleDirty();
         _articleDateBox.TextChanged  += (_, _) => MarkArticleDirty();
+    }
+
+    private void ChangeDistButton_Click(object? sender, EventArgs e)
+    {
+        using var dlg = new FolderBrowserDialog
+        {
+            Description = "dist フォルダ（出力先）を選択してください",
+            UseDescriptionForTitle = true,
+            SelectedPath = SiteBuilderCore.GetDistDir(),
+        };
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+        var settings = SiteBuilderSettings.Load();
+        settings.DistDir = dlg.SelectedPath;
+        settings.Save();
+        _statusLabel.Text = $"出力先を変更しました: {dlg.SelectedPath}";
+        NavigateToDistIndex();
     }
 
     private async void BuildButton_Click(object? sender, EventArgs e)
@@ -121,8 +138,14 @@ public partial class MainForm : Form
         RestoreWindowState();
         await _webView2.EnsureCoreWebView2Async(null);
         _webView2.CoreWebView2.NavigationCompleted += WebView_NavigationCompleted;
+        NavigateToDistIndex();
+    }
+
+    private void NavigateToDistIndex()
+    {
         var indexPath = Path.Combine(SiteBuilderCore.GetDistDir(), "index.html");
-        _webView2.CoreWebView2.Navigate(new Uri(indexPath).AbsoluteUri);
+        if (_webView2.CoreWebView2 != null && File.Exists(indexPath))
+            _webView2.CoreWebView2.Navigate(new Uri(indexPath).AbsoluteUri);
     }
 
     private void WebView_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
