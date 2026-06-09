@@ -34,3 +34,9 @@ deploy.sh
 
 # Claude Code local settings (personal permissions/overrides)
 .claude/settings.local.json
+
+# Card images (game-derived, not redistributable)
+card-images/
+
+# Site builder output
+StS2SiteBuilder/dist/

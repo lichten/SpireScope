@@ -83,3 +83,13 @@ dotnet build
 | セーブデータビューア | `dotnet run --project StS2Toys` | デッキ・レリックの閲覧 |
 | カードブラウザ | `dotnet run --project StS2CardBrowser` | キャラクター・メカニクスでフィルタリング |
 | 静的サイトジェネレータ | `dotnet run --project StS2SiteBuilder` | ゲーム情報サイトの生成 |
+
+---
+
+## Disclaimer
+
+本リポジトリは Slay the Spire 2 の非公式ファンツールです。  
+Slay the Spire 2 は [Mega Crit Games](https://www.megacrit.com/) の著作物です。
+
+**本リポジトリはゲームの著作物を含みません。**  
+ゲームアセット（画像・テキスト等）は、ユーザー自身の Steam インストールから抽出して使用します（`tools/extracted/` ディレクトリ、git 管理外）。
