@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ---- 設定（各自の環境に合わせて編集） ----
 REMOTE_HOST="sts2-server"          # ~/.ssh/config の Host 名
-REMOTE_PATH="/home/user/domains/example.com/public_html/sts2"
+REMOTE_PATH="/home/user/domains/example.com/public_html/sts2/"
 
 # ---- パス解決（スクリプト位置から自動決定） ----
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
