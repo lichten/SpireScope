@@ -15,6 +15,8 @@ partial class MainForm
         _statusLabel = new ToolStripStatusLabel();
         _tabControl = new TabControl();
         _tabPreview = new TabPage();
+        _previewUrlBar = new Panel();
+        _previewUrlLabel = new Label();
         _previewSplit = new SplitContainer();
         _webView2 = new Microsoft.Web.WebView2.WinForms.WebView2();
         _reviewPanel = new Panel();
@@ -64,6 +66,7 @@ partial class MainForm
         _statusStrip.SuspendLayout();
         _tabControl.SuspendLayout();
         _tabPreview.SuspendLayout();
+        _previewUrlBar.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)_previewSplit).BeginInit();
         _previewSplit.Panel1.SuspendLayout();
         _previewSplit.Panel2.SuspendLayout();
@@ -120,15 +123,37 @@ partial class MainForm
         _tabControl.TabIndex = 1;
         // 
         // _tabPreview
-        // 
+        //
         _tabPreview.Controls.Add(_previewSplit);
+        _tabPreview.Controls.Add(_previewUrlBar);
         _tabPreview.Dock = DockStyle.Fill;
         _tabPreview.Location = new Point(4, 34);
         _tabPreview.Name = "_tabPreview";
         _tabPreview.Size = new Size(1278, 930);
         _tabPreview.TabIndex = 0;
         _tabPreview.Text = "プレビュー";
-        // 
+        //
+        // _previewUrlBar
+        //
+        _previewUrlBar.Controls.Add(_previewUrlLabel);
+        _previewUrlBar.Dock = DockStyle.Top;
+        _previewUrlBar.Location = new Point(0, 0);
+        _previewUrlBar.Name = "_previewUrlBar";
+        _previewUrlBar.Padding = new Padding(6, 0, 6, 0);
+        _previewUrlBar.Size = new Size(1278, 26);
+        _previewUrlBar.TabIndex = 1;
+        //
+        // _previewUrlLabel
+        //
+        _previewUrlLabel.Dock = DockStyle.Fill;
+        _previewUrlLabel.Font = new Font("Consolas", 9F);
+        _previewUrlLabel.ForeColor = Color.FromArgb(80, 80, 80);
+        _previewUrlLabel.Location = new Point(6, 0);
+        _previewUrlLabel.Name = "_previewUrlLabel";
+        _previewUrlLabel.Size = new Size(1266, 26);
+        _previewUrlLabel.TabIndex = 0;
+        _previewUrlLabel.TextAlign = ContentAlignment.MiddleLeft;
+        //
         // _previewSplit
         // 
         _previewSplit.Dock = DockStyle.Fill;
@@ -672,6 +697,7 @@ partial class MainForm
         _statusStrip.PerformLayout();
         _tabControl.ResumeLayout(false);
         _tabPreview.ResumeLayout(false);
+        _previewUrlBar.ResumeLayout(false);
         _previewSplit.Panel1.ResumeLayout(false);
         _previewSplit.Panel2.ResumeLayout(false);
         ((System.ComponentModel.ISupportInitialize)_previewSplit).EndInit();
@@ -713,6 +739,8 @@ partial class MainForm
     private ToolStripStatusLabel _statusLabel;
     private TabControl           _tabControl;
     private TabPage              _tabPreview;
+    private Panel                _previewUrlBar;
+    private Label                _previewUrlLabel;
     private TabPage              _tabBuild;
     private SplitContainer       _previewSplit;
     private Microsoft.Web.WebView2.WinForms.WebView2 _webView2;

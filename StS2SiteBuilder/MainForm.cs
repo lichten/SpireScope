@@ -148,15 +148,27 @@ public partial class MainForm : Form
 
     private void WebView_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
     {
-        if (!e.IsSuccess) return;
         var uri = _webView2.Source;
+        if (uri != null && uri.Scheme == "file")
+        {
+            var distDir  = Path.GetFullPath(SiteBuilderCore.GetDistDir());
+            var filePath = Path.GetFullPath(uri.LocalPath);
+            _previewUrlLabel.Text = filePath.StartsWith(distDir, StringComparison.OrdinalIgnoreCase)
+                ? filePath[distDir.Length..].Replace('\\', '/')
+                : filePath;
+        }
+        else
+        {
+            _previewUrlLabel.Text = uri?.ToString() ?? "";
+        }
+
+        if (!e.IsSuccess) return;
         if (uri == null || uri.Scheme != "file")
         {
             SetReviewPanel(null);
             return;
         }
-        var filePath = uri.LocalPath;
-        SetReviewPanel(filePath);
+        SetReviewPanel(uri.LocalPath);
     }
 
     private void SetReviewPanel(string? filePath)
