@@ -1267,6 +1267,66 @@ var kwEntries = cardKeywords.OrderBy(kv => kv.Key).Select(kv =>
 File.WriteAllText(kwOutPath, "{\n" + string.Join(",\n", kwEntries) + "\n}\n");
 Console.WriteLine(kwOutPath);
 
+// card_database.json 出力 (カード・レリックの EN/JP 表示名)
+// 名前は DLL ではなくローカライズの {ID}.title に存在するため、
+// tools/extracted/localization/{eng,jpn}/{cards,relics}.json から生成する。
+{
+    var outDir = Path.GetDirectoryName(outPath)!;
+    // outDir = .../StS2Shared/Resources/{version} → 3階層上がリポジトリルート
+    var repoRoot = Path.GetFullPath(Path.Combine(outDir, "..", "..", ".."));
+    var locDir = Path.Combine(repoRoot, "tools", "extracted", "localization");
+
+    // 指定ファイルの {PREFIX}.title キーを PREFIX→訳語 辞書に集約する。
+    static Dictionary<string, string> LoadTitles(string path)
+    {
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (!File.Exists(path)) return map;
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+        const string suffix = ".title";
+        foreach (var prop in doc.RootElement.EnumerateObject())
+        {
+            if (!prop.Name.EndsWith(suffix, StringComparison.Ordinal)) continue;
+            var prefix = prop.Name[..^suffix.Length];
+            if (prefix.Contains('.')) continue; // 単一セグメントのみ
+            map[prefix] = prop.Value.GetString() ?? "";
+        }
+        return map;
+    }
+
+    var engCards   = LoadTitles(Path.Combine(locDir, "eng", "cards.json"));
+    var jpnCards   = LoadTitles(Path.Combine(locDir, "jpn", "cards.json"));
+    var engRelics  = LoadTitles(Path.Combine(locDir, "eng", "relics.json"));
+    var jpnRelics  = LoadTitles(Path.Combine(locDir, "jpn", "relics.json"));
+
+    if (engCards.Count == 0 && engRelics.Count == 0)
+    {
+        Console.Error.WriteLine($"WARNING: localization not found under {locDir}; skipping card_database.json.");
+    }
+    else
+    {
+        // (id, en, ja) を組み立てる。ja が無ければ en にフォールバック。
+        var entries = new List<(string Id, string En, string Ja)>();
+        foreach (var (prefix, en) in engCards)
+            entries.Add(($"CARD.{prefix}", en, jpnCards.TryGetValue(prefix, out var ja) && ja.Length > 0 ? ja : en));
+        foreach (var (prefix, en) in engRelics)
+            entries.Add(($"RELIC.{prefix}", en, jpnRelics.TryGetValue(prefix, out var ja) && ja.Length > 0 ? ja : en));
+
+        // 日本語をエスケープせず生のまま出力する（既存フォーマットに合わせる）。
+        var jsonOpts = new System.Text.Json.JsonSerializerOptions
+        {
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
+        string J(string s) => System.Text.Json.JsonSerializer.Serialize(s, jsonOpts);
+
+        var dbOutPath = Path.Combine(outDir, "card_database.json");
+        var dbLines = entries.OrderBy(e => e.Id, StringComparer.Ordinal).Select(e =>
+            $"  {J(e.Id)}: {{ \"en\": {J(e.En)}, \"ja\": {J(e.Ja)} }}");
+        File.WriteAllText(dbOutPath, "{\n" + string.Join(",\n", dbLines) + "\n}\n");
+        Console.Error.WriteLine($"Extracted {entries.Count} card/relic name mappings.");
+        Console.WriteLine(dbOutPath);
+    }
+}
+
 // ancient_options.json 出力
 // Ancient イベントクラスのオプションプールを IL から抽出する
 {

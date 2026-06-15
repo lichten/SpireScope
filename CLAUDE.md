@@ -49,7 +49,7 @@ $pck = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\SlayTheSp
 `StS2Shared` は全アプリが `ProjectReference` で参照する。埋め込みリソースとして以下を保持する：
 
 **`Resources/*.json`（手動管理 or card-type-extractor 生成）**
-- `card_database.json` — 手動管理の EN/JP 名前オーバーライド
+- `card_database.json` — カード・レリックの EN/JP 表示名。ローカライズの `{ID}.title` から card-type-extractor がバージョンフォルダ（`Resources/{version}/`）へ生成
 - `card_types.json`, `card_costs.json`, `card_rarities.json`, `card_characters.json` — ゲーム DLL から抽出
 - `card_star_costs.json` — スターコストを持つカードの ID リスト（`get_CanonicalStarCost > 0` または `get_HasStarCostX` が true のもの）
 - `card_stats.json` — カードのキャノニカル変数（ダメージ・ブロック値など）
