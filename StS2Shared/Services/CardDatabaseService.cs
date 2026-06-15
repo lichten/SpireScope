@@ -17,13 +17,13 @@ public static class CardDatabaseService
     static Dictionary<string, Entry> Load()
     {
         var asm = Assembly.GetExecutingAssembly();
-        var name = asm.GetManifestResourceNames()
-            .First(n => n.EndsWith("card_database.json"));
+        var result = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
+        var name = ResourceResolver.ResolveVersioned(asm, "card_database.json");
+        if (name is null) return result;
 
         using var stream = asm.GetManifestResourceStream(name)!;
         var doc = JsonDocument.Parse(stream);
 
-        var result = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
         foreach (var prop in doc.RootElement.EnumerateObject())
         {
             var en = prop.Value.GetProperty("en").GetString() ?? "";
@@ -39,8 +39,7 @@ public static class CardDatabaseService
     static Dictionary<string, string> LoadStringDict(string suffix)
     {
         var asm = Assembly.GetExecutingAssembly();
-        var name = asm.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith(suffix));
+        var name = ResourceResolver.ResolveVersioned(asm, suffix);
         if (name is null) return new Dictionary<string, string>();
 
         using var stream = asm.GetManifestResourceStream(name)!;
@@ -54,8 +53,7 @@ public static class CardDatabaseService
     static Dictionary<string, int> LoadCosts()
     {
         var asm = Assembly.GetExecutingAssembly();
-        var name = asm.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith("card_costs.json"));
+        var name = ResourceResolver.ResolveVersioned(asm, "card_costs.json");
         if (name is null) return new Dictionary<string, int>();
 
         using var stream = asm.GetManifestResourceStream(name)!;
@@ -346,8 +344,7 @@ public static class CardDatabaseService
     static IEnumerable<string> LoadStarCostIds()
     {
         var asm = Assembly.GetExecutingAssembly();
-        var name = asm.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith("card_star_costs.json", StringComparison.OrdinalIgnoreCase));
+        var name = ResourceResolver.ResolveVersioned(asm, "card_star_costs.json");
         if (name is null) yield break;
 
         using var stream = asm.GetManifestResourceStream(name)!;
@@ -364,8 +361,7 @@ public static class CardDatabaseService
     static HashSet<string> LoadKeywordSet(string keyword)
     {
         var asm = Assembly.GetExecutingAssembly();
-        var name = asm.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith("card_keywords.json", StringComparison.OrdinalIgnoreCase));
+        var name = ResourceResolver.ResolveVersioned(asm, "card_keywords.json");
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (name is null) return result;
         using var stream = asm.GetManifestResourceStream(name)!;
@@ -515,8 +511,7 @@ public static class CardDatabaseService
     static IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> LoadStats()
     {
         var asm = Assembly.GetExecutingAssembly();
-        var name = asm.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith("card_stats.json", StringComparison.OrdinalIgnoreCase));
+        var name = ResourceResolver.ResolveVersioned(asm, "card_stats.json");
         if (name is null) return new Dictionary<string, IReadOnlyDictionary<string, int>>();
 
         using var stream = asm.GetManifestResourceStream(name)!;
@@ -554,8 +549,7 @@ public static class CardDatabaseService
     static IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> LoadRelicStats()
     {
         var asm = Assembly.GetExecutingAssembly();
-        var name = asm.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith("relic_stats.json", StringComparison.OrdinalIgnoreCase));
+        var name = ResourceResolver.ResolveVersioned(asm, "relic_stats.json");
         if (name is null) return new Dictionary<string, IReadOnlyDictionary<string, int>>();
 
         using var stream = asm.GetManifestResourceStream(name)!;

@@ -73,6 +73,10 @@ $pck = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\SlayTheSp
 2. `GetManifestResourceStream()` でストリームを取得して `JsonDocument.Parse()`
 3. `key.EndsWith(suffix)` によるマッチングを使用（LogicalName 付き埋め込みを含む）
 
+バージョン別フォルダ（`Resources/v{version}/`）の JSON は全バージョンが埋め込まれるため、
+`Services/ResourceResolver.cs` の `ResolveVersioned()` で `.Resources.v*` のうち**最大バージョン**を選ぶ。
+これにより複数バージョン間および同名ローカライズ埋め込み（例 `card_keywords.json`）との衝突を回避する。
+
 ### card-type-extractor — メタデータ生成ツール
 
 ゲームの `sts2.dll` の IL を `System.Reflection.Metadata` で直接解析する。

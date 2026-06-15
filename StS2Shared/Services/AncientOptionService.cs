@@ -21,8 +21,7 @@ public static class AncientOptionService
     static AncientOptionService()
     {
         var asm = Assembly.GetExecutingAssembly();
-        var resName = asm.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith("ancient_options.json", StringComparison.OrdinalIgnoreCase));
+        var resName = ResourceResolver.ResolveVersioned(asm, "ancient_options.json");
 
         if (resName is null)
         {
