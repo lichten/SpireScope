@@ -50,6 +50,7 @@ $pck = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\SlayTheSp
 
 **`Resources/*.json`（手動管理 or card-type-extractor 生成）**
 - `card_database.json` — カード・レリックの EN/JP 表示名。ローカライズの `{ID}.title` から card-type-extractor がバージョンフォルダ（`Resources/{version}/`）へ生成
+- `card_descriptions.json` — カードの EN/JP 説明文（生テキスト＝`[gold]`タグや`{Var}`テンプレート保持）。ローカライズの `{ID}.description` から生成。`GetDescription` とシナジー判定の読み元（cards.json 埋め込みから移行）
 - `card_types.json`, `card_costs.json`, `card_rarities.json`, `card_characters.json` — ゲーム DLL から抽出
 - `card_star_costs.json` — スターコストを持つカードの ID リスト（`get_CanonicalStarCost > 0` または `get_HasStarCostX` が true のもの）
 - `card_upgraded_costs.json` — アップグレードでコストが変わるカードのみ収録（`OnUpgrade` の `EnergyCost.UpgradeBy/To` から抽出）。`CardDatabaseService.GetUpgradedCost(Value)` で参照
@@ -58,7 +59,7 @@ $pck = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\SlayTheSp
   extractor が実ファイルをスキャンして生成。`Services/CardImageService.cs` で参照し、SiteBuilder/Toys 双方の画像解決を一元化
 
 **ローカライゼーション JSON（`tools/extracted/` から埋め込み）**
-- `localization/{eng,jpn}/{cards,relics,enchantments,encounters,acts}.json`
+- `localization/{eng,jpn}/{relics,enchantments,encounters,acts}.json`（`cards.json` はバージョン管理の `card_descriptions.json` / `card_database.json` に移行済み）
 
 **主要サービス**
 

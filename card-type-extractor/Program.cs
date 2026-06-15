@@ -1372,13 +1372,12 @@ Console.WriteLine(kwOutPath);
     var repoRoot = Path.GetFullPath(Path.Combine(outDir, "..", "..", ".."));
     var locDir = Path.Combine(repoRoot, "tools", "extracted", "localization");
 
-    // 指定ファイルの {PREFIX}.title キーを PREFIX→訳語 辞書に集約する。
-    static Dictionary<string, string> LoadTitles(string path)
+    // 指定ファイルの {PREFIX}{suffix} キー（PREFIX に追加ドット無し）を PREFIX→値 辞書に集約する。
+    static Dictionary<string, string> LoadLocSuffix(string path, string suffix)
     {
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
         if (!File.Exists(path)) return map;
         using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
-        const string suffix = ".title";
         foreach (var prop in doc.RootElement.EnumerateObject())
         {
             if (!prop.Name.EndsWith(suffix, StringComparison.Ordinal)) continue;
@@ -1389,10 +1388,17 @@ Console.WriteLine(kwOutPath);
         return map;
     }
 
-    var engCards   = LoadTitles(Path.Combine(locDir, "eng", "cards.json"));
-    var jpnCards   = LoadTitles(Path.Combine(locDir, "jpn", "cards.json"));
-    var engRelics  = LoadTitles(Path.Combine(locDir, "eng", "relics.json"));
-    var jpnRelics  = LoadTitles(Path.Combine(locDir, "jpn", "relics.json"));
+    var engCards   = LoadLocSuffix(Path.Combine(locDir, "eng", "cards.json"), ".title");
+    var jpnCards   = LoadLocSuffix(Path.Combine(locDir, "jpn", "cards.json"), ".title");
+    var engRelics  = LoadLocSuffix(Path.Combine(locDir, "eng", "relics.json"), ".title");
+    var jpnRelics  = LoadLocSuffix(Path.Combine(locDir, "jpn", "relics.json"), ".title");
+
+    // 日本語をエスケープせず生のまま出力する（既存フォーマットに合わせる）。
+    var jsonOpts = new System.Text.Json.JsonSerializerOptions
+    {
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+    string J(string s) => System.Text.Json.JsonSerializer.Serialize(s, jsonOpts);
 
     if (engCards.Count == 0 && engRelics.Count == 0)
     {
@@ -1407,19 +1413,32 @@ Console.WriteLine(kwOutPath);
         foreach (var (prefix, en) in engRelics)
             entries.Add(($"RELIC.{prefix}", en, jpnRelics.TryGetValue(prefix, out var ja) && ja.Length > 0 ? ja : en));
 
-        // 日本語をエスケープせず生のまま出力する（既存フォーマットに合わせる）。
-        var jsonOpts = new System.Text.Json.JsonSerializerOptions
-        {
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        };
-        string J(string s) => System.Text.Json.JsonSerializer.Serialize(s, jsonOpts);
-
         var dbOutPath = Path.Combine(outDir, "card_database.json");
         var dbLines = entries.OrderBy(e => e.Id, StringComparer.Ordinal).Select(e =>
             $"  {J(e.Id)}: {{ \"en\": {J(e.En)}, \"ja\": {J(e.Ja)} }}");
         File.WriteAllText(dbOutPath, "{\n" + string.Join(",\n", dbLines) + "\n}\n");
         Console.Error.WriteLine($"Extracted {entries.Count} card/relic name mappings.");
         Console.WriteLine(dbOutPath);
+    }
+
+    // card_descriptions.json 出力（カードの EN/JP 説明文。生テキスト＝タグ・テンプレート保持）。
+    var engCardDesc = LoadLocSuffix(Path.Combine(locDir, "eng", "cards.json"), ".description");
+    var jpnCardDesc = LoadLocSuffix(Path.Combine(locDir, "jpn", "cards.json"), ".description");
+    if (engCardDesc.Count == 0)
+    {
+        Console.Error.WriteLine($"WARNING: card descriptions not found under {locDir}; skipping card_descriptions.json.");
+    }
+    else
+    {
+        var descLines = engCardDesc.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv =>
+        {
+            var ja = jpnCardDesc.TryGetValue(kv.Key, out var j) && j.Length > 0 ? j : kv.Value;
+            return $"  {J($"CARD.{kv.Key}")}: {{ \"en\": {J(kv.Value)}, \"ja\": {J(ja)} }}";
+        });
+        var descOutPath = Path.Combine(outDir, "card_descriptions.json");
+        File.WriteAllText(descOutPath, "{\n" + string.Join(",\n", descLines) + "\n}\n");
+        Console.Error.WriteLine($"Extracted {engCardDesc.Count} card descriptions.");
+        Console.WriteLine(descOutPath);
     }
 }
 

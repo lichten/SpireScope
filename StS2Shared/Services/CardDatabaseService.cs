@@ -139,14 +139,17 @@ public static class CardDatabaseService
     // ---- localization (description / flavor) ----
 
     record LocData(
-        IReadOnlyDictionary<string, string> EngCards,
-        IReadOnlyDictionary<string, string> JpnCards,
         IReadOnlyDictionary<string, string> EngRelics,
         IReadOnlyDictionary<string, string> JpnRelics,
         IReadOnlyDictionary<string, string> EngEvents,
         IReadOnlyDictionary<string, string> JpnEvents);
 
     static readonly LocData _loc = LoadLoc();
+
+    // カード説明文（バージョン管理: card_descriptions.json）。"CARD.X" → (en, ja)。
+    static readonly Dictionary<string, (string En, string Ja)> _cardDesc = LoadCardDescriptions();
+    // シナジー判定用に旧 _loc.EngCards と同形（"{rawId}.description" → en）の走査ソースを構築。
+    static readonly IReadOnlyDictionary<string, string> _engCardDesc = BuildEngCardDesc();
     static readonly HashSet<string> _blockGivers = ComputeBlockGivers();
     static readonly HashSet<string> _blockRelicGivers = ComputeBlockRelicGivers();
     static readonly HashSet<string> _drawRelated = ComputeDrawRelated();
@@ -187,7 +190,7 @@ public static class CardDatabaseService
         const string platingTag = "[gold]Plating[/gold]";
         const string descSuffix = ".description";
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (key, desc) in _loc.EngCards)
+        foreach (var (key, desc) in _engCardDesc)
         {
             if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
             // ブロック直接付与・倍増
@@ -236,7 +239,7 @@ public static class CardDatabaseService
         const string drawPileTag = "[gold]Draw Pile[/gold]";
         const string descSuffix = ".description";
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (key, desc) in _loc.EngCards)
+        foreach (var (key, desc) in _engCardDesc)
         {
             if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
             var stripped = desc.Replace(drawPileTag, "", StringComparison.Ordinal);
@@ -272,7 +275,7 @@ public static class CardDatabaseService
         const string exhaustedTag   = "[gold]Exhausted[/gold]";
         const string descSuffix     = ".description";
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (key, desc) in _loc.EngCards)
+        foreach (var (key, desc) in _engCardDesc)
         {
             if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
             var stripped = desc
@@ -288,7 +291,7 @@ public static class CardDatabaseService
     {
         const string descSuffix = ".description";
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var source in new[] { _loc.EngCards, _loc.EngRelics })
+        foreach (var source in new[] { _engCardDesc, _loc.EngRelics })
             foreach (var (key, desc) in source)
             {
                 if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
@@ -305,7 +308,7 @@ public static class CardDatabaseService
         const string descSuffix = ".description";
         var pattern = new Regex(@"\[gold\][^\[]*" + Regex.Escape(word) + @"[^\[]*\[/gold\]");
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var source in new[] { _loc.EngCards, _loc.EngRelics })
+        foreach (var source in new[] { _engCardDesc, _loc.EngRelics })
             foreach (var (key, desc) in source)
             {
                 if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
@@ -319,7 +322,7 @@ public static class CardDatabaseService
     {
         const string descSuffix = ".description";
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var source in new[] { _loc.EngCards, _loc.EngRelics })
+        foreach (var source in new[] { _engCardDesc, _loc.EngRelics })
             foreach (var (key, desc) in source)
             {
                 if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
@@ -331,13 +334,13 @@ public static class CardDatabaseService
 
     static HashSet<string> ComputeByNameContaining(string substring)
     {
-        const string titleSuffix = ".title";
+        // カード名（タイトル）は card_database.json 由来の _db（CARD.* の En）から判定する。
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (key, value) in _loc.EngCards)
+        foreach (var (id, entry) in _db)
         {
-            if (!key.EndsWith(titleSuffix, StringComparison.Ordinal)) continue;
-            if (value.Contains(substring, StringComparison.OrdinalIgnoreCase))
-                result.Add(key[..^titleSuffix.Length]);
+            if (!id.StartsWith("CARD.", StringComparison.OrdinalIgnoreCase)) continue;
+            if (entry.En.Contains(substring, StringComparison.OrdinalIgnoreCase))
+                result.Add(ToRawId(id));
         }
         return result;
     }
@@ -419,7 +422,7 @@ public static class CardDatabaseService
 
         const string descSuffix = ".description";
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (key, desc) in _loc.EngCards)
+        foreach (var (key, desc) in _engCardDesc)
         {
             if (!key.EndsWith(descSuffix, StringComparison.Ordinal)) continue;
             if (!desc.Contains("Add", StringComparison.Ordinal)) continue;
@@ -463,12 +466,37 @@ public static class CardDatabaseService
     public static bool IsAllEnemiesAttack(string id) => _allEnemiesAttack.Contains(ToRawId(id));
 
     static LocData LoadLoc() => new(
-        LoadLocJson("eng.cards"),
-        LoadLocJson("jpn.cards"),
         LoadLocJson("eng.relics"),
         LoadLocJson("jpn.relics"),
         LoadLocJson("eng.events"),
         LoadLocJson("jpn.events"));
+
+    static Dictionary<string, (string En, string Ja)> LoadCardDescriptions()
+    {
+        var asm = Assembly.GetExecutingAssembly();
+        var result = new Dictionary<string, (string, string)>(StringComparer.OrdinalIgnoreCase);
+        var name = ResourceResolver.ResolveVersioned(asm, "card_descriptions.json");
+        if (name is null) return result;
+
+        using var stream = asm.GetManifestResourceStream(name)!;
+        var doc = JsonDocument.Parse(stream);
+        foreach (var prop in doc.RootElement.EnumerateObject())
+        {
+            var en = prop.Value.TryGetProperty("en", out var e) ? e.GetString() ?? "" : "";
+            var ja = prop.Value.TryGetProperty("ja", out var j) ? j.GetString() ?? "" : en;
+            result[prop.Name] = (en, ja);
+        }
+        return result;
+    }
+
+    static IReadOnlyDictionary<string, string> BuildEngCardDesc()
+    {
+        // "CARD.ABRASIVE" → "ABRASIVE.description"（旧 _loc.EngCards の説明文キー形に合わせる）
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (id, v) in _cardDesc)
+            result[ToRawId(id) + ".description"] = v.En;
+        return result;
+    }
 
     static IReadOnlyDictionary<string, string> LoadLocJson(string suffix)
     {
@@ -671,11 +699,14 @@ public static class CardDatabaseService
     public static (string En, string Ja) GetDescription(string id)
     {
         bool isRelic = id.StartsWith("RELIC.", StringComparison.OrdinalIgnoreCase);
+        if (!isRelic)
+        {
+            // カード説明文はバージョン管理の card_descriptions.json から
+            return _cardDesc.TryGetValue("CARD." + ToRawId(id), out var d) ? (d.En, d.Ja) : ("", "");
+        }
         var key = ToRawId(id) + ".description";
-        var eng = isRelic ? _loc.EngRelics : _loc.EngCards;
-        var jpn = isRelic ? _loc.JpnRelics : _loc.JpnCards;
-        var en = eng.TryGetValue(key, out var ev) ? ev : "";
-        var ja = jpn.TryGetValue(key, out var jv) ? jv : en;
+        var en = _loc.EngRelics.TryGetValue(key, out var ev) ? ev : "";
+        var ja = _loc.JpnRelics.TryGetValue(key, out var jv) ? jv : en;
         return (en, ja);
     }
 

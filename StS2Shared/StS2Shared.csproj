@@ -11,8 +11,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources\*.json" />
     <EmbeddedResource Include="Resources\v*\*.json" />
-    <EmbeddedResource Include="..\tools\extracted\localization\eng\cards.json" LogicalName="StS2Shared.localization.eng.cards.json" />
-    <EmbeddedResource Include="..\tools\extracted\localization\jpn\cards.json" LogicalName="StS2Shared.localization.jpn.cards.json" />
+    <!-- カード説明文・名称はバージョン管理の card_descriptions.json / card_database.json に移行済み（cards.json 埋め込みは廃止） -->
     <EmbeddedResource Include="..\tools\extracted\localization\eng\relics.json" LogicalName="StS2Shared.localization.eng.relics.json" />
     <EmbeddedResource Include="..\tools\extracted\localization\jpn\relics.json" LogicalName="StS2Shared.localization.jpn.relics.json" />
     <EmbeddedResource Include="..\tools\extracted\localization\eng\card_keywords.json" LogicalName="StS2Shared.localization.eng.card_keywords.json" />
