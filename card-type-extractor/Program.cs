@@ -1689,6 +1689,21 @@ Console.WriteLine(kwOutPath);
         "[\n" + string.Join(",\n", actEntries) + "\n]\n");
     Console.Error.WriteLine($"Extracted {actEvents.Count} acts (+ALL_ACTS, {globalEvents.Count} global events).");
     Console.WriteLine(Path.Combine(outDir2, "event_acts.json"));
+
+    // ---- event_images.json（イベント ID → events 内の主画像相対パス）----
+    // ルート直下の {id}.png.import のみを主画像として採用（サブフォルダ/_foreground 等の副次素材は除外）。
+    var eventsDir = Path.Combine(repoRoot2, "tools", "extracted", "images", "events");
+    var evImg = new SortedDictionary<string, string>(StringComparer.Ordinal);
+    foreach (var id in allEventIds)
+    {
+        var raw = id.ToLowerInvariant();
+        if (File.Exists(Path.Combine(eventsDir, raw + ".png.import")))
+            evImg[id] = raw + ".png";
+    }
+    File.WriteAllText(Path.Combine(outDir2, "event_images.json"),
+        "{\n" + string.Join(",\n", evImg.Select(kv => $"  {J(kv.Key)}: {J(kv.Value)}")) + "\n}\n");
+    Console.Error.WriteLine($"Extracted {evImg.Count} event image paths.");
+    Console.WriteLine(Path.Combine(outDir2, "event_images.json"));
 }
 
 // card_images.json 出力（カード ID → card_portraits_png 内のソース相対パス）

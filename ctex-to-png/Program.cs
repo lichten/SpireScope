@@ -71,6 +71,39 @@ if (args.Length == 1 && args[0] == "relics")
     return;
 }
 
+// Event mode: convert event .ctex → PNG into images/events_png/ per event_images.json
+// Usage: dotnet run --project ctex-to-png -- events
+if (args.Length == 1 && args[0] == "events")
+{
+    var repoRoot  = Path.GetFullPath(Path.Combine(toolsRoot, "..", ".."));
+    var jsonPath  = LatestVersioned(Path.Combine(repoRoot, "StS2Shared", "Resources"), "event_images.json");
+    if (jsonPath is null) { Console.WriteLine("event_images.json が見つかりません。"); return; }
+
+    var eventsSrc = Path.Combine(toolsRoot, "images", "events");
+    var outRoot   = Path.Combine(toolsRoot, "images", "events_png");
+    Directory.CreateDirectory(outRoot);
+
+    using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(jsonPath));
+    int evConverted = 0, evSkipped = 0, evMissing = 0;
+    foreach (var prop in doc.RootElement.EnumerateObject())
+    {
+        var rel        = prop.Value.GetString()!;                 // "abyssal_baths.png"
+        var relOs      = rel.Replace('/', Path.DirectorySeparatorChar);
+        var importPath = Path.Combine(eventsSrc, relOs + ".import");
+        var ctexRel    = ParseImportCtexPath(importPath);
+        if (ctexRel is null) { evMissing++; continue; }
+        var ctexFull   = Path.Combine(toolsRoot, ctexRel.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        if (!File.Exists(ctexFull)) { evMissing++; continue; }
+        var outPath    = Path.Combine(outRoot, relOs);
+        Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
+        if (File.Exists(outPath)) { evSkipped++; continue; }
+        try { ConvertCtex(ctexFull, outPath, verbose: false); evConverted++; }
+        catch (Exception ex) { Console.WriteLine($"  fail {rel}: {ex.Message}"); evMissing++; }
+    }
+    Console.WriteLine($"events_png: converted={evConverted} skipped={evSkipped} missing={evMissing}");
+    return;
+}
+
 // Card JPEG mode: convert specified card IDs to web-sized JPEG for git tracking
 // Usage: dotnet run --project ctex-to-png -- <id1> <id2> ...
 // Example: dotnet run --project ctex-to-png -- bash defend_ironclad
