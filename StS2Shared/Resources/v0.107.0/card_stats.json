@@ -1,878 +1,1987 @@
 {
   "CARD.ABRASIVE": {
+    "Dexterity": 1,
+    "ThornsPower": 4,
     "UpgradedItem": 2
   },
   "CARD.ACCURACY": {
+    "AccuracyPower": 4,
     "UpgradedItem": 2
+  },
+  "CARD.ACROBATICS": {
+    "Cards": 3
   },
   "CARD.ADAPTIVE_STRIKE": {
-    "UpgradedDamage": 5
+    "Damage": 8,
+    "UpgradedDamage": 13
+  },
+  "CARD.ADRENALINE": {
+    "Cards": 2,
+    "Energy": 1
   },
   "CARD.AFTERLIFE": {
-    "UpgradedSummon": 3
+    "Summon": 6,
+    "UpgradedSummon": 9
+  },
+  "CARD.ALIGNMENT": {
+    "Energy": 2
   },
   "CARD.ALL_FOR_ONE": {
-    "UpgradedDamage": 4
+    "Damage": 8,
+    "UpgradedDamage": 12
   },
   "CARD.ANGER": {
-    "UpgradedDamage": 2
-  },
-  "CARD.ASSASSINATE": {
-    "UpgradedDamage": 3
-  },
-  "CARD.ASTRAL_PULSE": {
-    "UpgradedDamage": 2
-  },
-  "CARD.BACKFLIP": {
-    "UpgradedBlock": 3
-  },
-  "CARD.BACKSTAB": {
-    "UpgradedDamage": 4
-  },
-  "CARD.BALL_LIGHTNING": {
-    "UpgradedDamage": 3
-  },
-  "CARD.BARRAGE": {
-    "UpgradedDamage": 2
-  },
-  "CARD.BASH": {
-    "UpgradedDamage": 2
-  },
-  "CARD.BEAT_INTO_SHAPE": {
-    "UpgradedCalculationBase": 2,
-    "UpgradedCalculationExtra": 2,
-    "UpgradedDamage": 2
-  },
-  "CARD.BLIGHT_STRIKE": {
-    "UpgradedDamage": 2
-  },
-  "CARD.BLOOD_WALL": {
-    "UpgradedBlock": 4
-  },
-  "CARD.BLUDGEON": {
+    "Damage": 8,
     "UpgradedDamage": 10
   },
+  "CARD.ANTICIPATE": {
+    "Dexterity": 2
+  },
+  "CARD.ARMAMENTS": {
+    "Block": 8
+  },
+  "CARD.ASHEN_STRIKE": {
+    "CalculatedDamage": 8,
+    "CalculationBase": 6,
+    "DynamicVar": 7,
+    "ExtraDamage": 3
+  },
+  "CARD.ASSASSINATE": {
+    "Damage": 8,
+    "UpgradedDamage": 11,
+    "Vulnerable": 1
+  },
+  "CARD.ASTRAL_PULSE": {
+    "Damage": 8,
+    "UpgradedDamage": 10
+  },
+  "CARD.AUTOMATION": {
+    "Energy": 1
+  },
+  "CARD.BACKFLIP": {
+    "Block": 8,
+    "Cards": 2,
+    "UpgradedBlock": 11
+  },
+  "CARD.BACKSTAB": {
+    "Damage": 8,
+    "UpgradedDamage": 12
+  },
+  "CARD.BAD_LUCK": {
+    "HpLoss": 13
+  },
+  "CARD.BALL_LIGHTNING": {
+    "Damage": 8,
+    "UpgradedDamage": 11
+  },
+  "CARD.BANSHEES_CRY": {
+    "Damage": 8,
+    "Energy": 2
+  },
+  "CARD.BARRAGE": {
+    "CalculationBase": 1,
+    "CalculationExtra": 2,
+    "CardModel": 3,
+    "Damage": 8,
+    "UpgradedDamage": 10
+  },
+  "CARD.BASH": {
+    "Damage": 8,
+    "UpgradedDamage": 10,
+    "Vulnerable": 2
+  },
+  "CARD.BATTLE_TRANCE": {
+    "Cards": 3
+  },
+  "CARD.BEAM_CELL": {
+    "Damage": 8,
+    "Vulnerable": 1
+  },
+  "CARD.BEAT_DOWN": {
+    "Cards": 3
+  },
+  "CARD.BEAT_INTO_SHAPE": {
+    "CalculationBase": 5,
+    "CalculationExtra": 5,
+    "CardModel": 3,
+    "Damage": 8,
+    "UpgradedCalculationBase": 7,
+    "UpgradedCalculationExtra": 7,
+    "UpgradedDamage": 10
+  },
+  "CARD.BECKON": {
+    "HpLoss": 6
+  },
+  "CARD.BELIEVE_IN_YOU": {
+    "Energy": 2
+  },
+  "CARD.BIASED_COGNITION": {
+    "BiasedCognitionPower": 1,
+    "FocusPower": 4
+  },
+  "CARD.BIG_BANG": {
+    "Cards": 1,
+    "Energy": 1,
+    "Forge": 5,
+    "Stars": 1
+  },
+  "CARD.BLACK_HOLE": {
+    "BlackHolePower": 3
+  },
+  "CARD.BLADE_DANCE": {
+    "Cards": 3
+  },
+  "CARD.BLADE_OF_INK": {
+    "Cards": 2
+  },
+  "CARD.BLIGHT_STRIKE": {
+    "Damage": 8,
+    "UpgradedDamage": 10
+  },
+  "CARD.BLOOD_WALL": {
+    "Block": 8,
+    "HpLoss": 2,
+    "UpgradedBlock": 12
+  },
+  "CARD.BLOODLETTING": {
+    "Energy": 2,
+    "HpLoss": 3
+  },
+  "CARD.BLUDGEON": {
+    "Damage": 8,
+    "UpgradedDamage": 18
+  },
   "CARD.BLUR": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "DynamicVar": 1,
+    "UpgradedBlock": 11
+  },
+  "CARD.BODY_SLAM": {
+    "CalculatedDamage": 8,
+    "CalculationBase": 0,
+    "ExtraDamage": 1
   },
   "CARD.BODYGUARD": {
-    "UpgradedSummon": 2
+    "Summon": 5,
+    "UpgradedSummon": 7
+  },
+  "CARD.BOLAS": {
+    "Damage": 8
   },
   "CARD.BOMBARDMENT": {
-    "UpgradedDamage": 6
+    "Damage": 8,
+    "UpgradedDamage": 14
   },
   "CARD.BONE_SHARDS": {
-    "UpgradedBlock": 3,
-    "UpgradedOstyDamage": 3
+    "Block": 8,
+    "OstyDamage": 8,
+    "UpgradedBlock": 11,
+    "UpgradedOstyDamage": 11
   },
   "CARD.BOOST_AWAY": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "UpgradedBlock": 11
   },
   "CARD.BOOT_SEQUENCE": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "UpgradedBlock": 11
   },
   "CARD.BORROWED_TIME": {
-    "UpgradedEnergy": 2
+    "Energy": 4,
+    "UpgradedEnergy": 6
+  },
+  "CARD.BOUNCING_FLASK": {
+    "Poison": 3,
+    "Repeat": 3
+  },
+  "CARD.BRAND": {
+    "HpLoss": 0,
+    "Strength": 1
   },
   "CARD.BREAK": {
-    "UpgradedDamage": 10,
-    "UpgradedVulnerable": 2
+    "Damage": 8,
+    "UpgradedDamage": 18,
+    "UpgradedVulnerable": 7,
+    "Vulnerable": 5
   },
   "CARD.BREAKTHROUGH": {
-    "UpgradedDamage": 4
+    "Damage": 8,
+    "HpLoss": 1,
+    "UpgradedDamage": 12
+  },
+  "CARD.BRIGHTEST_FLAME": {
+    "Cards": 2,
+    "Energy": 2,
+    "MaxHp": 0
   },
   "CARD.BUBBLE_BUBBLE": {
-    "UpgradedPoison": 3
+    "Poison": 9,
+    "UpgradedPoison": 12
+  },
+  "CARD.BULK_UP": {
+    "Dexterity": 2,
+    "Strength": 2
+  },
+  "CARD.BULLY": {
+    "CalculatedDamage": 8,
+    "CalculationBase": 4,
+    "ExtraDamage": 2
   },
   "CARD.BULWARK": {
-    "UpgradedBlock": 3,
-    "UpgradedForge": 3
+    "Block": 8,
+    "Forge": 10,
+    "UpgradedBlock": 11,
+    "UpgradedForge": 13
+  },
+  "CARD.BUNDLE_OF_JOY": {
+    "Cards": 3
+  },
+  "CARD.BURN": {
+    "Damage": 12
+  },
+  "CARD.BURNING_PACT": {
+    "Cards": 2
   },
   "CARD.BURY": {
-    "UpgradedDamage": 11
+    "Damage": 8,
+    "UpgradedDamage": 19
   },
   "CARD.BYRD_SWOOP": {
-    "UpgradedDamage": 4
+    "Damage": 8,
+    "UpgradedDamage": 12
   },
   "CARD.CALCIFY": {
+    "CalcifyPower": 4,
     "UpgradedItem": 2
+  },
+  "CARD.CALL_OF_THE_VOID": {
+    "Cards": 1
   },
   "CARD.CALTROPS": {
+    "ThornsPower": 3,
     "UpgradedItem": 2
   },
+  "CARD.CAPACITOR": {
+    "Repeat": 2
+  },
+  "CARD.CAPTURE_SPIRIT": {
+    "Cards": 3,
+    "Damage": 14
+  },
+  "CARD.CATASTROPHE": {
+    "Cards": 2
+  },
+  "CARD.CELESTIAL_MIGHT": {
+    "Damage": 8,
+    "Repeat": 3
+  },
+  "CARD.CHAOS": {
+    "Repeat": 1
+  },
+  "CARD.CHARGE": {
+    "Cards": 2
+  },
   "CARD.CHARGE_BATTERY": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "Energy": 1,
+    "UpgradedBlock": 11
+  },
+  "CARD.CHILD_OF_THE_STARS": {
+    "DynamicVar": 2
   },
   "CARD.CINDER": {
-    "UpgradedDamage": 6
+    "Damage": 8,
+    "UpgradedDamage": 14
   },
   "CARD.CLASH": {
-    "UpgradedDamage": 4
+    "Damage": 8,
+    "UpgradedDamage": 12
+  },
+  "CARD.CLAW": {
+    "Damage": 8,
+    "DynamicVar": 2
   },
   "CARD.CLEANSE": {
-    "UpgradedSummon": 2
+    "Summon": 3,
+    "UpgradedSummon": 5
+  },
+  "CARD.CLOAK_AND_DAGGER": {
+    "Block": 8,
+    "Cards": 1
   },
   "CARD.CLOAK_OF_STARS": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "UpgradedBlock": 11
   },
   "CARD.COLD_SNAP": {
-    "UpgradedDamage": 3
-  },
-  "CARD.COLLISION_COURSE": {
-    "UpgradedDamage": 4
-  },
-  "CARD.COLOSSUS": {
-    "UpgradedBlock": 3
-  },
-  "CARD.COMET": {
+    "Damage": 8,
     "UpgradedDamage": 11
   },
+  "CARD.COLLISION_COURSE": {
+    "Damage": 8,
+    "UpgradedDamage": 12
+  },
+  "CARD.COLOSSUS": {
+    "Block": 8,
+    "DynamicVar": 1,
+    "UpgradedBlock": 11
+  },
+  "CARD.COMET": {
+    "Damage": 8,
+    "UpgradedDamage": 19,
+    "Vulnerable": 3,
+    "Weak": 3
+  },
+  "CARD.COMPACT": {
+    "Block": 8
+  },
   "CARD.COMPILE_DRIVER": {
-    "UpgradedDamage": 3
+    "CalculationBase": 1,
+    "CalculationExtra": 2,
+    "CardModel": 3,
+    "Damage": 8,
+    "UpgradedDamage": 11
+  },
+  "CARD.CONFLAGRATION": {
+    "Damage": 8,
+    "Repeat": 4
   },
   "CARD.CONQUEROR": {
-    "UpgradedForge": 2
+    "Forge": 3,
+    "UpgradedForge": 5
+  },
+  "CARD.CONSUMING_SHADOW": {
+    "ConsumingShadowPower": 1,
+    "Repeat": 2
+  },
+  "CARD.CONVERGENCE": {
+    "Energy": 1,
+    "Stars": 1
+  },
+  "CARD.COOLANT": {
+    "CoolantPower": 2
+  },
+  "CARD.COOLHEADED": {
+    "Cards": 1
   },
   "CARD.COORDINATE": {
-    "UpgradedStrength": 3
+    "Strength": 5,
+    "UpgradedStrength": 8
+  },
+  "CARD.CORROSIVE_WAVE": {
+    "DynamicVar": 2
   },
   "CARD.COSMIC_INDIFFERENCE": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "UpgradedBlock": 11
   },
   "CARD.COUNTDOWN": {
+    "CountdownPower": 6,
     "UpgradedItem": 3
   },
   "CARD.CRASH_LANDING": {
-    "UpgradedDamage": 5
+    "Damage": 8,
+    "UpgradedDamage": 13
+  },
+  "CARD.CRESCENT_SPEAR": {
+    "CalculatedDamage": 8,
+    "CalculationBase": 8,
+    "ExtraDamage": 2
   },
   "CARD.CRIMSON_MANTLE": {
+    "CrimsonMantlePower": 8,
     "UpgradedItem": 2
   },
   "CARD.CRUELTY": {
+    "CrueltyPower": 25,
     "UpgradedItem": 25
   },
+  "CARD.CRUSH_UNDER": {
+    "Damage": 8,
+    "DynamicVar": 1
+  },
   "CARD.DAGGER_SPRAY": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "UpgradedDamage": 10
   },
   "CARD.DAGGER_THROW": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.DANSE_MACABRE": {
+    "DanseMacabrePower": 4,
+    "Energy": 2,
     "UpgradedItem": 2
   },
   "CARD.DARK_SHACKLES": {
+    "DynamicVar": 9,
     "UpgradedItem": 6
   },
   "CARD.DASH": {
-    "UpgradedBlock": 3,
-    "UpgradedDamage": 3
+    "Block": 8,
+    "Damage": 8,
+    "UpgradedBlock": 11,
+    "UpgradedDamage": 11
   },
   "CARD.DEADLY_POISON": {
-    "UpgradedPoison": 2
+    "Poison": 5,
+    "UpgradedPoison": 7
   },
   "CARD.DEATH_MARCH": {
-    "UpgradedExtraDamage": 2
+    "CalculatedDamage": 8,
+    "CalculationBase": 8,
+    "ExtraDamage": 4,
+    "UpgradedExtraDamage": 6
   },
   "CARD.DEATHBRINGER": {
-    "UpgradedDoom": 5
+    "Doom": 21,
+    "UpgradedDoom": 26,
+    "Weak": 1
+  },
+  "CARD.DEATHS_DOOR": {
+    "Block": 8,
+    "Repeat": 2
   },
   "CARD.DEBILITATE": {
-    "UpgradedDamage": 2
-  },
-  "CARD.DECISIONS_DECISIONS": {
-    "UpgradedCards": 2
-  },
-  "CARD.DEFEND_DEFECT": {
-    "UpgradedBlock": 3
-  },
-  "CARD.DEFEND_IRONCLAD": {
-    "UpgradedBlock": 3
-  },
-  "CARD.DEFEND_NECROBINDER": {
-    "UpgradedBlock": 3
-  },
-  "CARD.DEFEND_REGENT": {
-    "UpgradedBlock": 3
-  },
-  "CARD.DEFEND_SILENT": {
-    "UpgradedBlock": 3
-  },
-  "CARD.DEFILE": {
-    "UpgradedDamage": 4
-  },
-  "CARD.DEFLECT": {
-    "UpgradedBlock": 3
-  },
-  "CARD.DEFY": {
-    "UpgradedBlock": 3
-  },
-  "CARD.DELAY": {
-    "UpgradedBlock": 2
-  },
-  "CARD.DEVASTATE": {
+    "Damage": 8,
+    "DebilitatePower": 2,
     "UpgradedDamage": 10
   },
+  "CARD.DEBT": {
+    "Gold": 10
+  },
+  "CARD.DECAY": {
+    "Damage": 12
+  },
+  "CARD.DECISIONS_DECISIONS": {
+    "Cards": 3,
+    "Repeat": 3,
+    "UpgradedCards": 5
+  },
+  "CARD.DEFEND_DEFECT": {
+    "Block": 8,
+    "UpgradedBlock": 11
+  },
+  "CARD.DEFEND_IRONCLAD": {
+    "Block": 8,
+    "UpgradedBlock": 11
+  },
+  "CARD.DEFEND_NECROBINDER": {
+    "Block": 8,
+    "UpgradedBlock": 11
+  },
+  "CARD.DEFEND_REGENT": {
+    "Block": 8,
+    "UpgradedBlock": 11
+  },
+  "CARD.DEFEND_SILENT": {
+    "Block": 8,
+    "UpgradedBlock": 11
+  },
+  "CARD.DEFILE": {
+    "Damage": 8,
+    "UpgradedDamage": 12
+  },
+  "CARD.DEFLECT": {
+    "Block": 8,
+    "UpgradedBlock": 11
+  },
+  "CARD.DEFY": {
+    "Block": 8,
+    "UpgradedBlock": 11,
+    "Weak": 1
+  },
+  "CARD.DELAY": {
+    "Block": 8,
+    "Energy": 1,
+    "UpgradedBlock": 10
+  },
+  "CARD.DEMESNE": {
+    "Cards": 1,
+    "Energy": 1
+  },
+  "CARD.DEMON_FORM": {
+    "Strength": 2
+  },
+  "CARD.DEMONIC_SHIELD": {
+    "CalculatedBlock": 8,
+    "CalculationBase": 0,
+    "CalculationExtra": 2,
+    "HpLoss": 1
+  },
+  "CARD.DEVASTATE": {
+    "Damage": 8,
+    "UpgradedDamage": 18
+  },
+  "CARD.DIRGE": {
+    "Summon": 3
+  },
+  "CARD.DISINTEGRATION": {
+    "DisintegrationPower": 6
+  },
   "CARD.DISMANTLE": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "UpgradedDamage": 10
   },
   "CARD.DODGE_AND_ROLL": {
-    "UpgradedBlock": 2
+    "Block": 8,
+    "UpgradedBlock": 10
+  },
+  "CARD.DOMINATE": {
+    "DynamicVar": 1,
+    "Vulnerable": 0
   },
   "CARD.DRAIN_POWER": {
-    "UpgradedDamage": 2
+    "Cards": 2,
+    "Damage": 8,
+    "UpgradedDamage": 10
   },
   "CARD.DRAMATIC_ENTRANCE": {
-    "UpgradedDamage": 4
+    "Damage": 8,
+    "UpgradedDamage": 12
+  },
+  "CARD.DREDGE": {
+    "Cards": 3
+  },
+  "CARD.DRUM_OF_BATTLE": {
+    "Cards": 2,
+    "Energy": 2
+  },
+  "CARD.DUAL_WIELD": {
+    "Cards": 1
   },
   "CARD.DYING_STAR": {
-    "UpgradedDamage": 2,
+    "Damage": 8,
+    "DynamicVar": 9,
+    "UpgradedDamage": 10,
     "UpgradedItem": 2
   },
   "CARD.ECHOING_SLASH": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.END_OF_DAYS": {
-    "UpgradedDoom": 8
+    "Doom": 29,
+    "UpgradedDoom": 37
+  },
+  "CARD.ENERGY_SURGE": {
+    "Energy": 2
   },
   "CARD.ENFEEBLING_TOUCH": {
+    "DynamicVar": 8,
     "UpgradedItem": 3
   },
+  "CARD.ENTROPY": {
+    "Cards": 1
+  },
   "CARD.EQUILIBRIUM": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "DynamicVar": 1,
+    "UpgradedBlock": 11
   },
   "CARD.ERADICATE": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.ESCAPE_PLAN": {
-    "UpgradedBlock": 2
+    "Block": 8,
+    "UpgradedBlock": 10
   },
   "CARD.ETERNAL_ARMOR": {
+    "PlatingPower": 9,
     "UpgradedItem": 3
   },
   "CARD.EVIL_EYE": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "UpgradedBlock": 11
+  },
+  "CARD.EXPECT_A_FIGHT": {
+    "CalculationBase": 1,
+    "CalculationExtra": 2,
+    "CardModel": 2,
+    "Energy": 0
+  },
+  "CARD.EXPERTISE": {
+    "Cards": 6
+  },
+  "CARD.EXPOSE": {
+    "DynamicVar": 2
+  },
+  "CARD.EXTERMINATE": {
+    "Damage": 8,
+    "Repeat": 4
   },
   "CARD.FALLING_STAR": {
-    "UpgradedDamage": 4
+    "Damage": 8,
+    "UpgradedDamage": 12,
+    "Vulnerable": 1,
+    "Weak": 2
+  },
+  "CARD.FAN_OF_KNIVES": {
+    "Cards": 4
   },
   "CARD.FASTEN": {
+    "DynamicVar": 4,
     "UpgradedItem": 2
   },
+  "CARD.FEAR": {
+    "Damage": 8,
+    "Vulnerable": 1
+  },
   "CARD.FEED": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "MaxHp": 3,
+    "UpgradedDamage": 10
   },
   "CARD.FEEDING_FRENZY": {
-    "UpgradedStrength": 2
+    "Strength": 5,
+    "UpgradedStrength": 7
+  },
+  "CARD.FEEL_NO_PAIN": {
+    "DynamicVar": 3
   },
   "CARD.FETCH": {
-    "UpgradedOstyDamage": 3
+    "Cards": 1,
+    "OstyDamage": 8,
+    "UpgradedOstyDamage": 11
   },
   "CARD.FIEND_FIRE": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
+  },
+  "CARD.FIGHT_ME": {
+    "Damage": 8,
+    "DynamicVar": 3,
+    "Repeat": 2,
+    "Strength": 3
   },
   "CARD.FIGHT_THROUGH": {
-    "UpgradedBlock": 4
+    "Block": 8,
+    "UpgradedBlock": 12
   },
   "CARD.FINESSE": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "Cards": 1,
+    "UpgradedBlock": 11
   },
   "CARD.FINISHER": {
-    "UpgradedDamage": 2
+    "CalculationBase": 1,
+    "CalculationExtra": 2,
+    "CardModel": 3,
+    "Damage": 8,
+    "UpgradedDamage": 10
   },
   "CARD.FISTICUFFS": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "UpgradedDamage": 10
   },
   "CARD.FLAK_CANNON": {
-    "UpgradedDamage": 3
+    "CalculationBase": 1,
+    "CalculationExtra": 2,
+    "CardModel": 3,
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.FLAME_BARRIER": {
-    "UpgradedBlock": 4,
+    "Block": 8,
+    "DynamicVar": 4,
+    "UpgradedBlock": 12,
     "UpgradedItem": 2
   },
   "CARD.FLASH_OF_STEEL": {
-    "UpgradedDamage": 3
+    "Cards": 1,
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.FLATTEN": {
-    "UpgradedOstyDamage": 4
+    "OstyDamage": 8,
+    "UpgradedOstyDamage": 12
   },
   "CARD.FLECHETTES": {
-    "UpgradedDamage": 2
+    "CalculationBase": 1,
+    "CalculationExtra": 2,
+    "CardModel": 3,
+    "Damage": 8,
+    "UpgradedDamage": 10
   },
   "CARD.FLICK_FLACK": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "UpgradedDamage": 10
   },
   "CARD.FOCUSED_STRIKE": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "FocusPower": 1,
+    "UpgradedDamage": 10
+  },
+  "CARD.FOOTWORK": {
+    "Dexterity": 2
+  },
+  "CARD.FOREGONE_CONCLUSION": {
+    "Cards": 2
+  },
+  "CARD.FORGOTTEN_RITUAL": {
+    "Energy": 3
+  },
+  "CARD.FRIENDSHIP": {
+    "Energy": 1,
+    "Strength": 2
+  },
+  "CARD.FTL": {
+    "Cards": 1,
+    "Damage": 8
+  },
+  "CARD.FUEL": {
+    "Cards": 1,
+    "Energy": 1
   },
   "CARD.FURNACE": {
-    "UpgradedForge": 2
+    "Forge": 5,
+    "UpgradedForge": 7
   },
   "CARD.GAMMA_BLAST": {
-    "UpgradedDamage": 5
+    "Damage": 8,
+    "UpgradedDamage": 13,
+    "Vulnerable": 2,
+    "Weak": 2
   },
   "CARD.GANG_UP": {
-    "UpgradedExtraDamage": 2
+    "CalculatedDamage": 8,
+    "CalculationBase": 5,
+    "ExtraDamage": 5,
+    "UpgradedExtraDamage": 7
   },
   "CARD.GATHER_LIGHT": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "Stars": 1,
+    "UpgradedBlock": 11
+  },
+  "CARD.GENESIS": {
+    "DynamicVar": 2
   },
   "CARD.GENETIC_ALGORITHM": {
-    "_currentBlock": 1
+    "_currentBlock": 1,
+    "Block": 8,
+    "DynamicVar": 3
   },
   "CARD.GIANT_ROCK": {
-    "UpgradedDamage": 4
+    "Damage": 8,
+    "UpgradedDamage": 12
   },
   "CARD.GLACIER": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "UpgradedBlock": 11
   },
   "CARD.GLASSWORK": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "UpgradedBlock": 11
+  },
+  "CARD.GLIMMER": {
+    "Cards": 3,
+    "DynamicVar": 1
+  },
+  "CARD.GLIMPSE_BEYOND": {
+    "Cards": 3
   },
   "CARD.GLITTERSTREAM": {
-    "UpgradedBlock": 2,
+    "Block": 8,
+    "UpgradedBlock": 10,
     "UpgradedItem": 2
   },
+  "CARD.GLOW": {
+    "Cards": 1,
+    "Stars": 1
+  },
+  "CARD.GO_FOR_THE_EYES": {
+    "Damage": 8,
+    "Weak": 1
+  },
+  "CARD.GOLD_AXE": {
+    "CalculatedDamage": 8,
+    "CalculationBase": 0,
+    "ExtraDamage": 1
+  },
   "CARD.GRAND_FINALE": {
-    "UpgradedDamage": 15
+    "Damage": 8,
+    "UpgradedDamage": 23
   },
   "CARD.GRAVE_WARDEN": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "Cards": 1,
+    "UpgradedBlock": 11
   },
   "CARD.GRAVEBLAST": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "UpgradedDamage": 10
+  },
+  "CARD.GUIDING_STAR": {
+    "Cards": 2,
+    "Damage": 8
+  },
+  "CARD.GUILTY": {
+    "DynamicVar": 5
+  },
+  "CARD.GUNK_UP": {
+    "Damage": 8,
+    "Repeat": 3
   },
   "CARD.HAILSTORM": {
+    "HailstormPower": 6,
     "UpgradedItem": 2
   },
   "CARD.HAND_OF_GREED": {
-    "UpgradedDamage": 5,
+    "Damage": 8,
+    "DynamicVar": 20,
+    "UpgradedDamage": 13,
     "UpgradedItem": 5
   },
   "CARD.HAND_TRICK": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "UpgradedBlock": 11
   },
   "CARD.HANG": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.HAUNT": {
-    "UpgradedHpLoss": 2
+    "HpLoss": 6,
+    "UpgradedHpLoss": 8
   },
   "CARD.HAZE": {
-    "UpgradedPoison": 2
+    "Poison": 4,
+    "UpgradedPoison": 6
   },
   "CARD.HEADBUTT": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.HEAVENLY_DRILL": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "Energy": 4,
+    "UpgradedDamage": 10
   },
   "CARD.HEGEMONY": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "Energy": 2,
+    "UpgradedDamage": 11
   },
   "CARD.HEIRLOOM_HAMMER": {
-    "UpgradedDamage": 5
+    "Damage": 8,
+    "Repeat": 1,
+    "UpgradedDamage": 13
   },
   "CARD.HELIX_DRILL": {
-    "UpgradedDamage": 2
+    "CalculationBase": 1,
+    "CalculationExtra": 2,
+    "CardModel": 3,
+    "Damage": 8,
+    "UpgradedDamage": 10
   },
   "CARD.HEMOKINESIS": {
-    "UpgradedDamage": 5
+    "Damage": 8,
+    "HpLoss": 2,
+    "UpgradedDamage": 13
+  },
+  "CARD.HIDDEN_CACHE": {
+    "StarNextTurnPower": 3,
+    "Stars": 1
+  },
+  "CARD.HIDDEN_DAGGERS": {
+    "Cards": 2,
+    "DynamicVar": 2
+  },
+  "CARD.HIDDEN_GEM": {
+    "DynamicVar": 2
   },
   "CARD.HIGH_FIVE": {
-    "UpgradedOstyDamage": 2
+    "OstyDamage": 8,
+    "UpgradedOstyDamage": 10,
+    "Vulnerable": 2
   },
   "CARD.HOLOGRAM": {
-    "UpgradedBlock": 2
-  },
-  "CARD.HOWL_FROM_BEYOND": {
-    "UpgradedDamage": 5
-  },
-  "CARD.HYPERBEAM": {
-    "UpgradedDamage": 8
-  },
-  "CARD.I_AM_INVINCIBLE": {
-    "UpgradedBlock": 3
-  },
-  "CARD.ICE_LANCE": {
-    "UpgradedDamage": 5
-  },
-  "CARD.IMPERVIOUS": {
+    "Block": 8,
     "UpgradedBlock": 10
   },
+  "CARD.HOTFIX": {
+    "FocusPower": 2
+  },
+  "CARD.HOWL_FROM_BEYOND": {
+    "Damage": 8,
+    "UpgradedDamage": 13
+  },
+  "CARD.HUDDLE_UP": {
+    "Cards": 2
+  },
+  "CARD.HYPERBEAM": {
+    "Damage": 8,
+    "FocusPower": 3,
+    "UpgradedDamage": 16
+  },
+  "CARD.I_AM_INVINCIBLE": {
+    "Block": 8,
+    "UpgradedBlock": 11
+  },
+  "CARD.ICE_LANCE": {
+    "Damage": 8,
+    "Repeat": 3,
+    "UpgradedDamage": 13
+  },
+  "CARD.IMPATIENCE": {
+    "Cards": 2
+  },
+  "CARD.IMPERVIOUS": {
+    "Block": 8,
+    "UpgradedBlock": 18
+  },
+  "CARD.INFECTION": {
+    "Damage": 12
+  },
   "CARD.INFERNO": {
+    "InfernoPower": 6,
     "UpgradedItem": 3
   },
+  "CARD.INFLAME": {
+    "Strength": 2
+  },
   "CARD.INTERCEPT": {
-    "UpgradedBlock": 4
+    "Block": 8,
+    "UpgradedBlock": 12
+  },
+  "CARD.INVOKE": {
+    "Energy": 2,
+    "Summon": 2
   },
   "CARD.IRON_WAVE": {
-    "UpgradedBlock": 2,
-    "UpgradedDamage": 2
+    "Block": 8,
+    "Damage": 8,
+    "UpgradedBlock": 10,
+    "UpgradedDamage": 10
+  },
+  "CARD.ITERATION": {
+    "IterationPower": 2
+  },
+  "CARD.JACK_OF_ALL_TRADES": {
+    "Cards": 1
   },
   "CARD.JACKPOT": {
-    "UpgradedDamage": 5
+    "Cards": 3,
+    "Damage": 8,
+    "UpgradedDamage": 13
   },
   "CARD.JUGGERNAUT": {
+    "JuggernautPower": 6,
     "UpgradedItem": 2
   },
   "CARD.KINGLY_KICK": {
-    "UpgradedDamage": 8
+    "Damage": 8,
+    "UpgradedDamage": 16
   },
   "CARD.KINGLY_PUNCH": {
-    "UpgradedDamage": 2,
+    "Damage": 8,
+    "DynamicVar": 4,
+    "UpgradedDamage": 10,
     "UpgradedItem": 2
   },
+  "CARD.KNIFE_TRAP": {
+    "CalculationBase": 0,
+    "CalculationExtra": 1,
+    "CardModel": 2
+  },
   "CARD.KNOCKDOWN": {
-    "UpgradedDamage": 4
+    "Damage": 8,
+    "KnockdownPower": 2,
+    "UpgradedDamage": 12
   },
   "CARD.KNOCKOUT_BLOW": {
-    "UpgradedDamage": 8
+    "Damage": 8,
+    "Stars": 5,
+    "UpgradedDamage": 16
+  },
+  "CARD.KNOW_THY_PLACE": {
+    "Vulnerable": 1,
+    "Weak": 0
   },
   "CARD.LEADING_STRIKE": {
-    "UpgradedDamage": 3
+    "Cards": 2,
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.LEAP": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "UpgradedBlock": 11
   },
   "CARD.LEG_SWEEP": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "UpgradedBlock": 11,
+    "Weak": 2
   },
   "CARD.LEGION_OF_BONE": {
-    "UpgradedSummon": 2
+    "Summon": 6,
+    "UpgradedSummon": 8
   },
   "CARD.LETHALITY": {
+    "LethalityPower": 50,
     "UpgradedItem": 25
   },
   "CARD.LIFT": {
-    "UpgradedBlock": 5
+    "Block": 8,
+    "UpgradedBlock": 13
   },
   "CARD.LIGHTNING_ROD": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "LightningRodPower": 2,
+    "UpgradedBlock": 11
+  },
+  "CARD.LUMINESCE": {
+    "Energy": 2
+  },
+  "CARD.LUNAR_BLAST": {
+    "CalculationBase": 1,
+    "CalculationExtra": 2,
+    "Damage": 8,
+    "DynamicVar": 7
+  },
+  "CARD.MACHINE_LEARNING": {
+    "Cards": 1
+  },
+  "CARD.MAD_SCIENCE": {
+    "Block": 8,
+    "Cards": 3,
+    "Damage": 8,
+    "Dexterity": 2,
+    "DynamicVar": 10,
+    "Energy": 2,
+    "StranglePower": 6,
+    "Strength": 2,
+    "Vulnerable": 2,
+    "Weak": 2
   },
   "CARD.MAKE_IT_SO": {
-    "UpgradedDamage": 3
+    "Cards": 3,
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.MANGLE": {
-    "UpgradedDamage": 5,
+    "Damage": 8,
+    "DynamicVar": 10,
+    "UpgradedDamage": 13,
     "UpgradedItem": 5
   },
+  "CARD.MANIFEST_AUTHORITY": {
+    "Block": 8
+  },
+  "CARD.MASTER_OF_STRATEGY": {
+    "Cards": 3
+  },
+  "CARD.MAUL": {
+    "Damage": 8,
+    "DynamicVar": 1
+  },
   "CARD.MELANCHOLY": {
-    "UpgradedBlock": 4
+    "Block": 8,
+    "Energy": 1,
+    "UpgradedBlock": 12
   },
   "CARD.MEMENTO_MORI": {
-    "UpgradedCalculationBase": 2
+    "CalculatedDamage": 8,
+    "CalculationBase": 9,
+    "ExtraDamage": 4,
+    "UpgradedCalculationBase": 11
   },
   "CARD.METAMORPHOSIS": {
-    "UpgradedCards": 2
+    "Cards": 3,
+    "UpgradedCards": 5
   },
   "CARD.METEOR_SHOWER": {
-    "UpgradedDamage": 7
+    "Damage": 8,
+    "UpgradedDamage": 15,
+    "Vulnerable": 2,
+    "Weak": 2
   },
   "CARD.METEOR_STRIKE": {
-    "UpgradedDamage": 6
+    "Damage": 8,
+    "UpgradedDamage": 14
+  },
+  "CARD.MIMIC": {
+    "CalculatedBlock": 8,
+    "CalculationBase": 0,
+    "CalculationExtra": 1
+  },
+  "CARD.MIND_BLAST": {
+    "CalculatedDamage": 8,
+    "CalculationBase": 0,
+    "ExtraDamage": 1
   },
   "CARD.MINION_DIVE_BOMB": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.MINION_SACRIFICE": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "UpgradedBlock": 11
   },
   "CARD.MINION_STRIKE": {
-    "UpgradedDamage": 3
+    "Cards": 1,
+    "Damage": 8,
+    "UpgradedDamage": 11
+  },
+  "CARD.MIRAGE": {
+    "CalculatedBlock": 8,
+    "CalculationBase": 0,
+    "CalculationExtra": 1
   },
   "CARD.MISERY": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "UpgradedDamage": 10
   },
   "CARD.MOCK_ATTACK_CARD": {
     "_hitCount": 1,
     "_targetingType": 2,
-    "UpgradedDamage": 3
+    "Block": 8,
+    "Damage": 8,
+    "OstyDamage": 8,
+    "UpgradedDamage": 11
+  },
+  "CARD.MOCK_POWER_CARD": {
+    "Block": 8,
+    "Strength": 2
   },
   "CARD.MOCK_SKILL_CARD": {
     "_blockCount": 1,
     "_targetType": 1,
-    "UpgradedBlock": 3
+    "Block": 8,
+    "Cards": 0,
+    "Energy": 0,
+    "Forge": 0,
+    "Stars": 0,
+    "Summon": 6,
+    "UpgradedBlock": 11
+  },
+  "CARD.MODDED": {
+    "Cards": 1,
+    "Repeat": 1
   },
   "CARD.MOLTEN_FIST": {
-    "UpgradedDamage": 4
+    "Damage": 8,
+    "UpgradedDamage": 12
   },
   "CARD.MOMENTUM_STRIKE": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
+  },
+  "CARD.MURDER": {
+    "CalculatedDamage": 8,
+    "CalculationBase": 0,
+    "ExtraDamage": 1
   },
   "CARD.NECRO_MASTERY": {
-    "UpgradedSummon": 3
+    "Summon": 5,
+    "UpgradedSummon": 8
   },
   "CARD.NEGATIVE_PULSE": {
-    "UpgradedDoom": 4
+    "Block": 8,
+    "Doom": 7,
+    "UpgradedDoom": 11
   },
   "CARD.NEOWS_FURY": {
-    "UpgradedDamage": 4
+    "Cards": 2,
+    "Damage": 8,
+    "UpgradedDamage": 12
+  },
+  "CARD.NEUROSURGE": {
+    "Cards": 2,
+    "Energy": 3,
+    "NeurosurgePower": 3
+  },
+  "CARD.NEUTRALIZE": {
+    "Damage": 8,
+    "Weak": 1
   },
   "CARD.NEUTRON_AEGIS": {
+    "PlatingPower": 8,
     "UpgradedItem": 3
   },
   "CARD.NO_ESCAPE": {
-    "UpgradedCalculationBase": 5
+    "CalculationBase": 10,
+    "CalculationExtra": 5,
+    "CardModel": 3,
+    "UpgradedCalculationBase": 15
+  },
+  "CARD.NORMALITY": {
+    "CalculationBase": 3,
+    "CalculationExtra": 1,
+    "CardModel": 2
   },
   "CARD.NOT_YET": {
-    "UpgradedHeal": 3
+    "Heal": 10,
+    "UpgradedHeal": 13
+  },
+  "CARD.NOXIOUS_FUMES": {
+    "DynamicVar": 2
   },
   "CARD.NULL": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11,
+    "Weak": 2
+  },
+  "CARD.OBLIVION": {
+    "Doom": 3
   },
   "CARD.OFFERING": {
-    "UpgradedCards": 2
+    "Cards": 3,
+    "Energy": 2,
+    "HpLoss": 6,
+    "UpgradedCards": 5
   },
   "CARD.OMNISLICE": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
+  },
+  "CARD.ORBIT": {
+    "Energy": 1
   },
   "CARD.OUTBREAK": {
+    "OutbreakPower": 11,
+    "Repeat": 3,
     "UpgradedItem": 4
   },
+  "CARD.OUTMANEUVER": {
+    "Energy": 2
+  },
+  "CARD.OVERCLOCK": {
+    "Cards": 2
+  },
   "CARD.PACTS_END": {
-    "UpgradedDamage": 6
+    "Cards": 3,
+    "Damage": 8,
+    "UpgradedDamage": 14
+  },
+  "CARD.PAGESTORM": {
+    "Cards": 1
+  },
+  "CARD.PALE_BLUE_DOT": {
+    "Cards": 1,
+    "DynamicVar": 5
   },
   "CARD.PANACHE": {
+    "DynamicVar": 10,
     "UpgradedItem": 4
   },
   "CARD.PANIC_BUTTON": {
-    "UpgradedBlock": 10
+    "Block": 8,
+    "DynamicVar": 2,
+    "UpgradedBlock": 18
   },
   "CARD.PARRY": {
+    "ParryPower": 10,
     "UpgradedItem": 4
   },
+  "CARD.PARSE": {
+    "Cards": 3
+  },
   "CARD.PARTICLE_WALL": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "UpgradedBlock": 11
   },
   "CARD.PATTER": {
-    "UpgradedBlock": 2
+    "Block": 8,
+    "UpgradedBlock": 10,
+    "VigorPower": 2
+  },
+  "CARD.PECK": {
+    "Damage": 8,
+    "Repeat": 3
+  },
+  "CARD.PERFECTED_STRIKE": {
+    "CalculatedDamage": 8,
+    "CalculationBase": 6,
+    "ExtraDamage": 2
   },
   "CARD.PHANTOM_BLADES": {
+    "PhantomBladesPower": 9,
     "UpgradedItem": 3
   },
   "CARD.PHOTON_CUT": {
-    "UpgradedDamage": 3
+    "Cards": 1,
+    "Damage": 8,
+    "DynamicVar": 2,
+    "UpgradedDamage": 11
   },
   "CARD.PIERCING_WAIL": {
+    "DynamicVar": 6,
     "UpgradedItem": 2
   },
   "CARD.PILLAGE": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
+  },
+  "CARD.PILLAR_OF_CREATION": {
+    "Block": 4
   },
   "CARD.PINPOINT": {
-    "UpgradedDamage": 4
+    "Damage": 8,
+    "UpgradedDamage": 12
   },
   "CARD.POISONED_STAB": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "Poison": 3,
+    "UpgradedDamage": 10
   },
   "CARD.POKE": {
-    "UpgradedOstyDamage": 3
+    "OstyDamage": 8,
+    "UpgradedOstyDamage": 11
+  },
+  "CARD.POMMEL_STRIKE": {
+    "Cards": 1,
+    "Damage": 8
   },
   "CARD.POUNCE": {
-    "UpgradedDamage": 6
+    "Damage": 8,
+    "UpgradedDamage": 14
   },
   "CARD.PRECISE_CUT": {
-    "UpgradedCalculationBase": 3
+    "CalculatedDamage": 8,
+    "CalculationBase": 13,
+    "ExtraDamage": 2,
+    "UpgradedCalculationBase": 16
   },
   "CARD.PREDATOR": {
-    "UpgradedDamage": 5
+    "Damage": 8,
+    "UpgradedDamage": 13
   },
   "CARD.PREP_TIME": {
+    "PrepTimePower": 4,
     "UpgradedItem": 2
   },
+  "CARD.PREPARED": {
+    "Cards": 1
+  },
+  "CARD.PRODUCTION": {
+    "Energy": 2
+  },
   "CARD.PROPHESIZE": {
-    "UpgradedCards": 3
+    "Cards": 6,
+    "UpgradedCards": 9
   },
   "CARD.PROTECTOR": {
-    "UpgradedCalculationBase": 5
+    "CalculatedDamage": 8,
+    "CalculationBase": 10,
+    "ExtraDamage": 1,
+    "UpgradedCalculationBase": 15
+  },
+  "CARD.PROWESS": {
+    "Dexterity": 1,
+    "Strength": 0
   },
   "CARD.PULL_AGGRO": {
-    "UpgradedBlock": 2
+    "Block": 8,
+    "Summon": 4,
+    "UpgradedBlock": 10
   },
   "CARD.PULL_FROM_BELOW": {
-    "UpgradedDamage": 2
+    "CalculationBase": 1,
+    "CalculationExtra": 2,
+    "CardModel": 3,
+    "Damage": 8,
+    "UpgradedDamage": 10
   },
   "CARD.PURITY": {
-    "UpgradedCards": 2
+    "Cards": 3,
+    "UpgradedCards": 5
+  },
+  "CARD.PUTREFY": {
+    "DynamicVar": 2
+  },
+  "CARD.PYRE": {
+    "Energy": 1
+  },
+  "CARD.QUADCAST": {
+    "Repeat": 4
+  },
+  "CARD.RADIATE": {
+    "CalculationBase": 2,
+    "CalculationExtra": 3,
+    "Damage": 8,
+    "DynamicVar": 7,
+    "Stars": 1
   },
   "CARD.RAGE": {
+    "DynamicVar": 3,
     "UpgradedItem": 2
   },
   "CARD.RALLY": {
-    "UpgradedBlock": 5
+    "Block": 8,
+    "UpgradedBlock": 13
   },
   "CARD.RAMPAGE": {
+    "Damage": 8,
+    "DynamicVar": 5,
     "UpgradedItem": 4
   },
   "CARD.RATTLE": {
-    "UpgradedOstyDamage": 2
+    "CalculationBase": 1,
+    "CalculationExtra": 2,
+    "CardModel": 3,
+    "OstyDamage": 8,
+    "UpgradedOstyDamage": 10
   },
   "CARD.REANIMATE": {
-    "UpgradedSummon": 5
+    "Summon": 20,
+    "UpgradedSummon": 25
   },
   "CARD.REAP": {
-    "UpgradedDamage": 6
+    "Damage": 8,
+    "UpgradedDamage": 14
   },
   "CARD.REAVE": {
-    "UpgradedDamage": 2
+    "Cards": 1,
+    "Damage": 8,
+    "UpgradedDamage": 10
   },
   "CARD.REBOOT": {
-    "UpgradedCards": 2
+    "Cards": 4,
+    "UpgradedCards": 6
   },
   "CARD.REBOUND": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.REFINE_BLADE": {
-    "UpgradedForge": 4
+    "Energy": 1,
+    "Forge": 9,
+    "UpgradedForge": 13
   },
   "CARD.REFLECT": {
-    "UpgradedBlock": 5
+    "Block": 8,
+    "UpgradedBlock": 13
+  },
+  "CARD.REFLEX": {
+    "Cards": 2
   },
   "CARD.REFRACT": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "Repeat": 2,
+    "UpgradedDamage": 11
   },
   "CARD.RELAX": {
-    "UpgradedBlock": 2
+    "Block": 8,
+    "Cards": 2,
+    "Energy": 2,
+    "UpgradedBlock": 10
   },
   "CARD.REND": {
-    "UpgradedCalculationBase": 3,
-    "UpgradedExtraDamage": 3
+    "CalculatedDamage": 8,
+    "CalculationBase": 15,
+    "ExtraDamage": 5,
+    "UpgradedCalculationBase": 18,
+    "UpgradedExtraDamage": 8
+  },
+  "CARD.RESTLESSNESS": {
+    "Cards": 2,
+    "Energy": 2
+  },
+  "CARD.RICOCHET": {
+    "Damage": 8,
+    "Repeat": 4
   },
   "CARD.RIGHT_HAND_HAND": {
-    "UpgradedOstyDamage": 2
+    "Energy": 2,
+    "OstyDamage": 8,
+    "UpgradedOstyDamage": 10
   },
   "CARD.RIP_AND_TEAR": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "UpgradedDamage": 10
+  },
+  "CARD.ROCKET_PUNCH": {
+    "Cards": 1,
+    "Damage": 8
   },
   "CARD.ROLLING_BOULDER": {
+    "DynamicVar": 5,
+    "RollingBoulderPower": 5,
     "UpgradedItem": 5
   },
+  "CARD.ROYAL_GAMBLE": {
+    "Stars": 9
+  },
   "CARD.ROYALTIES": {
-    "UpgradedGold": 10
+    "Gold": 30,
+    "UpgradedGold": 40
+  },
+  "CARD.SACRIFICE": {
+    "CalculatedBlock": 8,
+    "CalculationBase": 0,
+    "CalculationExtra": 1
   },
   "CARD.SALVO": {
-    "UpgradedDamage": 4
+    "Damage": 8,
+    "UpgradedDamage": 12
+  },
+  "CARD.SCAVENGE": {
+    "Energy": 2
   },
   "CARD.SCOURGE": {
-    "UpgradedDoom": 3
+    "Cards": 1,
+    "Doom": 13,
+    "UpgradedDoom": 16
   },
   "CARD.SCRAPE": {
-    "UpgradedDamage": 3
+    "Cards": 4,
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.SCULPTING_STRIKE": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
+  },
+  "CARD.SEANCE": {
+    "Cards": 1
   },
   "CARD.SECOND_WIND": {
-    "UpgradedBlock": 2
+    "Block": 8,
+    "UpgradedBlock": 10
   },
   "CARD.SEEKER_STRIKE": {
-    "UpgradedDamage": 3
+    "Cards": 3,
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.SEEKING_EDGE": {
-    "UpgradedForge": 4
+    "Forge": 7,
+    "UpgradedForge": 11
   },
   "CARD.SERPENT_FORM": {
+    "SerpentFormPower": 4,
     "UpgradedItem": 2
   },
   "CARD.SETUP_STRIKE": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "Strength": 2,
+    "UpgradedDamage": 10
+  },
+  "CARD.SEVEN_STARS": {
+    "Damage": 8,
+    "Repeat": 7
   },
   "CARD.SEVERANCE": {
-    "UpgradedDamage": 5
+    "Damage": 8,
+    "UpgradedDamage": 13
   },
   "CARD.SHADOW_SHIELD": {
-    "UpgradedBlock": 4
+    "Block": 8,
+    "UpgradedBlock": 12
+  },
+  "CARD.SHADOW_STEP": {
+    "Cards": 3
+  },
+  "CARD.SHARED_FATE": {
+    "DynamicVar": 2
   },
   "CARD.SHATTER": {
-    "UpgradedDamage": 4
+    "Damage": 8,
+    "UpgradedDamage": 12
   },
   "CARD.SHINING_STRIKE": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "Stars": 2,
+    "UpgradedDamage": 11
   },
   "CARD.SHIV": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "UpgradedDamage": 10
   },
   "CARD.SHOCKWAVE": {
+    "DynamicVar": 3,
     "UpgradedItem": 2
   },
+  "CARD.SHROUD": {
+    "Block": 4
+  },
   "CARD.SHRUG_IT_OFF": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "Cards": 1,
+    "UpgradedBlock": 11
+  },
+  "CARD.SIC_EM": {
+    "OstyDamage": 8,
+    "SicEmPower": 3
   },
   "CARD.SKEWER": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
+  },
+  "CARD.SKIM": {
+    "Cards": 3
   },
   "CARD.SLEIGHT_OF_FLESH": {
+    "SleightOfFleshPower": 9,
     "UpgradedItem": 4
   },
   "CARD.SLICE": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
+  },
+  "CARD.SLIMED": {
+    "Cards": 1
+  },
+  "CARD.SLOTH": {
+    "SlothPower": 3
   },
   "CARD.SMOKESTACK": {
+    "SmokestackPower": 5,
     "UpgradedItem": 2
   },
   "CARD.SNAKEBITE": {
-    "UpgradedPoison": 3
+    "Poison": 7,
+    "UpgradedPoison": 10
   },
   "CARD.SNAP": {
-    "UpgradedOstyDamage": 3
+    "OstyDamage": 8,
+    "UpgradedOstyDamage": 11
+  },
+  "CARD.SOLAR_STRIKE": {
+    "Damage": 8,
+    "Stars": 1
+  },
+  "CARD.SOUL": {
+    "Cards": 2
+  },
+  "CARD.SOUL_STORM": {
+    "CalculatedDamage": 8,
+    "CalculationBase": 9,
+    "DynamicVar": 7,
+    "ExtraDamage": 2
+  },
+  "CARD.SOVEREIGN_BLADE": {
+    "CalculatedBlock": 8,
+    "CalculationBase": 1,
+    "CalculationExtra": 2,
+    "Damage": 8,
+    "Repeat": 1
   },
   "CARD.SOW": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
+  },
+  "CARD.SPECTRUM_SHIFT": {
+    "Cards": 1
+  },
+  "CARD.SPEEDSTER": {
+    "SpeedsterPower": 2
+  },
+  "CARD.SPIRIT_OF_ASH": {
+    "DynamicVar": 4
+  },
+  "CARD.SPITE": {
+    "Damage": 8,
+    "Repeat": 2
   },
   "CARD.SPOILS_MAP": {
-    "_spoilsActIndex": -1
+    "_spoilsActIndex": -1,
+    "Gold": 600
   },
   "CARD.SPOILS_OF_BATTLE": {
-    "UpgradedForge": 3
+    "Cards": 2,
+    "Forge": 5,
+    "UpgradedForge": 8
   },
   "CARD.SPUR": {
-    "UpgradedHeal": 2,
-    "UpgradedSummon": 2
+    "Heal": 5,
+    "Summon": 3,
+    "UpgradedHeal": 7,
+    "UpgradedSummon": 5
   },
   "CARD.SQUASH": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "UpgradedDamage": 10,
+    "Vulnerable": 2
   },
   "CARD.SQUEEZE": {
-    "UpgradedCalculationBase": 5
+    "CalculatedDamage": 8,
+    "CalculationBase": 25,
+    "ExtraDamage": 5,
+    "UpgradedCalculationBase": 30
   },
   "CARD.STACK": {
+    "CalculatedBlock": 8,
+    "CalculationBase": 0,
+    "CalculationExtra": 1,
+    "DynamicVar": 7,
     "UpgradedCalculationBase": 3
   },
   "CARD.STARDUST": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "UpgradedDamage": 10
   },
   "CARD.STOMP": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.STONE_ARMOR": {
+    "PlatingPower": 4,
     "UpgradedItem": 2
   },
   "CARD.STRANGLE": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "StranglePower": 2,
+    "UpgradedDamage": 10
   },
   "CARD.STRIKE_DEFECT": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.STRIKE_IRONCLAD": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.STRIKE_NECROBINDER": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.STRIKE_REGENT": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.STRIKE_SILENT": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.SUCKER_PUNCH": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "UpgradedDamage": 10,
+    "Weak": 1
   },
   "CARD.SUMMON_FORTH": {
-    "UpgradedForge": 3
+    "Forge": 8,
+    "UpgradedForge": 11
   },
   "CARD.SUNDER": {
-    "UpgradedDamage": 8
+    "Damage": 8,
+    "Energy": 3,
+    "UpgradedDamage": 16
   },
   "CARD.SUPERCRITICAL": {
-    "UpgradedEnergy": 2
+    "Energy": 4,
+    "UpgradedEnergy": 6
+  },
+  "CARD.SUPERMASSIVE": {
+    "CalculatedDamage": 8,
+    "CalculationBase": 5,
+    "ExtraDamage": 3
   },
   "CARD.SUPPRESS": {
-    "UpgradedDamage": 6,
-    "UpgradedWeak": 2
+    "Damage": 8,
+    "UpgradedDamage": 14,
+    "UpgradedWeak": 5,
+    "Weak": 3
   },
   "CARD.SURVIVOR": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "UpgradedBlock": 11
   },
   "CARD.SWEEPING_BEAM": {
-    "UpgradedDamage": 3
+    "Cards": 1,
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.SWEEPING_GAZE": {
-    "UpgradedOstyDamage": 5
+    "OstyDamage": 8,
+    "UpgradedOstyDamage": 13
+  },
+  "CARD.SWORD_BOOMERANG": {
+    "Damage": 8,
+    "Repeat": 3
+  },
+  "CARD.SYNCHRONIZE": {
+    "CalculationBase": 0,
+    "CalculationExtra": 2,
+    "CardModel": 2
   },
   "CARD.SYNTHESIS": {
-    "UpgradedDamage": 6
+    "Damage": 8,
+    "UpgradedDamage": 14
+  },
+  "CARD.TACTICIAN": {
+    "Energy": 1
   },
   "CARD.TAG_TEAM": {
-    "UpgradedDamage": 4
+    "Damage": 8,
+    "UpgradedDamage": 12
+  },
+  "CARD.TAUNT": {
+    "Block": 8,
+    "Vulnerable": 1
   },
   "CARD.TEAR_ASUNDER": {
-    "UpgradedDamage": 2
+    "CalculationBase": 2,
+    "CalculationExtra": 3,
+    "CardModel": 4,
+    "Damage": 8,
+    "Repeat": 1,
+    "UpgradedDamage": 10
   },
   "CARD.TERRAFORMING": {
-    "UpgradedItem": 2
+    "UpgradedItem": 2,
+    "VigorPower": 6
+  },
+  "CARD.TESLA_COIL": {
+    "Damage": 8
   },
   "CARD.THE_BOMB": {
+    "DynamicVar": 40,
     "UpgradedItem": 10
   },
   "CARD.THE_GAMBIT": {
-    "UpgradedBlock": 25
+    "Block": 8,
+    "UpgradedBlock": 33
   },
   "CARD.THE_HUNT": {
-    "UpgradedDamage": 5
+    "Damage": 8,
+    "UpgradedDamage": 13
   },
   "CARD.THE_SCYTHE": {
-    "_currentDamage": 13
+    "_currentDamage": 13,
+    "Damage": 8,
+    "DynamicVar": 4
   },
   "CARD.THE_SMITH": {
-    "UpgradedForge": 10
+    "Forge": 30,
+    "UpgradedForge": 40
+  },
+  "CARD.THINKING_AHEAD": {
+    "Cards": 2
   },
   "CARD.THRASH": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "UpgradedDamage": 10
   },
   "CARD.THRUMMING_HATCHET": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11
   },
   "CARD.THUNDER": {
+    "ThunderPower": 6,
     "UpgradedItem": 2
   },
   "CARD.THUNDERCLAP": {
-    "UpgradedDamage": 3
+    "Damage": 8,
+    "UpgradedDamage": 11,
+    "Vulnerable": 1
+  },
+  "CARD.TIMES_UP": {
+    "CalculatedDamage": 8,
+    "CalculationBase": 0,
+    "ExtraDamage": 1
   },
   "CARD.TORIC_TOUGHNESS": {
-    "UpgradedBlock": 2
+    "Block": 8,
+    "UpgradedBlock": 10
+  },
+  "CARD.TOXIC": {
+    "Damage": 12
+  },
+  "CARD.TRANSFIGURE": {
+    "Energy": 1
+  },
+  "CARD.TREMBLE": {
+    "Vulnerable": 3
   },
   "CARD.TRUE_GRIT": {
-    "UpgradedBlock": 2
+    "Block": 8,
+    "UpgradedBlock": 10
+  },
+  "CARD.TURBO": {
+    "Energy": 2
   },
   "CARD.TWIN_STRIKE": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "UpgradedDamage": 10
   },
   "CARD.ULTIMATE_DEFEND": {
-    "UpgradedBlock": 4
+    "Block": 8,
+    "UpgradedBlock": 12
   },
   "CARD.ULTIMATE_STRIKE": {
-    "UpgradedDamage": 6
+    "Damage": 8,
+    "UpgradedDamage": 14
   },
   "CARD.UNDEATH": {
-    "UpgradedBlock": 2
+    "Block": 8,
+    "UpgradedBlock": 10
   },
   "CARD.UNLEASH": {
-    "UpgradedCalculationBase": 3
+    "CalculatedDamage": 8,
+    "CalculationBase": 6,
+    "CardModel": 2,
+    "ExtraDamage": 1,
+    "UpgradedCalculationBase": 9
   },
   "CARD.UNRELENTING": {
-    "UpgradedDamage": 6
+    "Damage": 8,
+    "UpgradedDamage": 14
   },
   "CARD.UNTOUCHABLE": {
-    "UpgradedBlock": 3
+    "Block": 8,
+    "UpgradedBlock": 11
+  },
+  "CARD.UP_MY_SLEEVE": {
+    "Cards": 3
+  },
+  "CARD.UPPERCUT": {
+    "Damage": 8,
+    "DynamicVar": 1
   },
   "CARD.UPROAR": {
-    "UpgradedDamage": 2
+    "Damage": 8,
+    "UpgradedDamage": 10
   },
   "CARD.VEILPIERCER": {
-    "UpgradedDamage": 3
-  },
-  "CARD.VOLLEY": {
-    "UpgradedDamage": 4
-  },
-  "CARD.WHIRLWIND": {
-    "UpgradedDamage": 3
-  },
-  "CARD.WHISTLE": {
+    "Damage": 8,
     "UpgradedDamage": 11
   },
+  "CARD.VENERATE": {
+    "Stars": 2
+  },
+  "CARD.VICIOUS": {
+    "Cards": 1
+  },
+  "CARD.VOID": {
+    "Energy": 1
+  },
+  "CARD.VOID_FORM": {
+    "VoidFormPower": 2
+  },
+  "CARD.VOLLEY": {
+    "Damage": 8,
+    "UpgradedDamage": 12
+  },
+  "CARD.VOLTAIC": {
+    "CalculationBase": 0,
+    "CalculationExtra": 1,
+    "DynamicVar": 7
+  },
+  "CARD.WHIRLWIND": {
+    "Damage": 8,
+    "UpgradedDamage": 11
+  },
+  "CARD.WHISTLE": {
+    "Damage": 8,
+    "UpgradedDamage": 19
+  },
+  "CARD.WISP": {
+    "Energy": 1
+  },
+  "CARD.WITHER": {
+    "Damage": 12
+  },
+  "CARD.WRAITH_FORM": {
+    "IntangiblePower": 2,
+    "WraithFormPower": 1
+  },
   "CARD.WROUGHT_IN_WAR": {
-    "UpgradedDamage": 2,
-    "UpgradedForge": 2
+    "Damage": 8,
+    "Forge": 7,
+    "UpgradedDamage": 10,
+    "UpgradedForge": 9
   }
 }

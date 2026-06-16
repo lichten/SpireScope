@@ -14,14 +14,17 @@ public static class DescriptionFormatter
     public static string Clean(string raw, bool japanese = false) => Resolve(raw, null, japanese);
 
     // card_stats.json の値を渡すと実際の数値で置換する（案A）
-    public static string Resolve(string raw, IReadOnlyDictionary<string, int>? stats, bool japanese = false, bool upgraded = false)
+    // preserveTags: true で [gold] 等の色タグを除去せず残す（解決済み説明文のエクスポート用）。
+    // combineDiff:  true（既定）で diff() を "base(upgraded)" 結合表示、false で純 base 値のみ。
+    public static string Resolve(string raw, IReadOnlyDictionary<string, int>? stats, bool japanese = false, bool upgraded = false,
+        bool preserveTags = false, bool combineDiff = true)
     {
         if (string.IsNullOrEmpty(raw)) return raw;
         raw = StripInCombat(raw);
-        var s = TagRegex.Replace(raw, "");
+        var s = preserveTags ? raw : TagRegex.Replace(raw, "");
         s = TemplateRegex.Replace(s, m =>
         {
-            var r = ResolveTemplate(m.Groups[1].Value, stats, japanese, upgraded);
+            var r = ResolveTemplate(m.Groups[1].Value, stats, japanese, upgraded, combineDiff);
             if (IsEnergyWord(r, japanese))
             {
                 if (m.Index > 0 && s[m.Index - 1] != ' ') r = " " + r;
@@ -58,7 +61,7 @@ public static class DescriptionFormatter
         return s[..start] + StripInCombat(s[pos..]);
     }
 
-    static string ResolveTemplate(string content, IReadOnlyDictionary<string, int>? stats, bool japanese, bool upgraded = false)
+    static string ResolveTemplate(string content, IReadOnlyDictionary<string, int>? stats, bool japanese, bool upgraded = false, bool combineDiff = true)
     {
         int colonIdx = content.IndexOf(':');
         var varName  = colonIdx >= 0 ? content[..colonIdx] : content;
@@ -101,7 +104,7 @@ public static class DescriptionFormatter
         var (baseVal, upgVal) = FindStatPair(stats, varName);
         if (upgraded && upgVal.HasValue) return $"{upgVal}";
         if (baseVal.HasValue)
-            return upgVal.HasValue ? $"{baseVal}({upgVal})" : $"{baseVal}";
+            return (!upgraded && upgVal.HasValue && combineDiff) ? $"{baseVal}({upgVal})" : $"{baseVal}";
 
         // 案C: 値不明の変数名を [VarName] で表示
         return $"[{varName}]";

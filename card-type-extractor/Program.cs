@@ -2,6 +2,7 @@ using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Text.RegularExpressions;
+using StS2Shared.Services;
 
 // 引数: [sts2.dll のパス] [出力 JSON のパス]
 // 省略時はデフォルトパスを使用
@@ -853,9 +854,6 @@ foreach (var typeHandle in mr.TypeDefinitions)
     }
 }
 
-// System.Decimal..ctor(int) のトークン
-const int decimalIntCtorToken = 0x0A001317;
-
 foreach (var typeHandle in mr.TypeDefinitions)
 {
     var typeDef = mr.GetTypeDefinition(typeHandle);
@@ -932,7 +930,9 @@ foreach (var typeHandle in mr.TypeDefinitions)
     }
 
     // パス3: get_CanonicalVars から DynamicVar 値を取得
-    // パターン: ldc.i4 N → newobj Decimal..ctor → [ldc.i4 M] → newobj XxxVar..ctor
+    // パターン: ldc.i4 N → newobj Decimal..ctor → newobj XxxVar..ctor
+    // レリック用パスR2 と同じ緩いロジック: 「Var newobj 直前の最後の ldc.i4」を採用する
+    // （Decimal トークン不問。Damage/Block/Magic 等の base 値を取りこぼさないため）。
     foreach (var mh in typeDef.GetMethods())
     {
         var method = mr.GetMethodDefinition(mh);
@@ -942,8 +942,7 @@ foreach (var typeHandle in mr.TypeDefinitions)
         if (body == null) continue;
         var il = body.GetILBytes();
 
-        int? lastInt = null;
-        int? pendingDecimal = null;
+        int? pendingInt = null;
         var canonFields = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         for (int i = 0; i < il.Length; )
         {
@@ -951,23 +950,17 @@ foreach (var typeHandle in mr.TypeDefinitions)
             if (op == 0x73 && i + 4 < il.Length) // newobj
             {
                 int tok = il[i+1]|(il[i+2]<<8)|(il[i+3]<<16)|(il[i+4]<<24);
-                if (tok == decimalIntCtorToken)
+                if (pendingInt.HasValue && varNameByCtorToken.TryGetValue(tok, out var vname))
                 {
-                    pendingDecimal = lastInt;
-                    lastInt = null;
+                    canonFields.TryAdd(vname, pendingInt.Value);
+                    pendingInt = null;
                 }
-                else if (pendingDecimal.HasValue && varNameByCtorToken.TryGetValue(tok, out var vname))
-                {
-                    canonFields.TryAdd(vname, pendingDecimal.Value);
-                    pendingDecimal = null;
-                    lastInt = null;
-                }
+                // 非Var ctor（Decimal 等）では pendingInt を維持して次の Var ctor に引き継ぐ
                 i += 5;
                 continue;
             }
             var (val, size) = ReadLdcI4(il, i);
-            if (val.HasValue) lastInt = val;
-            else if (op is not (0x02 or 0x25)) lastInt = null; // ldarg.0/dup はリセットしない
+            if (val.HasValue) pendingInt = val; // ldc.i4 を見るたびに更新（最後の値を保持）
             i += size;
         }
         if (canonFields.Count > 0)
@@ -1468,6 +1461,49 @@ Console.WriteLine(kwOutPath);
         File.WriteAllText(descOutPath, "{\n" + string.Join(",\n", descLines) + "\n}\n");
         Console.Error.WriteLine($"Extracted {engCardDesc.Count} card descriptions.");
         Console.WriteLine(descOutPath);
+    }
+
+    // card_descriptions_resolved.json / relic_descriptions_resolved.json 出力
+    // 色タグ（[gold] 等）を保持したまま {Var} を実数値に解決する（個別カード説明文の表示用）。
+    // base は純 base 値（combineDiff:false）、upgraded は純 upgraded 値。
+    {
+        string Res(string raw, IReadOnlyDictionary<string, int>? st, bool ja, bool upg) =>
+            DescriptionFormatter.Resolve(raw, st, japanese: ja, upgraded: upg,
+                preserveTags: true, combineDiff: false);
+
+        // カード: { en, ja, enUpgraded, jaUpgraded }
+        var cardLines = new List<string>();
+        foreach (var (prefix, rawEn) in engCardDesc.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            var id    = "CARD." + prefix;
+            var rawJa = jpnCardDesc.TryGetValue(prefix, out var j) && j.Length > 0 ? j : rawEn;
+            var st    = cardStats.TryGetValue(id, out var sd) ? sd : null;
+            cardLines.Add(
+                $"  {J(id)}: {{ \"en\": {J(Res(rawEn, st, false, false))}, \"ja\": {J(Res(rawJa, st, true, false))}, " +
+                $"\"enUpgraded\": {J(Res(rawEn, st, false, true))}, \"jaUpgraded\": {J(Res(rawJa, st, true, true))} }}");
+        }
+        var cardResOut = Path.Combine(outDir, "card_descriptions_resolved.json");
+        File.WriteAllText(cardResOut, "{\n" + string.Join(",\n", cardLines) + "\n}\n");
+        Console.Error.WriteLine($"Resolved {cardLines.Count} card descriptions.");
+        Console.WriteLine(cardResOut);
+
+        // レリック: { en, ja }（アップグレード概念なし）
+        var engRelicDesc = LoadLocSuffix(Path.Combine(locDir, "eng", "relics.json"), ".description");
+        var jpnRelicDesc = LoadLocSuffix(Path.Combine(locDir, "jpn", "relics.json"), ".description");
+        var relicLines = new List<string>();
+        foreach (var (prefix, rawEn) in engRelicDesc.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (string.IsNullOrEmpty(rawEn)) continue;
+            var id    = "RELIC." + prefix;
+            var rawJa = jpnRelicDesc.TryGetValue(prefix, out var j) && j.Length > 0 ? j : rawEn;
+            var st    = relicStats.TryGetValue(prefix, out var sd) ? sd : null;
+            relicLines.Add(
+                $"  {J(id)}: {{ \"en\": {J(Res(rawEn, st, false, false))}, \"ja\": {J(Res(rawJa, st, true, false))} }}");
+        }
+        var relicResOut = Path.Combine(outDir, "relic_descriptions_resolved.json");
+        File.WriteAllText(relicResOut, "{\n" + string.Join(",\n", relicLines) + "\n}\n");
+        Console.Error.WriteLine($"Resolved {relicLines.Count} relic descriptions.");
+        Console.WriteLine(relicResOut);
     }
 }
 

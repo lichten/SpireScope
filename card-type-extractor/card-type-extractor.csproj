@@ -5,4 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- 解決済み説明文エクスポートで DescriptionFormatter（純関数）を再利用するため。
+         StS2Shared は extractor を参照しないので循環は無い。 -->
+    <ProjectReference Include="..\StS2Shared\StS2Shared.csproj" />
+  </ItemGroup>
 </Project>
