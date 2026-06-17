@@ -82,10 +82,11 @@ $pck = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\SlayTheSp
 - `potion_descriptions_resolved.json` — `{Var}` を `potion_stats.json` の値で実数解決（色タグ保持）。`relic_descriptions_resolved.json` と同方式
 
 **ローカライゼーション JSON（バージョン管理 = `Resources/{version}/localization/{eng,jpn}/`）**
-- `relics` / `card_keywords` / `afflictions` / `enchantments` / `encounters` / `acts` / `events` / `ancients` / `potions` の各 `.json`。
+- `relics` / `card_keywords` / `afflictions` / `enchantments` / `encounters` / `acts` / `events` / `ancients` / `potions` / `rest_site_ui` の各 `.json`。
   `tools/extracted` はゲーム更新時に内容が変わるため、card-type-extractor が抽出時に各バージョンフォルダへ**生のままコピー**して版を固定する。
-  読み込みは各サービス（`KeywordDatabaseService` / `EncounterDatabaseService` / `AncientDatabaseService` / `CardDatabaseService`）が
+  読み込みは各サービス（`KeywordDatabaseService` / `EncounterDatabaseService` / `AncientDatabaseService` / `CardDatabaseService` / `RestSiteOptionService`）が
   `ResourceResolver.ResolveVersioned(asm, "localization.{lang}.{file}.json")` で最新版を解決する。
+  （`rest_site_ui.json` の `OPTION_{ID}.name` は焚き火選択肢の EN/JP 名。`RestSiteOptionService` がラン履歴の `rest_site_choices` 生 ID を日本語名へ解決）
   （`cards.json` はバージョン管理の `card_descriptions.json` / `card_database.json` に移行済み）
 
 **主要サービス**

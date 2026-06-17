@@ -669,10 +669,13 @@ static string BuildRunPage(RunHistoryData run, CharData[] chars,
                     relicHtml = $""" <span style="color:#a0600c">🔮{string.Join(", ", picked2)}</span>""";
             }
 
-            // 焚き火
+            // 焚き火（生 ID "SMITH" 等 → 日本語名「鍛冶」等。生 ID は title でホバー表示）
             var restHtml = "";
             if (ps?.RestSiteChoices is { Count: > 0 } rest)
-                restHtml = $""" <span style="color:#166;font-size:12px">[{string.Join("/", rest)}]</span>""";
+            {
+                var restLabels = rest.Select(r => RestSiteOptionService.GetName(r, japanese: true));
+                restHtml = $""" <span style="color:#166;font-size:12px" title="{string.Join("/", rest)}">[{string.Join("/", restLabels)}]</span>""";
+            }
 
             timelineHtml.AppendLine($"""
               <div class="floor-row">{badge}{encLink}{turns} {cardPickHtml}{cardRemoveHtml}{relicHtml}{restHtml} {hpStr}</div>

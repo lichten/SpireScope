@@ -1367,7 +1367,7 @@ Console.WriteLine(kwOutPath);
     string[] locFiles =
     {
         "relics", "card_keywords", "afflictions", "enchantments",
-        "encounters", "acts", "events", "ancients", "potions"
+        "encounters", "acts", "events", "ancients", "potions", "rest_site_ui"
     };
     foreach (var lang in new[] { "eng", "jpn" })
     {
