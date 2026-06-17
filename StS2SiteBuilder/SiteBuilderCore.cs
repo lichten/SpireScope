@@ -1922,7 +1922,7 @@ static string BuildEventPage(string eventId, CharData[] chars, bool hasImage = f
 
 static string BuildAncientListPage(string[] allAncientIds, CharData[] chars, HashSet<string> ancientsWithImg)
 {
-    var rows = string.Concat(allAncientIds.Select(id =>
+    string Row(string id)
     {
         var nameEn  = AncientDatabaseService.GetAncientTitle(id);
         var nameJa  = AncientDatabaseService.GetAncientTitle(id, japanese: true);
@@ -1937,6 +1937,28 @@ static string BuildAncientListPage(string[] allAncientIds, CharData[] chars, Has
                       <a href="{href}" class="card-name-link">{nameEn}</a>{jaSpan}{epithetSpan}
                     </td>
                   </tr>
+            """;
+    }
+
+    // 登場アクト別にグループ（第一幕(Neow) → 第二幕 → 第三幕 → その他(Darv/TheArchitect)）
+    var groups = new (string Label, Func<string, bool> Match)[]
+    {
+        ("第一幕", id => AncientActService.GetAct(id) == 1),
+        ("第二幕", id => AncientActService.GetAct(id) == 2),
+        ("第三幕", id => AncientActService.GetAct(id) == 3),
+        ("その他", id => AncientActService.GetAct(id) is null),
+    };
+    var sections = string.Concat(groups.Select(g =>
+    {
+        var ids = allAncientIds.Where(g.Match).ToList();
+        if (ids.Count == 0) return "";
+        return $"""
+            <section class="section">
+              <h2 class="section-title">{g.Label} <span style="font-size:13px;color:#bbb;font-weight:400">{ids.Count}件</span></h2>
+              <table class="card-table ancient-table">
+                <tbody>{string.Concat(ids.Select(Row))}</tbody>
+              </table>
+            </section>
             """;
     }));
 
@@ -1969,7 +1991,7 @@ static string BuildAncientListPage(string[] allAncientIds, CharData[] chars, Has
         (function () {
           var input   = document.getElementById('ancient-search');
           var countEl = document.getElementById('ancient-count');
-          var allRows = document.querySelectorAll('#ancient-table tbody tr');
+          var allRows = document.querySelectorAll('.ancient-table tbody tr');
           function update() {
             var q = input.value.trim().toLowerCase();
             var n = 0;
@@ -2031,14 +2053,7 @@ static string BuildAncientListPage(string[] allAncientIds, CharData[] chars, Has
           <p class="hero-sub">全{allAncientIds.Length}件</p>
         </div>
         {filterPanel}
-        <section class="section">
-          <table class="card-table" id="ancient-table">
-            <thead>
-              <tr><th>Ancient 名</th></tr>
-            </thead>
-            <tbody>{rows}</tbody>
-          </table>
-        </section>
+        {sections}
         """, extraHead: ANCIENT_FILTER_CSS, extraFoot: ANCIENT_FILTER_JS);
 }
 
@@ -2061,6 +2076,13 @@ static string BuildAncientPage(string ancientId, CharData[] chars, bool hasImage
     var epithetPart = epithetEn != ""
         ? $"""<div class="card-title-ja" style="color:#9a6ec7;font-style:italic">{epithetEn}{(epithetJa != "" && epithetJa != epithetEn ? $" / {epithetJa}" : "")}</div>"""
         : "";
+
+    // 登場アクト（DLL: ActModel.get_AllAncients）
+    var actNo = AncientActService.GetAct(ancientId);
+    var actBadge = actNo is int n
+        ? $"""<span class="badge" style="background:#6b46c1;color:#fff">登場アクト: 第{n}幕</span>"""
+        : """<span class="badge" style="background:#888;color:#fff">特殊（通常アクト外）</span>""";
+    var ancientMeta = $"""<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">{actBadge}</div>""";
 
     var imgSection = hasImage ? $"""
         <div class="event-image-wrap">
@@ -2229,6 +2251,7 @@ static string BuildAncientPage(string ancientId, CharData[] chars, bool hasImage
           <h1 class="card-title-en" style="color:{accent}">{nameEn}</h1>
           {(nameJa != nameEn ? $"""<div class="card-title-ja">{nameJa}</div>""" : "")}
           {epithetPart}
+          {ancientMeta}
           <!-- LAST_UPDATED_START -->{(lastUpdated != "" ? $"""<div class="page-updated">最終更新: {lastUpdated}</div>""" : "")}<!-- LAST_UPDATED_END -->
         </div>
         {imgSection}

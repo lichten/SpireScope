@@ -2255,6 +2255,34 @@ Console.WriteLine(kwOutPath);
     File.WriteAllText(optionsOutPath, "{\n" + string.Join(",\n", ancientEntries) + "\n}\n");
     Console.Error.WriteLine($"Extracted Ancient options for {ancientOptions.Count} Ancients.");
     Console.WriteLine(optionsOutPath);
+
+    // ---- ancient_acts.json ----（アクト配置。event_acts と同じ CollectGenericArgRefs パターン）
+    // 各 Act クラスの get_AllAncients が Add<AncientType>() で登場 Ancient を登録する。
+    //   region→act 番号: OVERGROWTH/UNDERDOCKS=1, HIVE=2, GLORY=3（Neow は Act1 の両 region に現れる→最小採用）。
+    //   Darv/TheArchitect はどのアクトの AllAncients にも無い特殊扱い→出力しない（act=null）。
+    var regionToAct = new Dictionary<string, int>(StringComparer.Ordinal)
+        { ["OVERGROWTH"] = 1, ["UNDERDOCKS"] = 1, ["HIVE"] = 2, ["GLORY"] = 3 };
+
+    var ancientAct = new Dictionary<string, int>(StringComparer.Ordinal);          // ANCIENT_ID -> act番号
+    foreach (var th in mr.TypeDefinitions)
+    {
+        var td = mr.GetTypeDefinition(th);
+        if (mr.GetString(td.Namespace) != "MegaCrit.Sts2.Core.Models.Acts") continue;
+        var region = CamelToUpperSnake(mr.GetString(td.Name));
+        if (!regionToAct.TryGetValue(region, out var actNo)) continue;
+        foreach (var anc in CollectGenericArgRefs(mr, peReader, td, n => n == "get_AllAncients"))
+        {
+            var id = CamelToUpperSnake(anc);
+            if (!ancientAct.TryGetValue(id, out var cur) || actNo < cur) ancientAct[id] = actNo;
+        }
+    }
+
+    var ancientActEntries = ancientAct.OrderBy(kv => kv.Key, StringComparer.Ordinal)
+        .Select(kv => $"  \"{kv.Key}\": {{ \"act\": {kv.Value} }}");
+    var ancientActsOutPath = Path.Combine(Path.GetDirectoryName(outPath)!, "ancient_acts.json");
+    File.WriteAllText(ancientActsOutPath, "{\n" + string.Join(",\n", ancientActEntries) + "\n}\n");
+    Console.Error.WriteLine($"Extracted Ancient act placement for {ancientAct.Count} Ancients.");
+    Console.WriteLine(ancientActsOutPath);
 }
 
 // ---- helpers ----

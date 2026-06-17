@@ -180,3 +180,12 @@ Ancient NPC のデータは `tools/extracted/localization/{eng,jpn}/ancients.jso
 ```
 
 カード授与は `OPTION_POOL_*` 系のキーで表現される（例: `OROBAS.pages.INITIAL.options.OPTION_POOL_3_LOCKED`）。
+
+Ancient の DLL 由来メタデータは card-type-extractor が 2 ファイルに生成する（`Resources/{version}/`）：
+- `ancient_options.json` — 各 Ancient の提示プール（レリック/カード。`{ANCIENT_ID}` → `{プール名}` → ID 配列）。
+  Ancient クラス（`Models.Events` の Darv/Neow/.../Vakuu）の `get_*Option(s)` IL から `CollectGenericArgRefs` で抽出。`AncientOptionService` が読む。
+- `ancient_acts.json` — 各 Ancient の登場アクト（`{ANCIENT_ID}` → `{ "act": 1|2|3 }`）。
+  `ActModel.get_AllAncients` から `CollectGenericArgRefs` で抽出（Act1=Neow / Act2=Orobas・Pael・Tezcatara / Act3=Nonupeipe・Tanx・Vakuu）。
+  Darv・TheArchitect はどのアクトの AllAncients にも無い特殊扱いで未収録（参照側は null=「その他」）。`AncientActService` が読む。
+  SiteBuilder の ancients 一覧をアクト別グループ表示し、個別ページに「登場アクト」を出す。コスト・出現重みは DLL に無いため非対象。
+  （`AncientEventModel.get_AnyCharacterDialogueBlacklist` は出現可否ではなく汎用ダイアログ選択用フラグ＝抽出対象外）
