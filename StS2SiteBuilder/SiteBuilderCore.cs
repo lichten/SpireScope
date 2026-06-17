@@ -83,15 +83,16 @@ public static class SiteBuilderCore
 
 CharData[] chars =
 [
-    new("ironclad",    "Ironclad",    "アイアンクラッド", "#c0392b", "#fde8e8",
+    // アクセント色は character_colors.json（DLL の MapDrawingColor）由来。第2引数は欠落時フォールバック。
+    new("ironclad",    "Ironclad",    "アイアンクラッド", CharacterColorService.GetAccent("ironclad",    "#c0392b"), "#fde8e8",
         "力と忍耐のキャラクター。StrengthとExhaustを活かした圧倒的な攻撃力が持ち味。"),
-    new("silent",      "Silent",      "サイレント",       "#1a7a4a", "#e8f8f0",
+    new("silent",      "Silent",      "サイレント",       CharacterColorService.GetAccent("silent",      "#1a7a4a"), "#e8f8f0",
         "素早さと策略のキャラクター。Poisonで敵を蝕みながら、Shivの連撃で圧倒する。"),
-    new("defect",      "Defect",      "ディフェクト",     "#1a5799", "#e8f0fc",
+    new("defect",      "Defect",      "ディフェクト",     CharacterColorService.GetAccent("defect",      "#1a5799"), "#e8f0fc",
         "論理と精密さのキャラクター。属性オーブのChannel・Evokeを駆使して戦う。"),
-    new("necrobinder", "Necrobinder", "ネクロバインダー", "#6c3483", "#f4ecf7",
+    new("necrobinder", "Necrobinder", "ネクロバインダー", CharacterColorService.GetAccent("necrobinder", "#6c3483"), "#f4ecf7",
         "暗黒魔術と召喚のキャラクター。OstyとSoulを操り、Doomで敵を追い詰める。"),
-    new("regent",      "Regent",      "リージェント",     "#7d6608", "#fdf8e8",
+    new("regent",      "Regent",      "リージェント",     CharacterColorService.GetAccent("regent",      "#7d6608"), "#fdf8e8",
         "創造と王権のキャラクター。武器を鍛え、カードを生み出し、Starを消費して強力な効果を発動する。"),
 ];
 
@@ -1317,16 +1318,7 @@ static string BuildCardListPage(string[] allCardIds, CharData[] chars)
         .filter-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.13); }
         .filter-btn[data-filter="all"]              { color: #555; border-color: #ccc; }
         .filter-btn[data-filter="all"].active       { background: #555; color: #fff; border-color: #555; }
-        .filter-btn[data-filter="ironclad"]         { color: #c0392b; border-color: #c0392b; }
-        .filter-btn[data-filter="ironclad"].active  { background: #c0392b; color: #fff; }
-        .filter-btn[data-filter="silent"]           { color: #1a7a4a; border-color: #1a7a4a; }
-        .filter-btn[data-filter="silent"].active    { background: #1a7a4a; color: #fff; }
-        .filter-btn[data-filter="defect"]           { color: #1a5799; border-color: #1a5799; }
-        .filter-btn[data-filter="defect"].active    { background: #1a5799; color: #fff; }
-        .filter-btn[data-filter="necrobinder"]      { color: #6c3483; border-color: #6c3483; }
-        .filter-btn[data-filter="necrobinder"].active { background: #6c3483; color: #fff; }
-        .filter-btn[data-filter="regent"]           { color: #7d6608; border-color: #7d6608; }
-        .filter-btn[data-filter="regent"].active    { background: #7d6608; color: #fff; }
+        /* キャラ別フィルタ色は BuildCharCss が ch.Accent（DLL 由来）から生成する */
         .filter-btn[data-filter="shared"]           { color: #555; border-color: #999; }
         .filter-btn[data-filter="shared"].active    { background: #666; color: #fff; border-color: #666; }
         .filter-btn[data-type="all"]             { color: #555; border-color: #ccc; }
@@ -3244,6 +3236,7 @@ static string BuildCharCss(CharData[] chars) => $$"""
     <style>
     .col-char { white-space: nowrap; }
     {{string.Concat(chars.Select(ch => $".char-{ch.Id}{{background:{ch.LightBg};color:{ch.Accent}}}\n"))}}
+    {{string.Concat(chars.Select(ch => $".filter-btn[data-filter=\"{ch.Id}\"]{{color:{ch.Accent};border-color:{ch.Accent}}} .filter-btn[data-filter=\"{ch.Id}\"].active{{background:{ch.Accent};color:#fff}}\n"))}}
     .char-shared { background: #f0f0f0; color: #888; }
     </style>
     """;

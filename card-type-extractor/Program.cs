@@ -2285,6 +2285,98 @@ Console.WriteLine(kwOutPath);
     Console.WriteLine(ancientActsOutPath);
 }
 
+// ---- character_colors.json ----（キャラクターの識別色＋UIパレットを DLL から抽出）
+// 各 CharacterModel（Models.Characters）の Color プロパティから取得：
+//   NameColor      = Helpers.StsColors の名前付き定数（red/green/blue/purple/orange）。StsColors.cctor の hex を解決。
+//   MapDrawingColor / DialogueColor / EnergyLabelOutlineColor / RemoteTargetingLineColor
+//                  = Godot `new Color("hex")` の hex 文字列（ldstr）。8桁(RRGGBBAA)は RRGGBB に正規化。
+{
+    var outDirC = Path.GetDirectoryName(outPath)!;
+    const string charNs = "MegaCrit.Sts2.Core.Models.Characters";
+    var charClasses = new[] { "Ironclad", "Silent", "Defect", "Necrobinder", "Regent" };
+
+    string? ReadUserString(int tok)
+    {
+        try { return mr.GetUserString(MetadataTokens.UserStringHandle(tok & 0xFFFFFF)); } catch { return null; }
+    }
+    int Tok(byte[] il, int i) => il[i+1] | (il[i+2]<<8) | (il[i+3]<<16) | (il[i+4]<<24);
+    byte[]? GetterIl(TypeDefinition td, string getter)
+    {
+        foreach (var mh in td.GetMethods())
+        {
+            var md = mr.GetMethodDefinition(mh);
+            if (mr.GetString(md.Name) != getter || md.RelativeVirtualAddress == 0) continue;
+            return peReader.GetMethodBody(md.RelativeVirtualAddress)?.GetILBytes();
+        }
+        return null;
+    }
+    string? FirstLdstr(TypeDefinition td, string getter)
+    {
+        var il = GetterIl(td, getter); if (il == null) return null;
+        for (int i = 0; i + 4 < il.Length; i++)
+            if (il[i] == 0x72) { var s = ReadUserString(Tok(il, i)); if (!string.IsNullOrEmpty(s)) return s; }
+        return null;
+    }
+    string? FirstLdsfld(TypeDefinition td, string getter)
+    {
+        var il = GetterIl(td, getter); if (il == null) return null;
+        for (int i = 0; i + 4 < il.Length; i++)
+            if (il[i] == 0x7E) { var n = ResolveFieldToken(mr, Tok(il, i)); if (!string.IsNullOrEmpty(n)) return n; }
+        return null;
+    }
+    static string NormHex(string? raw)
+    {
+        if (string.IsNullOrEmpty(raw)) return "";
+        var h = raw.Trim().TrimStart('#').ToUpperInvariant();
+        if (h.Length == 8) h = h[..6];        // RRGGBBAA → RRGGBB
+        return h.Length == 6 ? "#" + h : "";
+    }
+
+    // StsColors の名前付き定数 → hex（.cctor の「ldstr "hex" … stsfld 名前」を対応付け）
+    var stsColors = new Dictionary<string, string>(StringComparer.Ordinal);
+    var charTds = new Dictionary<string, TypeDefinition>(StringComparer.Ordinal);
+    foreach (var th in mr.TypeDefinitions)
+    {
+        var td = mr.GetTypeDefinition(th);
+        var nm = mr.GetString(td.Name);
+        if (mr.GetString(td.Namespace) == charNs && charClasses.Contains(nm)) charTds[nm] = td;
+        if (nm != "StsColors") continue;
+        var il = GetterIl(td, ".cctor"); if (il == null) continue;
+        string? lastStr = null;
+        for (int i = 0; i + 4 < il.Length; i++)
+        {
+            if (il[i] == 0x72) lastStr = ReadUserString(Tok(il, i));
+            else if (il[i] == 0x80) // stsfld
+            {
+                var fn = ResolveFieldToken(mr, Tok(il, i));
+                if (!string.IsNullOrEmpty(fn) && lastStr != null) stsColors.TryAdd(fn, lastStr);
+                lastStr = null;
+            }
+        }
+    }
+
+    var colorEntries = new List<string>();
+    foreach (var cn in charClasses)
+    {
+        if (!charTds.TryGetValue(cn, out var td)) continue;
+        var id        = CamelToUpperSnake(cn);
+        var nameField = FirstLdsfld(td, "get_NameColor") ?? "";
+        var nameHex   = stsColors.TryGetValue(nameField, out var nh) ? NormHex(nh) : "";
+        var map       = NormHex(FirstLdstr(td, "get_MapDrawingColor"));
+        var dialogue  = NormHex(FirstLdstr(td, "get_DialogueColor"));
+        var energy    = NormHex(FirstLdstr(td, "get_EnergyLabelOutlineColor"));
+        var targeting = NormHex(FirstLdstr(td, "get_RemoteTargetingLineColor"));
+        colorEntries.Add(
+            $"  \"{id}\": {{ \"name\": \"{nameField}\", \"nameColor\": \"{nameHex}\", " +
+            $"\"mapDrawingColor\": \"{map}\", \"dialogueColor\": \"{dialogue}\", " +
+            $"\"energyOutlineColor\": \"{energy}\", \"targetingLineColor\": \"{targeting}\" }}");
+    }
+    var colorsOutPath = Path.Combine(outDirC, "character_colors.json");
+    File.WriteAllText(colorsOutPath, "{\n" + string.Join(",\n", colorEntries) + "\n}\n");
+    Console.Error.WriteLine($"Extracted character colors for {colorEntries.Count} characters.");
+    Console.WriteLine(colorsOutPath);
+}
+
 // ---- helpers ----
 
 // get_CanonicalKeywords の IL を解析してキーワード int 値のリストを返す
