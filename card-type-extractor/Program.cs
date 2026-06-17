@@ -1367,7 +1367,7 @@ Console.WriteLine(kwOutPath);
     string[] locFiles =
     {
         "relics", "card_keywords", "afflictions", "enchantments",
-        "encounters", "acts", "events", "ancients"
+        "encounters", "acts", "events", "ancients", "potions"
     };
     foreach (var lang in new[] { "eng", "jpn" })
     {
@@ -1805,6 +1805,302 @@ Console.WriteLine(kwOutPath);
     }
 }
 
+// ── Potion 抽出 ─────────────────────────────────────────────────────────────
+// カード/レリックと同一の IL パターン。クラス集合は名前空間 Models.Potions から直接列挙し
+// （プールの生成メソッド名に依存しない）、キャラ帰属のみ *PotionPool の生成メソッド IL から補う。
+// レアリティは専用 enum PotionRarity（COMMON/UNCOMMON/RARE/POTENCY）を get_Rarity で引く。
+{
+    var outDirP   = Path.GetDirectoryName(outPath)!;
+    var repoRootP = Path.GetFullPath(Path.Combine(outDirP, "..", "..", ".."));
+    const string potionsNs = "MegaCrit.Sts2.Core.Models.Potions";
+
+    var jsonOptsP = new System.Text.Json.JsonSerializerOptions
+    { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+    string JP(string s) => System.Text.Json.JsonSerializer.Serialize(s, jsonOptsP);
+    static string TitleCase(string s) =>
+        string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s[1..].ToLowerInvariant();
+
+    // (1) ポーションクラス集合（名前空間ベース。Mock/Deprecated/コンパイラ生成は除外）
+    var potionClasses = new HashSet<string>(StringComparer.Ordinal);
+    foreach (var th in mr.TypeDefinitions)
+    {
+        var td = mr.GetTypeDefinition(th);
+        if (mr.GetString(td.Namespace) != potionsNs) continue;
+        var cls = mr.GetString(td.Name);
+        if (cls.StartsWith('<') || cls.Contains("Mock") || cls.Contains("Deprecated")) continue;
+        potionClasses.Add(cls);
+    }
+    Console.Error.WriteLine($"Found {potionClasses.Count} potion classes.");
+
+    // (2) キャラ／出所帰属（*PotionPool が生成するポーション型 → プール由来ラベル）
+    // 各プールの GenerateAllPotions / GetUnlockedPotions IL を走査し、
+    //   ・generic Add<Xxx>()       … MethodSpec 第一型引数（SharedPotionPool が使用）
+    //   ・newobj Xxx::.ctor()       … 具体生成（将来のキャラ専用プール用に対応）
+    // の双方からポーション型名を収集する。
+    // 注: v0.107.0 ではキャラ専用プール（Ironclad/Silent/Defect/Necrobinder/Regent）は空で、
+    //   標準ポーションは全て Shared。残りの特殊／生成系ポーションはどのプールにも属さず未帰属になる。
+    // 同一ポーションが複数プールに現れた場合は priority 順（Shared > Event > Token > 各キャラ）で確定する。
+    var potionPoolMap = new (string Pool, string Label)[]
+    {
+        ("SharedPotionPool",      "Shared"),
+        ("EventPotionPool",       "Event"),
+        ("TokenPotionPool",       "Token"),
+        ("IroncladPotionPool",    "Ironclad"),
+        ("SilentPotionPool",      "Silent"),
+        ("DefectPotionPool",      "Defect"),
+        ("NecrobinderPotionPool", "Necrobinder"),
+        ("RegentPotionPool",      "Regent"),
+    };
+
+    List<string> CollectPoolPotions(string poolName)
+    {
+        var ids = new List<string>();
+        foreach (var th in mr.TypeDefinitions)
+        {
+            var td = mr.GetTypeDefinition(th);
+            if (mr.GetString(td.Name) != poolName) continue;
+            foreach (var mh in td.GetMethods())
+            {
+                var m = mr.GetMethodDefinition(mh);
+                var mn = mr.GetString(m.Name);
+                if (mn != "GenerateAllPotions" && mn != "GetUnlockedPotions") continue;
+                if (m.RelativeVirtualAddress == 0) continue;
+                var il = peReader.GetMethodBody(m.RelativeVirtualAddress)?.GetILBytes();
+                if (il == null) continue;
+                for (int i = 0; i + 4 < il.Length; i++)
+                {
+                    int tok = il[i+1] | (il[i+2]<<8) | (il[i+3]<<16) | (il[i+4]<<24);
+                    string? tn = (il[i] == 0x28 || il[i] == 0x6F) ? ResolveMethodSpecFirstArg(mr, tok)
+                               :  il[i] == 0x73                    ? ResolveCtorDeclaringType(mr, tok)
+                               :  null;
+                    if (string.IsNullOrEmpty(tn) || tn.Contains('<') || !potionClasses.Contains(tn)) continue;
+                    ids.Add(CamelToUpperSnake(tn));
+                }
+            }
+            break;
+        }
+        return ids;
+    }
+
+    var potionCharacters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var (pool, label) in potionPoolMap)        // priority = 配列順
+        foreach (var id in CollectPoolPotions(pool))
+            potionCharacters.TryAdd(id, label);          // 先勝ち
+
+    // (3) PotionRarity enum 値マップ（COMMON/UNCOMMON/RARE/POTENCY → int）
+    var potionRarityByInt = new Dictionary<int, string>();
+    foreach (var th in mr.TypeDefinitions)
+    {
+        var td = mr.GetTypeDefinition(th);
+        if (mr.GetString(td.Name) != "PotionRarity") continue;
+        foreach (var fh in td.GetFields())
+        {
+            var f = mr.GetFieldDefinition(fh);
+            var fn = mr.GetString(f.Name);
+            if (fn == "value__") continue;
+            var c = f.GetDefaultValue(); if (c.IsNil) continue;
+            var br = mr.GetBlobReader(mr.GetConstant(c).Value);
+            potionRarityByInt[br.ReadInt32()] = fn;
+        }
+        break;
+    }
+
+    // (4) 各ポーションクラスから rarity / stats / canonicalVars（レリックと同ロジック）
+    var potionRarities = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    var potionStats    = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
+    foreach (var th in mr.TypeDefinitions)
+    {
+        var td  = mr.GetTypeDefinition(th);
+        var cls = mr.GetString(td.Name);
+        if (!potionClasses.Contains(cls)) continue;
+        var id = CamelToUpperSnake(cls);
+
+        // get_Rarity → ldc.i4 N + ret
+        foreach (var mh in td.GetMethods())
+        {
+            var m = mr.GetMethodDefinition(mh);
+            if (mr.GetString(m.Name) != "get_Rarity") continue;
+            if (m.RelativeVirtualAddress == 0) continue;
+            var il = peReader.GetMethodBody(m.RelativeVirtualAddress)?.GetILBytes();
+            if (il == null) continue;
+            var (val, _) = ReadLdcI4(il, 0);
+            if (val.HasValue && potionRarityByInt.TryGetValue(val.Value, out var rn))
+                potionRarities[id] = TitleCase(rn);
+            break;
+        }
+
+        // パスP1: .ctor のフィールド代入 (stfld) / プロパティセッター (set_Xxx)
+        foreach (var mh in td.GetMethods())
+        {
+            var m = mr.GetMethodDefinition(mh);
+            if (mr.GetString(m.Name) != ".ctor") continue;
+            if (m.RelativeVirtualAddress == 0) continue;
+            var il = peReader.GetMethodBody(m.RelativeVirtualAddress)?.GetILBytes();
+            if (il == null) continue;
+            int? lastInt = null;
+            var ctorFields = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < il.Length;)
+            {
+                byte op = il[i];
+                if ((op == 0x7D || op == 0x28 || op == 0x6F) && i + 4 < il.Length)
+                {
+                    if (lastInt.HasValue)
+                    {
+                        int token = il[i+1] | (il[i+2]<<8) | (il[i+3]<<16) | (il[i+4]<<24);
+                        string? name = null;
+                        if (op == 0x7D) name = ResolveFieldToken(mr, token);
+                        else
+                        {
+                            var rawName = ResolveMethodName(mr, token);
+                            if (rawName.StartsWith("set_", StringComparison.Ordinal)) name = rawName[4..];
+                        }
+                        if (!string.IsNullOrEmpty(name)) ctorFields.TryAdd(name, lastInt.Value);
+                    }
+                    lastInt = null;
+                    i += 5;
+                    continue;
+                }
+                var (v2, sz2) = ReadLdcI4(il, i);
+                if (v2.HasValue) lastInt = v2;
+                else if (op != 0x02) lastInt = null;       // ldarg.0 は値を維持
+                i += sz2;
+            }
+            if (ctorFields.Count > 0) potionStats[id] = ctorFields;
+            break;
+        }
+
+        // パスP2: get_CanonicalVars → 直前の最後の ldc.i4 を次の newobj XxxVar の値とする
+        foreach (var mh in td.GetMethods())
+        {
+            var m = mr.GetMethodDefinition(mh);
+            if (mr.GetString(m.Name) != "get_CanonicalVars") continue;
+            if (m.RelativeVirtualAddress == 0) continue;
+            var il = peReader.GetMethodBody(m.RelativeVirtualAddress)?.GetILBytes();
+            if (il == null) continue;
+            int? pending = null;
+            var canon = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < il.Length;)
+            {
+                byte op = il[i];
+                if (op == 0x73 && i + 4 < il.Length)       // newobj
+                {
+                    int tok = il[i+1]|(il[i+2]<<8)|(il[i+3]<<16)|(il[i+4]<<24);
+                    if (pending.HasValue && varNameByCtorToken.TryGetValue(tok, out var vname))
+                    {
+                        canon.TryAdd(vname, pending.Value);
+                        pending = null;
+                    }
+                    i += 5;
+                    continue;
+                }
+                var (vR, szR) = ReadLdcI4(il, i);
+                if (vR.HasValue) pending = vR;
+                i += szR;
+            }
+            if (canon.Count > 0)
+            {
+                if (!potionStats.ContainsKey(id)) potionStats[id] = canon;
+                else foreach (var (k, v) in canon) potionStats[id].TryAdd(k, v);
+            }
+            break;
+        }
+    }
+    Console.Error.WriteLine($"Potions: rarities={potionRarities.Count}, with-stats={potionStats.Count}, characters={potionCharacters.Count}");
+
+    // (5) 出力: potion_rarities / potion_stats / potion_characters
+    var pRarLines = potionRarities.OrderBy(kv => kv.Key, StringComparer.Ordinal)
+        .Select(kv => $"  {JP(kv.Key)}: {JP(kv.Value)}");
+    File.WriteAllText(Path.Combine(outDirP, "potion_rarities.json"),
+        "{\n" + string.Join(",\n", pRarLines) + "\n}\n");
+    Console.WriteLine(Path.Combine(outDirP, "potion_rarities.json"));
+
+    var pStatLines = potionStats.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv =>
+    {
+        var fields = kv.Value.OrderBy(f => f.Key, StringComparer.Ordinal)
+            .Select(f => $"    {JP(f.Key)}: {f.Value}");
+        return $"  {JP(kv.Key)}: {{\n{string.Join(",\n", fields)}\n  }}";
+    });
+    File.WriteAllText(Path.Combine(outDirP, "potion_stats.json"),
+        "{\n" + string.Join(",\n", pStatLines) + "\n}\n");
+    Console.WriteLine(Path.Combine(outDirP, "potion_stats.json"));
+
+    var pCharLines = potionCharacters.OrderBy(kv => kv.Key, StringComparer.Ordinal)
+        .Select(kv => $"  {JP(kv.Key)}: {JP(kv.Value)}");
+    File.WriteAllText(Path.Combine(outDirP, "potion_characters.json"),
+        "{\n" + string.Join(",\n", pCharLines) + "\n}\n");
+    Console.WriteLine(Path.Combine(outDirP, "potion_characters.json"));
+
+    // (6) potion_images.json（実ファイルスキャン。potions/ はサブフォルダ無し）
+    var potionsImgDir = Path.Combine(repoRootP, "tools", "extracted", "images", "potions");
+    if (Directory.Exists(potionsImgDir))
+    {
+        var pImg = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        foreach (var cls in potionClasses)
+        {
+            var id = CamelToUpperSnake(cls);
+            var file = id.ToLowerInvariant() + ".png";
+            if (File.Exists(Path.Combine(potionsImgDir, file + ".import")))
+                pImg[id] = file;
+        }
+        var pImgLines = pImg.Select(kv => $"  {JP(kv.Key)}: {JP(kv.Value)}");
+        File.WriteAllText(Path.Combine(outDirP, "potion_images.json"),
+            "{\n" + string.Join(",\n", pImgLines) + "\n}\n");
+        Console.Error.WriteLine($"Extracted {pImg.Count} potion image paths.");
+        Console.WriteLine(Path.Combine(outDirP, "potion_images.json"));
+    }
+    else Console.Error.WriteLine($"WARNING: {potionsImgDir} not found; skipping potion_images.json.");
+
+    // (7) 表示名・説明文（localization potions.json）。キーは POTION. 接頭辞。
+    var locDirP = Path.Combine(repoRootP, "tools", "extracted", "localization");
+    var engTitle = LoadLocBySuffix(Path.Combine(locDirP, "eng", "potions.json"), ".title");
+    var jpnTitle = LoadLocBySuffix(Path.Combine(locDirP, "jpn", "potions.json"), ".title");
+    var engDesc  = LoadLocBySuffix(Path.Combine(locDirP, "eng", "potions.json"), ".description");
+    var jpnDesc  = LoadLocBySuffix(Path.Combine(locDirP, "jpn", "potions.json"), ".description");
+
+    if (engTitle.Count > 0)
+    {
+        var dbLines = engTitle.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv =>
+        {
+            var ja = jpnTitle.TryGetValue(kv.Key, out var j) && j.Length > 0 ? j : kv.Value;
+            return $"  {JP($"POTION.{kv.Key}")}: {{ \"en\": {JP(kv.Value)}, \"ja\": {JP(ja)} }}";
+        });
+        File.WriteAllText(Path.Combine(outDirP, "potion_database.json"),
+            "{\n" + string.Join(",\n", dbLines) + "\n}\n");
+        Console.Error.WriteLine($"Extracted {engTitle.Count} potion name mappings.");
+        Console.WriteLine(Path.Combine(outDirP, "potion_database.json"));
+    }
+    else Console.Error.WriteLine($"WARNING: potions localization not found under {locDirP}; skipping potion descriptions.");
+
+    if (engDesc.Count > 0)
+    {
+        // potion_descriptions.json（生テキスト＝タグ・{Var} 保持）
+        var rawLines = engDesc.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv =>
+        {
+            var ja = jpnDesc.TryGetValue(kv.Key, out var j) && j.Length > 0 ? j : kv.Value;
+            return $"  {JP($"POTION.{kv.Key}")}: {{ \"en\": {JP(kv.Value)}, \"ja\": {JP(ja)} }}";
+        });
+        File.WriteAllText(Path.Combine(outDirP, "potion_descriptions.json"),
+            "{\n" + string.Join(",\n", rawLines) + "\n}\n");
+        Console.WriteLine(Path.Combine(outDirP, "potion_descriptions.json"));
+
+        // potion_descriptions_resolved.json（{Var} を potion_stats で実数解決、色タグ保持）
+        string Res(string raw, IReadOnlyDictionary<string, int>? st, bool ja) =>
+            DescriptionFormatter.Resolve(raw, st, japanese: ja, upgraded: false,
+                preserveTags: true, combineDiff: false);
+        var resLines = engDesc.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv =>
+        {
+            var rawEn = kv.Value;
+            var rawJa = jpnDesc.TryGetValue(kv.Key, out var j) && j.Length > 0 ? j : rawEn;
+            var st = potionStats.TryGetValue(kv.Key, out var sd) ? sd : null;
+            return $"  {JP($"POTION.{kv.Key}")}: {{ \"en\": {JP(Res(rawEn, st, false))}, \"ja\": {JP(Res(rawJa, st, true))} }}";
+        });
+        File.WriteAllText(Path.Combine(outDirP, "potion_descriptions_resolved.json"),
+            "{\n" + string.Join(",\n", resLines) + "\n}\n");
+        Console.Error.WriteLine($"Resolved {engDesc.Count} potion descriptions.");
+        Console.WriteLine(Path.Combine(outDirP, "potion_descriptions_resolved.json"));
+    }
+}
+
 // ancient_options.json 出力
 // Ancient イベントクラスのオプションプールを IL から抽出する
 {
@@ -2096,4 +2392,30 @@ static string ResolveMethodSpecFirstArg(MetadataReader mr, int token)
         return "";
     }
     catch { return ""; }
+}
+
+// newobj のオペランド（.ctor トークン）から、生成される型の単純名を解決する。
+// 例: newobj CunningPotion::.ctor() → "CunningPotion"。同一アセンブリ内は MethodDefinition、
+// 外部参照は MemberReference(Parent=TypeReference/TypeDefinition) を辿る。
+static string ResolveCtorDeclaringType(MetadataReader mr, int token)
+{
+    try
+    {
+        var h = MetadataTokens.EntityHandle(token);
+        if (h.Kind == HandleKind.MethodDefinition)
+        {
+            var md = mr.GetMethodDefinition((MethodDefinitionHandle)h);
+            return mr.GetString(mr.GetTypeDefinition(md.GetDeclaringType()).Name);
+        }
+        if (h.Kind == HandleKind.MemberReference)
+        {
+            var parent = mr.GetMemberReference((MemberReferenceHandle)h).Parent;
+            if (parent.Kind == HandleKind.TypeDefinition)
+                return mr.GetString(mr.GetTypeDefinition((TypeDefinitionHandle)parent).Name);
+            if (parent.Kind == HandleKind.TypeReference)
+                return mr.GetString(mr.GetTypeReference((TypeReferenceHandle)parent).Name);
+        }
+    }
+    catch { }
+    return "";
 }

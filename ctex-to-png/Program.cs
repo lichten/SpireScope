@@ -104,6 +104,39 @@ if (args.Length == 1 && args[0] == "events")
     return;
 }
 
+// Potion mode: convert potion .ctex → PNG into images/potions_png/ per potion_images.json
+// Usage: dotnet run --project ctex-to-png -- potions
+if (args.Length == 1 && args[0] == "potions")
+{
+    var repoRoot  = Path.GetFullPath(Path.Combine(toolsRoot, "..", ".."));
+    var jsonPath  = LatestVersioned(Path.Combine(repoRoot, "StS2Shared", "Resources"), "potion_images.json");
+    if (jsonPath is null) { Console.WriteLine("potion_images.json が見つかりません。"); return; }
+
+    var potionsSrc = Path.Combine(toolsRoot, "images", "potions");
+    var outRoot    = Path.Combine(toolsRoot, "images", "potions_png");
+    Directory.CreateDirectory(outRoot);
+
+    using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(jsonPath));
+    int potConverted = 0, potSkipped = 0, potMissing = 0;
+    foreach (var prop in doc.RootElement.EnumerateObject())
+    {
+        var rel        = prop.Value.GetString()!;                 // "fire_potion.png"
+        var relOs      = rel.Replace('/', Path.DirectorySeparatorChar);
+        var importPath = Path.Combine(potionsSrc, relOs + ".import");
+        var ctexRel    = ParseImportCtexPath(importPath);
+        if (ctexRel is null) { potMissing++; continue; }
+        var ctexFull   = Path.Combine(toolsRoot, ctexRel.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        if (!File.Exists(ctexFull)) { potMissing++; continue; }
+        var outPath    = Path.Combine(outRoot, relOs);
+        Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
+        if (File.Exists(outPath)) { potSkipped++; continue; }
+        try { ConvertCtex(ctexFull, outPath, verbose: false); potConverted++; }
+        catch (Exception ex) { Console.WriteLine($"  fail {rel}: {ex.Message}"); potMissing++; }
+    }
+    Console.WriteLine($"potions_png: converted={potConverted} skipped={potSkipped} missing={potMissing}");
+    return;
+}
+
 // Card JPEG mode: convert specified card IDs to web-sized JPEG for git tracking
 // Usage: dotnet run --project ctex-to-png -- <id1> <id2> ...
 // Example: dotnet run --project ctex-to-png -- bash defend_ironclad

@@ -65,8 +65,24 @@ $pck = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\SlayTheSp
   PNG 実体は `dotnet run --project ctex-to-png -- events` で `.ctex` を変換し `tools/extracted/images/events_png/` に生成する
 - `card_related.json` — カードがホバー表示する関連カード（DLL の `get_ExtraHoverTips`、カードのみにフィルタ）。例: `CARD.ACCURACY` → `[CARD.SHIV]`。`GetRelatedCards` / `GetCreatedByCards`（逆引き）で参照
 
+**ポーション系 JSON（card-type-extractor 生成、`Resources/{version}/`）**
+- ポーションはカード・レリックと同一の IL パターンで DLL に格納される。extractor は名前空間 `MegaCrit.Sts2.Core.Models.Potions`
+  のクラスを直接列挙し（`Mock*` / `Deprecated*` 除外）、各 ID は接頭辞なし大文字（例 `FIRE_POTION`、ローカライズの `potions.json` キーと一致）。
+- `potion_rarities.json` — ポーション専用 enum `MegaCrit.Sts2.Core.Entities.Potions.PotionRarity`（`Common`/`Uncommon`/`Rare`/`Event`/`Token`/`Potency`、
+  カード・レリックの共有 `Rarity` enum とは別物）を `get_Rarity` の `ldc.i4 + ret` から引く。enum 駆動のため Title case に正規化して出力
+- `potion_stats.json` — `.ctor` のフィールド代入（`stfld` / `set_Xxx`）と `get_CanonicalVars`（`newobj XxxVar`）から得たキャノニカル変数（card/relic と同ロジック）
+- `potion_characters.json` — `*PotionPool`（`SharedPotionPool` / 各キャラ / `EventPotionPool` / `TokenPotionPool`）の `GenerateAllPotions` / `GetUnlockedPotions` IL を
+  generic `Add<T>()` と `newobj` 双方から走査し、プール由来の出所を `Shared` / キャラ名 / `Event` / `Token` で付与（優先順 Shared > Event > Token > 各キャラ）。
+  注: 現バージョンではキャラ専用プールは空で標準ポーションは全て `Shared`。どのプールにも属さない特殊・生成系ポーションは未収録（将来プールが埋まれば自動で拾う）
+- `potion_images.json` — ポーション ID（例 `FIRE_POTION`）→ 画像のソース相対パス（`potions_png/` 基準、例 `fire_potion.png`）。
+  extractor が `tools/extracted/images/potions/` の `.png.import` をスキャンして生成（サブフォルダ無し）。
+  PNG 実体は `dotnet run --project ctex-to-png -- potions` で `.ctex` を変換し `tools/extracted/images/potions_png/` に生成する
+- `potion_database.json` — ポーションの EN/JP 表示名（`POTION.` 接頭辞）。ローカライズの `{ID}.title` から生成
+- `potion_descriptions.json` — ポーションの EN/JP 説明文（生テキスト＝タグ・`{Var}` 保持）。ローカライズの `{ID}.description` から生成
+- `potion_descriptions_resolved.json` — `{Var}` を `potion_stats.json` の値で実数解決（色タグ保持）。`relic_descriptions_resolved.json` と同方式
+
 **ローカライゼーション JSON（バージョン管理 = `Resources/{version}/localization/{eng,jpn}/`）**
-- `relics` / `card_keywords` / `afflictions` / `enchantments` / `encounters` / `acts` / `events` / `ancients` の各 `.json`。
+- `relics` / `card_keywords` / `afflictions` / `enchantments` / `encounters` / `acts` / `events` / `ancients` / `potions` の各 `.json`。
   `tools/extracted` はゲーム更新時に内容が変わるため、card-type-extractor が抽出時に各バージョンフォルダへ**生のままコピー**して版を固定する。
   読み込みは各サービス（`KeywordDatabaseService` / `EncounterDatabaseService` / `AncientDatabaseService` / `CardDatabaseService`）が
   `ResourceResolver.ResolveVersioned(asm, "localization.{lang}.{file}.json")` で最新版を解決する。
