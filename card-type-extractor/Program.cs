@@ -2377,6 +2377,173 @@ Console.WriteLine(kwOutPath);
     Console.WriteLine(colorsOutPath);
 }
 
+// merchant_prices.json 出力
+// マーチャント（店）の価格ロジックを DLL の IL から抽出する。
+//   ・カード/ポーション基本価格（レアリティ別）  … *Entry.GetCost のリテラル
+//   ・無色カードのマークアップ・変動率・セール率   … *Entry.GetCost / CalcCost の ldc.r4
+//   ・レリック基本価格（レアリティ別）            … RelicModel.get_MerchantCost のスイッチ
+//   ・カード除去コスト（基本値・増分・アセンション） … MerchantCardRemovalEntry.get_BaseCost / get_PriceIncrease
+// 数値はゲーム更新で変わり得るが、構造（レアリティの大小関係・スイッチ）は安定なので
+// リテラルを IL から拾い、スロット（レアリティ）への割り当てのみ既知の規則で行う。
+{
+    var outDirM = Path.GetDirectoryName(outPath)!;
+
+    // 指定型・メソッドの IL を返す（最初に一致したもの）
+    byte[] MIL(string typeName, string methodName)
+    {
+        foreach (var th in mr.TypeDefinitions)
+        {
+            var td = mr.GetTypeDefinition(th);
+            if (mr.GetString(td.Name) != typeName) continue;
+            foreach (var mh in td.GetMethods())
+            {
+                var m = mr.GetMethodDefinition(mh);
+                if (mr.GetString(m.Name) != methodName || m.RelativeVirtualAddress == 0) continue;
+                return peReader.GetMethodBody(m.RelativeVirtualAddress)?.GetILBytes() ?? Array.Empty<byte>();
+            }
+        }
+        return Array.Empty<byte>();
+    }
+
+    // IL を命令単位で走査し ldc.i4（整数）と ldc.r4（float）を文書順で収集
+    (List<int> Ints, List<float> Floats) ScanConsts(byte[] il)
+    {
+        var ints = new List<int>();
+        var floats = new List<float>();
+        for (int i = 0; i < il.Length;)
+        {
+            if (il[i] == 0x22 && i + 4 < il.Length) { floats.Add(BitConverter.ToSingle(il, i + 1)); i += 5; continue; }
+            if (il[i] == 0x23 && i + 8 < il.Length) { i += 9; continue; } // ldc.r8 は skip
+            var (v, sz) = ReadLdcI4(il, i);
+            if (v.HasValue) ints.Add(v.Value);
+            i += sz;
+        }
+        return (ints, floats);
+    }
+
+    // _cost / N（セール半額）の除数 N を返す: div(0x5B) 直前の ldc.i4
+    int FindDivisor(byte[] il)
+    {
+        int? last = null;
+        for (int i = 0; i < il.Length;)
+        {
+            if (il[i] == 0x5B) return last ?? 0;             // div
+            if (il[i] == 0x22) { i += 5; continue; }         // ldc.r4
+            var (v, sz) = ReadLdcI4(il, i);
+            if (v.HasValue) last = v;
+            i += sz;
+        }
+        return 0;
+    }
+
+    string F(float v) => v.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture);
+
+    // RelicRarity enum: int → 名前
+    var relicRarityById = new Dictionary<int, string>();
+    foreach (var th in mr.TypeDefinitions)
+    {
+        var td = mr.GetTypeDefinition(th);
+        if (mr.GetString(td.Name) != "RelicRarity") continue;
+        foreach (var fh in td.GetFields())
+        {
+            var f = mr.GetFieldDefinition(fh);
+            var fn = mr.GetString(f.Name);
+            if (fn == "value__") continue;
+            var c = f.GetDefaultValue(); if (c.IsNil) continue;
+            relicRarityById[mr.GetBlobReader(mr.GetConstant(c).Value).ReadInt32()] = fn;
+        }
+        break;
+    }
+
+    // --- カード基本価格（MerchantCardEntry.GetCost）---
+    // ldc.i4 のうち価格（>=10）を降順に並べ Rare > Uncommon > Common に割り当て。
+    // 無色マークアップは末尾の ldc.r4（×1.15）。
+    var (cardInts, cardFloats) = ScanConsts(MIL("MerchantCardEntry", "GetCost"));
+    var cardPrices = cardInts.Where(v => v >= 10).Distinct().OrderByDescending(v => v).ToList();
+    float colorlessMarkup = cardFloats.Count > 0 ? cardFloats.Max() : 1f;
+    // カード変動率（CalcCost の ldc.r4 ペア）・セール率（_cost / N）
+    var cardCalc = MIL("MerchantCardEntry", "CalcCost");
+    var cardVarFloats = ScanConsts(cardCalc).Floats;
+    int cardSaleDiv = FindDivisor(cardCalc);
+
+    // --- ポーション基本価格（MerchantPotionEntry.GetCost）+ 変動率（CalcCost）---
+    var potionPrices = ScanConsts(MIL("MerchantPotionEntry", "GetCost")).Ints
+        .Where(v => v >= 10).Distinct().OrderByDescending(v => v).ToList();
+    var potionVarFloats = ScanConsts(MIL("MerchantPotionEntry", "CalcCost")).Floats;
+
+    // --- レリック基本価格（RelicModel.get_MerchantCost のスイッチ）+ 変動率（MerchantRelicEntry.CalcCost）---
+    // get_Rarity の値を直接 switch する（index = RelicRarity の int 値）。
+    // ジャンプテーブルの各 case body 先頭 ldc.i4 が基本価格。Common/Uncommon/Rare/Shop のみ採用。
+    var relicBase = new Dictionary<string, int>(StringComparer.Ordinal);
+    var rmIl = MIL("RelicModel", "get_MerchantCost");
+    for (int i = 0; i + 4 < rmIl.Length; i++)
+    {
+        if (rmIl[i] != 0x45) continue;                       // switch
+        int count = rmIl[i+1] | (rmIl[i+2]<<8) | (rmIl[i+3]<<16) | (rmIl[i+4]<<24);
+        int tableStart = i + 5;
+        int afterTable = tableStart + count * 4;
+        for (int r = 0; r < count && afterTable + 4 <= rmIl.Length; r++)
+        {
+            int off = BitConverter.ToInt32(rmIl, tableStart + r * 4);
+            int target = afterTable + off;
+            if (target < 0 || target >= rmIl.Length) continue;
+            var (val, _) = ReadLdcI4(rmIl, target);
+            if (val.HasValue && relicRarityById.TryGetValue(r, out var rn)
+                && rn is "Common" or "Uncommon" or "Rare" or "Shop")
+                relicBase[rn] = val.Value;
+        }
+        break;
+    }
+    var relicVarFloats = ScanConsts(MIL("MerchantRelicEntry", "CalcCost")).Floats;
+
+    // --- カード除去コスト（GetValueIfAscension(threshold, normal, ascension)）---
+    var baseCostInts = ScanConsts(MIL("MerchantCardRemovalEntry", "get_BaseCost")).Ints;
+    var priceIncInts = ScanConsts(MIL("MerchantCardRemovalEntry", "get_PriceIncrease")).Ints;
+
+    // 価格を Rare/Uncommon/Common の3スロットへ（>=3件なら先頭3つ）
+    string RarityMap(List<int> prices) =>
+        prices.Count >= 3
+            ? $"{{ \"Rare\": {prices[0]}, \"Uncommon\": {prices[1]}, \"Common\": {prices[2]} }}"
+            : "{ }";
+
+    var relicBaseJson = string.Join(", ",
+        new[] { "Common", "Uncommon", "Rare", "Shop" }
+            .Where(relicBase.ContainsKey)
+            .Select(k => $"\"{k}\": {relicBase[k]}"));
+
+    var sb = new System.Text.StringBuilder();
+    sb.AppendLine("{");
+    sb.AppendLine($"  \"card\": {{");
+    sb.AppendLine($"    \"base\": {RarityMap(cardPrices)},");
+    sb.AppendLine($"    \"colorlessMarkup\": {F(colorlessMarkup)},");
+    sb.AppendLine($"    \"saleMultiplier\": {(cardSaleDiv > 0 ? F(1f / cardSaleDiv) : "1")},");
+    sb.AppendLine($"    \"variance\": {{ \"min\": {(cardVarFloats.Count > 0 ? F(cardVarFloats.Min()) : "1")}, \"max\": {(cardVarFloats.Count > 0 ? F(cardVarFloats.Max()) : "1")} }}");
+    sb.AppendLine($"  }},");
+    sb.AppendLine($"  \"potion\": {{");
+    sb.AppendLine($"    \"base\": {RarityMap(potionPrices)},");
+    sb.AppendLine($"    \"variance\": {{ \"min\": {(potionVarFloats.Count > 0 ? F(potionVarFloats.Min()) : "1")}, \"max\": {(potionVarFloats.Count > 0 ? F(potionVarFloats.Max()) : "1")} }}");
+    sb.AppendLine($"  }},");
+    sb.AppendLine($"  \"relic\": {{");
+    sb.AppendLine($"    \"base\": {{ {relicBaseJson} }},");
+    sb.AppendLine($"    \"variance\": {{ \"min\": {(relicVarFloats.Count > 0 ? F(relicVarFloats.Min()) : "1")}, \"max\": {(relicVarFloats.Count > 0 ? F(relicVarFloats.Max()) : "1")} }}");
+    sb.AppendLine($"  }},");
+    sb.AppendLine($"  \"cardRemoval\": {{");
+    sb.AppendLine($"    \"ascensionThreshold\": {(baseCostInts.Count >= 3 ? baseCostInts[0] : 0)},");
+    sb.AppendLine($"    \"baseCost\": {(baseCostInts.Count >= 3 ? baseCostInts[1] : 0)},");
+    sb.AppendLine($"    \"baseCostAscension\": {(baseCostInts.Count >= 3 ? baseCostInts[2] : 0)},");
+    sb.AppendLine($"    \"priceIncrease\": {(priceIncInts.Count >= 3 ? priceIncInts[1] : 0)},");
+    sb.AppendLine($"    \"priceIncreaseAscension\": {(priceIncInts.Count >= 3 ? priceIncInts[2] : 0)}");
+    sb.AppendLine($"  }}");
+    sb.AppendLine("}");
+
+    var merchantOutPath = Path.Combine(outDirM, "merchant_prices.json");
+    File.WriteAllText(merchantOutPath, sb.ToString());
+    Console.Error.WriteLine($"Merchant prices: card={RarityMap(cardPrices)} colorless×{F(colorlessMarkup)} " +
+        $"sale÷{cardSaleDiv} | potion={RarityMap(potionPrices)} | relic={{{relicBaseJson}}} | " +
+        $"removal base={(baseCostInts.Count >= 3 ? baseCostInts[1] : 0)}(+{(priceIncInts.Count >= 3 ? priceIncInts[1] : 0)}/use)");
+    Console.WriteLine(merchantOutPath);
+}
+
 // ---- helpers ----
 
 // get_CanonicalKeywords の IL を解析してキーワード int 値のリストを返す

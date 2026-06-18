@@ -197,6 +197,8 @@ PageEntry[] pages =
         $"全{MonsterDatabaseService.GetAllMonsters().Count}体のモンスターを GIF アニメーション付きで一覧表示。", "#7a1a1a"),
     new PageEntry("メカニクス", "mechanics.html", "Mechanic List", "メカニクス一覧",
         $"全{CharacterMechanics.All.Sum(g => g.Mechanics.Length)}件のメカニクスをキャラクター別に一覧表示。", "#4a5568"),
+    new PageEntry("マーチャント", "merchant.html", "Merchant Prices", "マーチャント価格",
+        "店のカード・レリック・ポーション・カード除去の価格を DLL 抽出値で一覧表示。", "#b8860b"),
 ];
 
 // favicon と wiki-link.js を assets/ から dist/ にコピー
@@ -265,6 +267,7 @@ File.WriteAllText(Path.Combine(distDir, "encounters.html"), BuildEncounterListPa
 File.WriteAllText(Path.Combine(distDir, "timeline.html"),   BuildTimelinePage(chars, monstersWithImg),             System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "ancients.html"),   BuildAncientListPage(allAncientIds, chars, ancientsWithImg), System.Text.Encoding.UTF8);
 File.WriteAllText(Path.Combine(distDir, "monsters.html"),   BuildMonsterListPage(chars, monstersWithImg), System.Text.Encoding.UTF8);
+File.WriteAllText(Path.Combine(distDir, "merchant.html"),   BuildMerchantPage(chars), System.Text.Encoding.UTF8);
 foreach (var ch in chars)
 {
     mechanicsMap.TryGetValue(ch.EnName, out var mecs);
@@ -2367,6 +2370,136 @@ static string BuildTimelinePage(CharData[] chars, HashSet<string> monstersWithIm
         """, extraHead: TL_CSS);
 }
 
+static string BuildMerchantPage(CharData[] chars)
+{
+    if (!MerchantPriceService.Available)
+        return Layout("マーチャント価格", "merchant", "#b8860b", chars, """
+            <div class="page-hero"><h1 class="hero-title">マーチャント価格</h1></div>
+            <p>価格データ（merchant_prices.json）が見つかりませんでした。</p>
+            """);
+
+    var rarityJa = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Common"] = "コモン", ["Uncommon"] = "アンコモン", ["Rare"] = "レア", ["Shop"] = "ショップ",
+    };
+
+    // レアリティ別の価格行（基本価格 + 変動レンジ）
+    string Rows(IReadOnlyDictionary<string, int> bases, MerchantPriceService.Variance v, string[] order)
+    {
+        var pct = (int)Math.Round((v.Max - 1) * 100);
+        return string.Concat(order.Where(bases.ContainsKey).Select(k =>
+        {
+            var (lo, hi) = MerchantPriceService.Range(bases[k], v);
+            var ja = rarityJa.TryGetValue(k, out var j) ? j : k;
+            return $"""
+                <tr>
+                  <td class="mc-rar mc-{k.ToLowerInvariant()}">{k}<span class="mc-rar-ja">{ja}</span></td>
+                  <td class="mc-base">{bases[k]}</td>
+                  <td class="mc-range">{lo} 〜 {hi} <span class="mc-pct">±{pct}%</span></td>
+                </tr>
+                """;
+        }));
+    }
+
+    string Table(string head, string rows) => $"""
+        <table class="mc-table">
+          <thead><tr><th>レアリティ</th><th>基本価格</th><th>{head}</th></tr></thead>
+          <tbody>{rows}</tbody>
+        </table>
+        """;
+
+    var card = MerchantPriceService.Card;
+    var potion = MerchantPriceService.Potion;
+    var relic = MerchantPriceService.Relic;
+    var rm = MerchantPriceService.CardRemoval;
+
+    var cardMarkupPct = (int)Math.Round((card.ColorlessMarkup - 1) * 100);
+    var salePct = (int)Math.Round((1 - card.SaleMultiplier) * 100);
+
+    var cardSection = $"""
+        <section class="section mc-sec">
+          <h2 class="mc-h">カード <span class="mc-h-sub">Card</span></h2>
+          {Table("販売価格（変動込み）", Rows(card.Base, card.Variance, ["Rare", "Uncommon", "Common"]))}
+          <ul class="mc-notes">
+            <li>無色（Colorless）カードは基本価格に <b>+{cardMarkupPct}%</b>（×{card.ColorlessMarkup:0.##}）。</li>
+            <li>各店で 1 枚がランダムに <b>{salePct}% OFF</b>（×{card.SaleMultiplier:0.##}）のセール対象。</li>
+            <li>店の品揃え: アタック2・スキル2・パワー1（キャラクタープール）。</li>
+          </ul>
+        </section>
+        """;
+
+    var potionSection = $"""
+        <section class="section mc-sec">
+          <h2 class="mc-h">ポーション <span class="mc-h-sub">Potion</span></h2>
+          {Table("販売価格（変動込み）", Rows(potion.Base, potion.Variance, ["Rare", "Uncommon", "Common"]))}
+        </section>
+        """;
+
+    var relicSection = $"""
+        <section class="section mc-sec">
+          <h2 class="mc-h">レリック <span class="mc-h-sub">Relic</span></h2>
+          {Table("販売価格（変動込み）", Rows(relic.Base, relic.Variance, ["Common", "Uncommon", "Rare", "Shop"]))}
+          <ul class="mc-notes">
+            <li>レリックの変動幅はカード/ポーション（±{(int)Math.Round((card.Variance.Max - 1) * 100)}%）より広い <b>±{(int)Math.Round((relic.Variance.Max - 1) * 100)}%</b>。</li>
+            <li>店の品揃え: ランダム2 + ショップ確定1（ゴールド生成系レリックは除外）。</li>
+          </ul>
+        </section>
+        """;
+
+    // カード除去: base + increase × 使用回数
+    var ex1 = rm.BaseCost;
+    var ex2 = rm.BaseCost + rm.PriceIncrease;
+    var ex3 = rm.BaseCost + rm.PriceIncrease * 2;
+    var removalSection = $"""
+        <section class="section mc-sec">
+          <h2 class="mc-h">カード除去 <span class="mc-h-sub">Card Removal</span></h2>
+          <p class="mc-formula">コスト = <b>{rm.BaseCost}</b> + <b>{rm.PriceIncrease}</b> × （この店までの除去使用回数）</p>
+          <table class="mc-table">
+            <thead><tr><th>使用回数</th><th>1 回目</th><th>2 回目</th><th>3 回目</th></tr></thead>
+            <tbody><tr><td class="mc-rar">通常</td><td>{ex1}</td><td>{ex2}</td><td>{ex3}</td></tr></tbody>
+          </table>
+          <ul class="mc-notes">
+            <li>アセンション {rm.AscensionThreshold} 以上: 基本 <b>{rm.BaseCostAscension}</b> + <b>{rm.PriceIncreaseAscension}</b> / 回。</li>
+          </ul>
+        </section>
+        """;
+
+    const string MC_CSS = """
+        <style>
+        .mc-sec { margin-bottom: 26px; }
+        .mc-h { font-size: 18px; margin: 0 0 12px; padding-bottom: 7px; border-bottom: 2px solid #b8860b; color: #2c3e50; }
+        .mc-h-sub { font-size: 12px; color: #999; font-weight: 400; margin-left: 8px; }
+        .mc-table { border-collapse: collapse; width: 100%; max-width: 540px; background: #fff; border: 1px solid #eee; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .mc-table th { background: #faf6ec; color: #6b5210; font-size: 12px; text-align: left; padding: 8px 12px; border-bottom: 1px solid #eee; }
+        .mc-table td { padding: 8px 12px; border-bottom: 1px solid #f3f3f3; font-size: 14px; }
+        .mc-table tr:last-child td { border-bottom: none; }
+        .mc-rar { font-weight: 600; }
+        .mc-rar-ja { display: block; font-size: 11px; color: #aaa; font-weight: 400; }
+        .mc-common   { color: #6b7280; }
+        .mc-uncommon { color: #2f855a; }
+        .mc-rare     { color: #b7791f; }
+        .mc-shop     { color: #2b6cb0; }
+        .mc-base { font-variant-numeric: tabular-nums; font-weight: 600; }
+        .mc-range { font-variant-numeric: tabular-nums; color: #444; }
+        .mc-pct { color: #aaa; font-size: 11px; margin-left: 4px; }
+        .mc-formula { background: #faf6ec; border-radius: 6px; padding: 10px 14px; max-width: 540px; font-size: 14px; }
+        .mc-notes { margin: 10px 0 0; padding-left: 20px; color: #555; font-size: 13px; }
+        .mc-notes li { margin: 3px 0; }
+        </style>
+        """;
+
+    return Layout("マーチャント価格", "merchant", "#b8860b", chars, $"""
+        <div class="page-hero">
+          <h1 class="hero-title">マーチャント価格</h1>
+          <p class="hero-sub">店の価格はゲーム DLL から抽出した基本価格。実売価格は基本価格 × 変動率（ランごとの乱数）で決まる。</p>
+        </div>
+        {cardSection}
+        {potionSection}
+        {relicSection}
+        {removalSection}
+        """, extraHead: MC_CSS);
+}
+
 static string BuildEncounterListPage(string[] allEncounterIds, CharData[] chars)
 {
     var rows = string.Concat(allEncounterIds.Select(id =>
@@ -3600,6 +3733,9 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
     var mecsActive     = activeId == "mechanics";
     var mecsStyle      = mecsActive     ? " style=\"border-left-color:#4a5568\"" : "";
     var mecsClass      = mecsActive     ? " active" : "";
+    var merchantActive = activeId == "merchant";
+    var merchantStyle  = merchantActive ? " style=\"border-left-color:#b8860b\"" : "";
+    var merchantClass  = merchantActive ? " active" : "";
     var keywordsActive = activeId == "keywords";
     var keywordsStyle  = keywordsActive ? " style=\"border-left-color:#4a5568\"" : "";
     var keywordsClass  = keywordsActive ? " active" : "";
@@ -3677,6 +3813,9 @@ static string Layout(string title, string activeId, string accent, CharData[] ch
                 </a>
                 <a href="{basePath}mechanics.html" class="nav-link{mecsClass}"{mecsStyle}>
                   <span class="nav-icon">&#9881;</span>メカニクス一覧
+                </a>
+                <a href="{basePath}merchant.html" class="nav-link{merchantClass}"{merchantStyle}>
+                  <span class="nav-icon">&#128176;</span>マーチャント価格
                 </a>
                 <a href="{basePath}keywords.html" class="nav-link{keywordsClass}"{keywordsStyle}>
                   <span class="nav-icon">&#128216;</span>キーワード一覧
