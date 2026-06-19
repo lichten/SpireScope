@@ -3140,6 +3140,7 @@ static string BuildKeywordsPage(CharData[] chars, string review = "")
                   <div class="kw-title">{System.Net.WebUtility.HtmlEncode(e.TitleJa)} <span class="kw-en">({System.Net.WebUtility.HtmlEncode(e.TitleEn)})</span></div>
                   <div class="kw-desc">{System.Net.WebUtility.HtmlEncode(descJa)}</div>
                   {extraJa}
+                  {DevNoteHtml(e.DevNoteEn)}
                 </div>
                 """;
         }));
@@ -3151,12 +3152,41 @@ static string BuildKeywordsPage(CharData[] chars, string review = "")
             """;
     }
 
+    // sts2.xml 由来の開発者ノート行（英語、ローカライズ無し）。空なら何も出さない。
+    static string DevNoteHtml(string note) =>
+        string.IsNullOrEmpty(note) ? ""
+        : $"""<div class="kw-devnote"><span class="kw-devnote-label">dev</span> {System.Net.WebUtility.HtmlEncode(note)}</div>""";
+
+    // ローカライズの無い Power / enum のメモ専用セクション（dev ノートのみ）。
+    static string RenderNoteSection(string titleJa, string titleEn, string borderColor,
+                                    IReadOnlyList<StS2Shared.Services.DevNote> notes)
+    {
+        if (notes.Count == 0) return "";
+        var rows = string.Concat(notes.Select(n => $"""
+            <div class="kw-entry">
+              <div class="kw-title">{System.Net.WebUtility.HtmlEncode(n.TitleEn)}</div>
+              <div class="kw-desc">{System.Net.WebUtility.HtmlEncode(n.TextEn)}</div>
+            </div>
+            """));
+        return $"""
+            <section class="section" style="border-left:3px solid {borderColor}">
+              <h2 class="section-title">{titleJa} <span style="font-size:0.7em;color:#888;font-weight:400">{titleEn}</span></h2>
+              <p style="font-size:12px;color:#888;margin:4px 0 0">sts2.xml の開発者ノート（英語のみ・ローカライズ無し）。</p>
+              <div class="kw-grid">{rows}</div>
+            </section>
+            """;
+    }
+
     var cardKwSection   = RenderSection("カードキーワード", "Card Keywords", "#4a90d9",
                               KeywordDatabaseService.GetCardKeywords());
     var afflicSection   = RenderSection("アフリクション",   "Afflictions",   "#8b2222",
                               KeywordDatabaseService.GetAfflictions());
     var enchantSection  = RenderSection("エンチャント",      "Enchantments",  "#7d6608",
                               KeywordDatabaseService.GetEnchantments());
+    var powerSection    = RenderNoteSection("パワー（開発者ノート）", "Powers",  "#2a6b4f",
+                              KeywordDatabaseService.GetPowerNotes());
+    var enumSection     = RenderNoteSection("カード系 enum",          "Card Enums", "#4a4a6b",
+                              KeywordDatabaseService.GetEnumNotes());
 
     var total = KeywordDatabaseService.GetCardKeywords().Count
               + KeywordDatabaseService.GetAfflictions().Count
@@ -3171,6 +3201,11 @@ static string BuildKeywordsPage(CharData[] chars, string review = "")
         .kw-desc   { font-size: 13px; color: #444; line-height: 1.5; }
         .kw-extra  { font-size: 12px; color: #777; margin-top: 4px; border-top: 1px solid #f0f0f0;
                      padding-top: 4px; font-style: italic; }
+        .kw-devnote { font-size: 12px; color: #5a6b5a; margin-top: 4px; border-top: 1px dashed #e0e6e0;
+                      padding-top: 4px; line-height: 1.45; }
+        .kw-devnote-label { display: inline-block; font-size: 10px; font-weight: 700; color: #fff;
+                      background: #2a6b4f; border-radius: 3px; padding: 0 4px; margin-right: 4px;
+                      vertical-align: 1px; letter-spacing: 0.5px; }
         """;
 
     const string REVIEW_GUIDE = """
@@ -3203,6 +3238,8 @@ static string BuildKeywordsPage(CharData[] chars, string review = "")
         {cardKwSection}
         {afflicSection}
         {enchantSection}
+        {powerSection}
+        {enumSection}
         {reviewZone}
         """, basePath, extraHead: $"<style>{kwCss}</style>");
 }

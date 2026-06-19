@@ -71,6 +71,13 @@ $pck = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\SlayTheSp
   extractor が `tools/extracted/images/ancients/` の `*_placeholder.png.import` をスキャンして生成（汎用フォールバックの `under_construction` は除外、画像未提供の `NEOW`/`TEZCATARA` は未収録）。`Services/AncientImageService.cs` で参照。
   PNG 実体は `dotnet run --project ctex-to-png -- ancients` で `.ctex` を変換し `tools/extracted/images/ancients_png/` に生成する
 - `card_related.json` — カードがホバー表示する関連カード（DLL の `get_ExtraHoverTips`、カードのみにフィルタ）。例: `CARD.ACCURACY` → `[CARD.SHIV]`。`GetRelatedCards` / `GetCreatedByCards`（逆引き）で参照
+- `keyword_dev_notes.json` — DLL 隣の `sts2.xml`（v0.107.1 から公開される .NET XML ドキュメント）の `<summary>` を抽出した開発者ノート。
+  `{接頭辞}.{ID}` → 英語 summary（`<see cref>` は短縮クラス名に解決）。接頭辞は `AFFLICTION`/`ENCHANTMENT`（→ `CamelToUpperSnake` した ID、ローカライズ ID と一致）、
+  `POWER`（同上）、`ENUM.{EnumType}.{Field}`（`Core.Entities.Cards.*` のフィールドのみ。`Mock*`/`Deprecated*`・ネスト型は除外）。
+  個別カード/レリックは sts2.xml のドキュメント化が僅少なため対象外（`card_database` 等の IL 抽出は置き換えない）。
+  `KeywordDatabaseService` が読み、`KeywordEntry.DevNoteEn`（Affliction/Enchantment エントリに付与）と
+  `GetPowerNotes()`/`GetEnumNotes()`（ローカライズの無い Power/enum のメモ専用 `DevNote` エントリ）で公開。
+  SiteBuilder の keywords ページが各エントリの dev ノート行と「パワー/カード系 enum」セクションを描画する
 
 **ポーション系 JSON（card-type-extractor 生成、`Resources/{version}/`）**
 - ポーションはカード・レリックと同一の IL パターンで DLL に格納される。extractor は名前空間 `MegaCrit.Sts2.Core.Models.Potions`

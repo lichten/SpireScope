@@ -1,7 +1,11 @@
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
+using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using StS2Shared.Services;
 
 // 引数: [sts2.dll のパス] [出力 JSON のパス]
@@ -2566,6 +2570,96 @@ Console.WriteLine(kwOutPath);
         $"sale÷{cardSaleDiv} | potion={RarityMap(potionPrices)} | relic={{{relicBaseJson}}} | " +
         $"removal base={(baseCostInts.Count >= 3 ? baseCostInts[1] : 0)}(+{(priceIncInts.Count >= 3 ? priceIncInts[1] : 0)}/use)");
     Console.WriteLine(merchantOutPath);
+}
+
+// keyword_dev_notes.json 出力
+// sts2.xml（v0.107.1 から DLL 隣に公開される .NET XML ドキュメント）の <summary> を
+// enum（Core.Entities.Cards.* のフィールド）/ Power / Affliction / Enchantment について収集し、
+// category 接頭辞付き ID → 英語 dev summary のマップを生成する。
+// 個別カード/レリックはドキュメント化が僅少なため対象外（card_database 等の IL 抽出を置き換えない）。
+// KeywordDatabaseService が既存 keyword エントリの DevNote 付与と Power/enum のメモ専用エントリ公開に使う。
+{
+    var outDirK = Path.GetDirectoryName(outPath)!;
+    var xmlPath = Path.Combine(Path.GetDirectoryName(dllPath)!, "sts2.xml");
+    if (!File.Exists(xmlPath))
+    {
+        Console.Error.WriteLine($"sts2.xml が見つからないため keyword_dev_notes.json をスキップ: {xmlPath}");
+    }
+    else
+    {
+        // <summary> を 1 行テキスト化する。<see cref="T:...Foo"/> 等は短縮名 "Foo" に解決する。
+        static string Flatten(XElement summary)
+        {
+            var sb = new StringBuilder();
+            foreach (var node in summary.Nodes())
+            {
+                if (node is XText t) { sb.Append(t.Value); continue; }
+                if (node is not XElement e) continue;
+                switch (e.Name.LocalName)
+                {
+                    case "see":
+                    case "seealso":
+                        var cref = (string?)e.Attribute("cref") ?? (string?)e.Attribute("langword") ?? "";
+                        if (cref.Contains('.')) cref = cref[(cref.LastIndexOf('.') + 1)..];
+                        var paren = cref.IndexOf('(');
+                        if (paren >= 0) cref = cref[..paren];   // M:Foo.Bar(args) → Bar
+                        sb.Append(cref);
+                        break;
+                    case "paramref":
+                    case "typeparamref":
+                        sb.Append((string?)e.Attribute("name") ?? "");
+                        break;
+                    default:
+                        sb.Append(e.Value);
+                        break;
+                }
+            }
+            return Regex.Replace(sb.ToString(), @"\s+", " ").Trim();
+        }
+
+        var notes = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        foreach (var m in XDocument.Load(xmlPath).Descendants("member"))
+        {
+            var name = (string?)m.Attribute("name");
+            var summary = m.Element("summary");
+            if (name is null || summary is null) continue;
+            var text = Flatten(summary);
+            if (text.Length == 0) continue;
+
+            // T:MegaCrit.Sts2.Core.Models.{Afflictions|Enchantments|Powers}.{ClassName}（ネスト型は除外）
+            var t = Regex.Match(name,
+                @"^T:MegaCrit\.Sts2\.Core\.Models\.(Afflictions|Enchantments|Powers)\.([A-Za-z0-9_]+)$");
+            if (t.Success)
+            {
+                var cls = t.Groups[2].Value;
+                if (cls.StartsWith("Mock") || cls.StartsWith("Deprecated")) continue;
+                var cat = t.Groups[1].Value switch
+                {
+                    "Afflictions"  => "AFFLICTION",
+                    "Enchantments" => "ENCHANTMENT",
+                    _              => "POWER",
+                };
+                notes[$"{cat}.{CamelToUpperSnake(cls)}"] = text;
+                continue;
+            }
+
+            // F:MegaCrit.Sts2.Core.Entities.Cards.{EnumType}.{Field}（カード系プレイヤー向け enum のフィールド）
+            var f = Regex.Match(name,
+                @"^F:MegaCrit\.Sts2\.Core\.Entities\.Cards\.([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)$");
+            if (f.Success)
+                notes[$"ENUM.{f.Groups[1].Value}.{f.Groups[2].Value}"] = text;
+        }
+
+        var json = JsonSerializer.Serialize(notes, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        });
+        var notesOutPath = Path.Combine(outDirK, "keyword_dev_notes.json");
+        WriteJson(notesOutPath, json + "\n");
+        Console.Error.WriteLine($"Extracted {notes.Count} keyword dev notes from sts2.xml.");
+        Console.WriteLine(notesOutPath);
+    }
 }
 
 // ---- helpers ----
