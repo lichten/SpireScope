@@ -145,10 +145,11 @@ var monstersWithImg = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 var monstersWithGif = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 if (toolsRoot is not null)
 {
-    var monsterSrcDir = Path.Combine(toolsRoot, "images",     "monsters");
-    var animationsDir = Path.Combine(toolsRoot, "animations", "monsters");
+    var monsterSrcDir      = Path.Combine(toolsRoot, "images",     "monsters");
+    var animationsDir      = Path.Combine(toolsRoot, "animations", "monsters");
+    var creatureVisualsDir = Path.Combine(toolsRoot, "scenes",     "creature_visuals");
     if (Directory.Exists(animationsDir))
-        monstersWithGif = GenerateMonsterGifs(animationsDir, monsterSrcDir, toolsRoot, log);
+        monstersWithGif = GenerateMonsterGifs(animationsDir, creatureVisualsDir, monsterSrcDir, toolsRoot, log);
     if (Directory.Exists(monsterSrcDir))
     {
         foreach (var src in Directory.GetFiles(monsterSrcDir, "*.*")
@@ -4373,95 +4374,181 @@ static string ExtractPageTitle(string filePath)
 }
     // ── モンスター GIF 生成 ────────────────────────────────────────────────────────
 
-    static HashSet<string> GenerateMonsterGifs(string animationsDir, string outDir, string toolsRoot, Action<string> log)
+    static HashSet<string> GenerateMonsterGifs(string animationsDir, string creatureVisualsDir, string outDir, string toolsRoot, Action<string> log)
     {
         Directory.CreateDirectory(outDir);
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var monsterDirs = Directory.GetDirectories(animationsDir);
         int generated = 0, skipped = 0, failed = 0;
 
-        foreach (var monsterDir in monsterDirs)
-        {
-            var name    = Path.GetFileName(monsterDir);
-            var gifPath = Path.Combine(outDir, $"{name}.gif");
-            var pngPath = Path.Combine(outDir, $"{name}.png");
+        // モンスター ID ごとに creature_visuals/{id}.tscn を解決して描画する。
+        // tscn が無い ID は animations/monsters/{id}/ のフォルダにフォールバック。
+        var ids = MonsterDatabaseService.GetAllMonsters().Select(m => m.DirName)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
 
-            // キャッシュチェック
-            var skelImport = Directory.GetFiles(monsterDir, "*.skel.import").FirstOrDefault();
-            if (skelImport is not null && File.Exists(gifPath) && File.Exists(pngPath) &&
-                File.GetLastWriteTimeUtc(gifPath) >= File.GetLastWriteTimeUtc(skelImport))
+        foreach (var id in ids)
+        {
+            var gifPath = Path.Combine(outDir, $"{id}.gif");
+            var pngPath = Path.Combine(outDir, $"{id}.png");
+            var tscnPath = Path.Combine(creatureVisualsDir, $"{id}.tscn");
+
+            CreatureVisual? cv = File.Exists(tscnPath) ? CreatureVisualParser.Parse(tscnPath, toolsRoot) : null;
+
+            // フォールバック: tscn 無し（または解決不能）でフォルダがあれば従来のフォルダ単位 Spine 描画
+            if (cv is null)
             {
-                result.Add(name);
+                var folder = Path.Combine(animationsDir, id);
+                if (Directory.Exists(folder))
+                    cv = new CreatureVisual(CreatureVisualKind.Spine,
+                        Directory.GetFiles(folder, "*.skel.import").FirstOrDefault(),
+                        Directory.GetFiles(folder, "*.atlas.import").FirstOrDefault());
+            }
+
+            if (cv is null || cv.Kind == CreatureVisualKind.Invisible)
+                continue; // 画像なし（? 表示）
+
+            // キャッシュ判定: 入力（tscn / skel.import / 静的 ctex）より出力が新しければスキップ
+            var stamp = NewestWriteTime(tscnPath, cv.SkelImport, cv.StaticCtexPath);
+            bool spineCached = File.Exists(gifPath) && File.Exists(pngPath) &&
+                               File.GetLastWriteTimeUtc(gifPath) >= stamp;
+            bool staticCached = File.Exists(pngPath) &&
+                                File.GetLastWriteTimeUtc(pngPath) >= stamp;
+            if ((cv.Kind == CreatureVisualKind.Spine && spineCached) ||
+                (cv.Kind == CreatureVisualKind.Static && staticCached))
+            {
+                if (File.Exists(gifPath)) result.Add(id);
                 skipped++;
                 continue;
             }
 
-            MonsterData? monsterData = null;
+            const int w = 192, h = 192;
             try
             {
-                monsterData = SpineLoader.Load(monsterDir, toolsRoot);
-
-                var animName = monsterData.Animations.FirstOrDefault(
-                    a => a.Equals("idle", StringComparison.OrdinalIgnoreCase))
-                    ?? monsterData.Animations.FirstOrDefault();
-                if (animName is null) { failed++; continue; }
-
-                var anim     = monsterData.SkeletonData.FindAnimation(animName)!;
-                float duration = anim.Duration > 0 ? anim.Duration : 1f;
-                int frameCount = Math.Min(50, Math.Max(2, (int)(duration * 10)));
-                const int w = 192, h = 192;
-
-                using var gifImage = new Image<Rgba32>(w, h);
-                gifImage.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay = 10;
-
-                for (int i = 0; i < frameCount; i++)
+                if (cv.Kind == CreatureVisualKind.Static)
                 {
-                    float time = i == 0 ? 0f : duration * i / (frameCount - 1);
-                    using var bmp = SpineRenderer.Render(monsterData, animName, time, w, h);
-                    var pixels = bmp.Pixels;
-
-                    if (i == 0)
-                    {
-                        for (int pi = 0; pi < pixels.Length; pi++)
-                        {
-                            var p = pixels[pi];
-                            gifImage.Frames.RootFrame[pi % w, pi / w] = new Rgba32(p.Red, p.Green, p.Blue, p.Alpha);
-                        }
-                    }
-                    else
-                    {
-                        using var frameImg = new Image<Rgba32>(w, h);
-                        frameImg.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay = 10;
-                        for (int pi = 0; pi < pixels.Length; pi++)
-                        {
-                            var p = pixels[pi];
-                            frameImg.Frames.RootFrame[pi % w, pi / w] = new Rgba32(p.Red, p.Green, p.Blue, p.Alpha);
-                        }
-                        gifImage.Frames.AddFrame(frameImg.Frames.RootFrame);
-                    }
+                    using var src = SpineLoader.LoadCtexAsSKBitmap(cv.StaticCtexPath!);
+                    using var fitted = FitBitmap(src, w, h);
+                    SavePng(fitted, pngPath, w, h);
+                    generated++;
+                    continue;
                 }
 
-                gifImage.Metadata.GetGifMetadata().RepeatCount = 0;
-                gifImage.SaveAsGif(gifPath);
-                using var pngFrame = gifImage.Frames.CloneFrame(0);
-                pngFrame.SaveAsPng(pngPath);
+                // Spine
+                if (cv.SkelImport is null || cv.AtlasImport is null) { failed++; continue; }
 
-                result.Add(name);
-                generated++;
+                MonsterData? monsterData = null;
+                try
+                {
+                    monsterData = SpineLoader.LoadFromImports(cv.SkelImport, cv.AtlasImport, toolsRoot);
+
+                    // アニメ選択: tscn 指定 → idle 系 → 先頭。無ければ静止 setup pose。
+                    string? animName = null;
+                    if (cv.Animation is { } a && a != "-- Empty --" &&
+                        monsterData.SkeletonData.FindAnimation(a) != null)
+                        animName = a;
+                    animName ??= monsterData.Animations.FirstOrDefault(
+                                     x => x.Contains("idle", StringComparison.OrdinalIgnoreCase))
+                                 ?? monsterData.Animations.FirstOrDefault();
+
+                    float duration = 1f;
+                    int frameCount = 1;
+                    if (animName is not null)
+                    {
+                        var anim = monsterData.SkeletonData.FindAnimation(animName)!;
+                        duration = anim.Duration > 0 ? anim.Duration : 1f;
+                        frameCount = Math.Min(50, Math.Max(2, (int)(duration * 10)));
+                    }
+
+                    using var gifImage = new Image<Rgba32>(w, h);
+                    gifImage.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay = 10;
+
+                    for (int i = 0; i < frameCount; i++)
+                    {
+                        float time = (frameCount <= 1) ? 0f : duration * i / (frameCount - 1);
+                        using var bmp = SpineRenderer.Render(monsterData, animName, time, w, h, cv.Skin, cv.Tint);
+                        var pixels = bmp.Pixels;
+
+                        if (i == 0)
+                        {
+                            for (int pi = 0; pi < pixels.Length; pi++)
+                            {
+                                var p = pixels[pi];
+                                gifImage.Frames.RootFrame[pi % w, pi / w] = new Rgba32(p.Red, p.Green, p.Blue, p.Alpha);
+                            }
+                        }
+                        else
+                        {
+                            using var frameImg = new Image<Rgba32>(w, h);
+                            frameImg.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay = 10;
+                            for (int pi = 0; pi < pixels.Length; pi++)
+                            {
+                                var p = pixels[pi];
+                                frameImg.Frames.RootFrame[pi % w, pi / w] = new Rgba32(p.Red, p.Green, p.Blue, p.Alpha);
+                            }
+                            gifImage.Frames.AddFrame(frameImg.Frames.RootFrame);
+                        }
+                    }
+
+                    gifImage.Metadata.GetGifMetadata().RepeatCount = 0;
+                    gifImage.SaveAsGif(gifPath);
+                    using var pngFrame = gifImage.Frames.CloneFrame(0);
+                    pngFrame.SaveAsPng(pngPath);
+
+                    result.Add(id);
+                    generated++;
+                }
+                finally
+                {
+                    monsterData?.Texture.Dispose();
+                }
             }
             catch (Exception ex)
             {
-                log($"GIF 生成エラー: {name}: {ex.Message}");
+                log($"GIF 生成エラー: {id}: {ex.Message}");
                 failed++;
-            }
-            finally
-            {
-                monsterData?.Texture.Dispose();
             }
         }
 
         log($"モンスター GIF: {generated} 件生成 / {skipped} 件スキップ / {failed} 件エラー");
         return result;
+    }
+
+    // 入力ファイル群のうち存在するものの最新更新時刻（キャッシュ判定用）
+    static DateTime NewestWriteTime(params string?[] paths)
+    {
+        var newest = DateTime.MinValue;
+        foreach (var p in paths)
+            if (p is not null && File.Exists(p))
+            {
+                var t = File.GetLastWriteTimeUtc(p);
+                if (t > newest) newest = t;
+            }
+        return newest;
+    }
+
+    // 静的テクスチャを w×h の背景(30,30,35)中央にアスペクト維持で配置
+    static SkiaSharp.SKBitmap FitBitmap(SkiaSharp.SKBitmap src, int w, int h)
+    {
+        var bitmap = new SkiaSharp.SKBitmap(w, h, SkiaSharp.SKColorType.Rgba8888, SkiaSharp.SKAlphaType.Premul);
+        using var canvas = new SkiaSharp.SKCanvas(bitmap);
+        canvas.Clear(new SkiaSharp.SKColor(30, 30, 35));
+        float scale = Math.Min((w - 8f) / src.Width, (h - 8f) / src.Height);
+        float dw = src.Width * scale, dh = src.Height * scale;
+        var dst = new SkiaSharp.SKRect((w - dw) / 2, (h - dh) / 2, (w + dw) / 2, (h + dh) / 2);
+        using var paint = new SkiaSharp.SKPaint { IsAntialias = true };
+        canvas.DrawBitmap(src, dst, paint);
+        return bitmap;
+    }
+
+    static void SavePng(SkiaSharp.SKBitmap bmp, string pngPath, int w, int h)
+    {
+        using var img = new Image<Rgba32>(w, h);
+        var pixels = bmp.Pixels;
+        for (int pi = 0; pi < pixels.Length; pi++)
+        {
+            var p = pixels[pi];
+            img[pi % w, pi / w] = new Rgba32(p.Red, p.Green, p.Blue, p.Alpha);
+        }
+        img.SaveAsPng(pngPath);
     }
 
     // ── モンスター一覧ページ ──────────────────────────────────────────────────────

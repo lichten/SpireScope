@@ -18,17 +18,35 @@ static class SpineLoader
     {
         var skelImport  = Directory.GetFiles(monsterDir, "*.skel.import").FirstOrDefault()
             ?? throw new FileNotFoundException($"*.skel.import not found in {monsterDir}");
-        var spskelPath  = ResolveImportPath(skelImport, toolsRoot);
-
         var atlasImport = Directory.GetFiles(monsterDir, "*.atlas.import").FirstOrDefault()
             ?? throw new FileNotFoundException($"*.atlas.import not found in {monsterDir}");
+        return LoadFromImports(skelImport, atlasImport, toolsRoot);
+    }
+
+    /// <summary>
+    /// 明示的な .skel.import / .atlas.import を指定してロードする
+    /// （creature_visuals の .tscn → .tres で解決した特定リグ用）。
+    /// テクスチャは atlas_data 先頭行のページ名から同フォルダの .png.import を引く。
+    /// </summary>
+    public static MonsterData LoadFromImports(string skelImport, string atlasImport, string toolsRoot)
+    {
+        var spskelPath  = ResolveImportPath(skelImport, toolsRoot);
         var spatlasPath = ResolveImportPath(atlasImport, toolsRoot);
 
         using var spatlasDoc = JsonDocument.Parse(File.ReadAllText(spatlasPath));
         var atlasText     = spatlasDoc.RootElement.GetProperty("atlas_data").GetString()!;
 
-        var pngImport = Directory.GetFiles(monsterDir, "*.png.import").FirstOrDefault()
-            ?? throw new FileNotFoundException($"*.png.import not found in {monsterDir}");
+        // atlas_data 先頭の非空行 = ページ画像名（例 "bowlbug.png"）
+        var atlasDir = Path.GetDirectoryName(atlasImport)!;
+        var pageName = atlasText.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0);
+        string? pngImport = null;
+        if (pageName is not null)
+        {
+            var candidate = Path.Combine(atlasDir, pageName + ".import");
+            if (File.Exists(candidate)) pngImport = candidate;
+        }
+        pngImport ??= Directory.GetFiles(atlasDir, "*.png.import").FirstOrDefault()
+            ?? throw new FileNotFoundException($"*.png.import not found in {atlasDir}");
         var ctexPath  = ResolveImportPath(pngImport, toolsRoot);
         var texture   = LoadCtexAsSKBitmap(ctexPath);
 
@@ -44,7 +62,7 @@ static class SpineLoader
         return new MonsterData(skeletonData, atlas, texture, animations);
     }
 
-    static string ResolveImportPath(string importFile, string toolsRoot)
+    public static string ResolveImportPath(string importFile, string toolsRoot)
     {
         var content = File.ReadAllText(importFile);
         var m = ImportPathRegex.Match(content);

@@ -140,10 +140,19 @@ $pck = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\SlayTheSp
 ビルドは「生成」ボタンまたは `dotnet run --project StS2SiteBuilder` で実行。
 
 **モンスター GIF アニメーション生成（ビルド時自動）：**
-- `--build` 実行時に `tools/extracted/animations/monsters/` から Spine アニメーションを読み込み、
-  idle アニメーションの GIF（192×192、10fps）を自動生成して `tools/extracted/images/monsters/` にキャッシュする。
-- キャッシュ済みの GIF はスキップされる（`.skel.import` より新しければ再生成不要）。
-- PNG スナップショット（256×256）は以前と同様に同ディレクトリに残る。
+- `--build` 実行時に `monster_names.json` の各モンスター **ID 単位**で
+  `tools/extracted/scenes/creature_visuals/{id}.tscn`（モデル→リグ・スキン・アニメ・modulate の権威的マッピング）を
+  解決し、idle アニメーションの GIF（192×192、10fps）と PNG を `{id}.gif`/`{id}.png` として
+  `tools/extracted/images/monsters/` に自動生成・キャッシュする。
+  - `.tscn` は `SpineSprite`（`{rig}_skel_data.tres` 参照 + `preview_skin`/`preview_animation`/`modulate`）か、
+    静的 `Sprite2D`（`images/monsters/*_placeholder.png` 等）か、`visible=false`（画像なし）のいずれか。
+    `CreatureVisual.cs`（`CreatureVisualParser`）が解析し、`SpineRenderer.Render` がスキン・ティント指定で描画する。
+  - これにより**フォルダ名 ≠ ID のリグ**（例 `flyconid`→`flying_mushrooms`、`mysterious_knight`→`flail_knight`＋緑 tint）や、
+    **1 リグをスキンで分けるモンスター**（`bowlbug_rock`=skin`rock`/`bowlbug_silk`=skin`web`、`battle_friend_v1/2/3` など）も
+    正しい ID 名で画像化される（旧来のフォルダ単位描画では欠落していた）。
+  - `crusher`/`rocket` など `visible=false` の内部サブモンスターは画像を生成せず timeline で `?` 表示のまま。
+  - `.tscn` が無い ID は `animations/monsters/{id}/` のフォルダにフォールバックして従来通り描画する。
+- キャッシュ済みは入力（`.tscn`／解決先 `.skel.import`／静的 `.ctex`）より GIF/PNG が新しければスキップ。
 
 エンカウンター→モンスターの対応 `encounter_monsters.json`、モンスターの EN/JA 名 `monster_names.json`、
 Act→イベントの対応 `event_acts.json`、Act→エンカウンターの対応 `encounter_acts.json` は、

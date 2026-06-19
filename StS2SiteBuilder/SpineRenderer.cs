@@ -3,12 +3,15 @@ using Spine;
 
 static class SpineRenderer
 {
-    public static SKBitmap Render(MonsterData data, string animationName, float time, int width, int height)
+    public static SKBitmap Render(MonsterData data, string? animationName, float time, int width, int height,
+        string? skin = null, (float R, float G, float B, float A)? tint = null)
     {
         var skeleton = new Skeleton(data.SkeletonData);
+        if (!string.IsNullOrEmpty(skin) && data.SkeletonData.FindSkin(skin) != null)
+            skeleton.SetSkin(skin);
         skeleton.SetToSetupPose();
 
-        if (data.SkeletonData.FindAnimation(animationName) != null)
+        if (!string.IsNullOrEmpty(animationName) && data.SkeletonData.FindAnimation(animationName) != null)
         {
             var stateData = new AnimationStateData(data.SkeletonData);
             var state = new AnimationState(stateData);
@@ -34,13 +37,15 @@ static class SpineRenderer
 
         using var shader = SKShader.CreateBitmap(
             data.Texture, SKShaderTileMode.Clamp, SKShaderTileMode.Clamp);
-        DrawSkeleton(canvas, skeleton, shader, data.Texture.Width, data.Texture.Height);
+        var (tr, tg, tb, ta) = tint ?? (1f, 1f, 1f, 1f);
+        DrawSkeleton(canvas, skeleton, shader, data.Texture.Width, data.Texture.Height, tr, tg, tb, ta);
 
         canvas.Restore();
         return bitmap;
     }
 
-    static void DrawSkeleton(SKCanvas canvas, Skeleton skeleton, SKShader shader, int texW, int texH)
+    static void DrawSkeleton(SKCanvas canvas, Skeleton skeleton, SKShader shader, int texW, int texH,
+        float tr, float tg, float tb, float ta)
     {
         using var paint = new SKPaint { IsAntialias = true };
         var regionVerts = new float[8];
@@ -62,14 +67,16 @@ static class SpineRenderer
             {
                 region.ComputeWorldVertices(slot, regionVerts, 0, 2);
                 DrawQuad(canvas, paint, shader, regionVerts, region.UVs,
-                    texW, texH, slot.R, slot.G, slot.B, slot.A, region.R, region.G, region.B, region.A, blend);
+                    texW, texH, slot.R * tr, slot.G * tg, slot.B * tb, slot.A * ta,
+                    region.R, region.G, region.B, region.A, blend);
             }
             else if (slot.Attachment is MeshAttachment mesh)
             {
                 var mv = new float[mesh.WorldVerticesLength];
                 mesh.ComputeWorldVertices(slot, 0, mesh.WorldVerticesLength, mv, 0, 2);
                 DrawMesh(canvas, paint, shader, mv, mesh.UVs, mesh.Triangles,
-                    texW, texH, slot.R, slot.G, slot.B, slot.A, mesh.R, mesh.G, mesh.B, mesh.A, blend);
+                    texW, texH, slot.R * tr, slot.G * tg, slot.B * tb, slot.A * ta,
+                    mesh.R, mesh.G, mesh.B, mesh.A, blend);
             }
         }
     }
