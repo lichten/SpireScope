@@ -53,6 +53,22 @@ public sealed class CardRegionDetector
     }
 
     /// <summary>
+    /// カード矩形から絵（portrait）の窓を算出する。タイトルの下、本体矩形の上部にある。
+    /// 全体の絵窓は 上 +0.05×幅・高さ 0.55×幅・左右 0.04×幅。ただし下端には在ゲーム特有の
+    /// 「アタック」等の種別装飾が重なるため、下 15% を切り詰める（0.55×0.85≈0.4675）。
+    /// 照合の対応を保つため portrait 側も上 85% を使う（TemplateCardRecognizer 側で同じトリム）。
+    /// </summary>
+    public static Rectangle ArtRegionOf(Rectangle card)
+    {
+        const double TopFrac = 0.05, HeightFrac = 0.55 * 0.85, SideInset = 0.04;
+        int x1 = card.Left + (int)(card.Width * SideInset);
+        int x2 = card.Right - (int)(card.Width * SideInset);
+        int y1 = card.Top + (int)(card.Width * TopFrac);
+        int y2 = y1 + (int)(card.Width * HeightFrac);
+        return Rectangle.FromLTRB(x1, y1, Math.Max(x1 + 4, x2), Math.Max(y1 + 4, y2));
+    }
+
+    /// <summary>
     /// カード矩形からタイトル小領域を算出する。青フレームは「飾りバー＋コスト玉」と「本体矩形」に
     /// 分かれ、間のタイトルバナーは青くないため、検出される矩形は本体（タイトルの下）になる。
     /// よってタイトルは検出矩形の **上** にある。実測：本体 box.Top の上 ~0.03〜0.19×幅 が文字帯。
