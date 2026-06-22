@@ -1,17 +1,18 @@
 namespace StS2Capture.Recognition;
 
 /// <summary>
-/// キャプチャ画像からカードの矩形領域を「縁の色（明るい低彩度の銀フレーム）」で検出する。
-/// 明るく低彩度のマスク → 膨張で隙間を埋める → 連結成分 → カード形状でフィルタ。
+/// キャプチャ画像からカードの矩形領域を「縁の色（フレーム）」で検出する。
+/// フレーム色マスク → 膨張で隙間を埋める → 連結成分 → カード形状でフィルタ。
+/// 枠色の判定はキャラ別の <see cref="ActiveProfile"/> に委譲する（現在キャラはセーブから解決）。
 /// 検出したカード矩形は、タイトル／絵／説明文の切り出しや Template 照合の基盤になる。
 /// </summary>
 public sealed class CardRegionDetector
 {
-    // 青フレーム判定のしきい値（調整可能）。実機計測の青フレームに合わせた既定値。
-    public int FrameMinB { get; set; } = 95;        // B がこれ以上
-    public int FrameMinBminusR { get; set; } = 50;  // B - R がこれ以上（青さ）
-    public int FrameMinBminusG { get; set; } = 14;  // B - G がこれ以上（青緑を除外）
-    public int FrameMaxR { get; set; } = 80;         // R がこれ以下
+    /// <summary>
+    /// 枠色判定プロファイル（キャラ別）。既定は検証済みの Defect 青。CaptureLoop が
+    /// 現在キャラに応じて差し替える。未実測キャラ／セーブ無し時は彩度リングへ。
+    /// </summary>
+    public FrameColorProfile ActiveProfile { get; set; } = FrameColorProfile.DefectBlue;
 
     // カード形状フィルタ（フレーム幅比・縦横比・リング状の充填率）。
     public double MinWidthRatio { get; set; } = 0.05;
@@ -29,7 +30,7 @@ public sealed class CardRegionDetector
     public List<Rectangle> Detect(Bitmap frame)
     {
         int w = frame.Width, h = frame.Height;
-        var mask = ImageOps.BuildFrameMask(frame, FrameMinB, FrameMinBminusR, FrameMinBminusG, FrameMaxR);
+        var mask = ImageOps.BuildFrameMask(frame, ActiveProfile);
 
         int dilate = Math.Max(2, w / 400);
         var dil = Dilate(mask, w, h, dilate);

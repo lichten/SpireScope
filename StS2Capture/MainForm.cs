@@ -22,6 +22,16 @@ public sealed class MainForm : Form
     readonly Button _btnSave = new() { Text = "キャプチャ保存", AutoSize = true };
     readonly CheckBox _cbAuto = new() { Text = "自動監視", AutoSize = true };
     readonly CheckBox _cbSaveCrops = new() { Text = "切出し/マスク保存", AutoSize = true };
+    readonly ComboBox _cbCharacter = new()
+    {
+        DropDownStyle = ComboBoxStyle.DropDownList,
+        Width = 150,
+        Margin = new Padding(8, 3, 0, 0),
+    };
+
+    // 枠色プロファイルの手動上書き候補。先頭は「自動（セーブから解決）」。
+    static readonly string[] CharacterChoices =
+        { "DEFECT", "SILENT", "IRONCLAD", "NECROBINDER", "REGENT" };
     readonly ListView _list = new();
     readonly ListView _ocrList = new();
     readonly PictureBox _capturePreview = new();
@@ -76,6 +86,11 @@ public sealed class MainForm : Form
         top.Controls.Add(_btnCapture);
         top.Controls.Add(_btnSave);
         top.Controls.Add(_cbSaveCrops);
+        top.Controls.Add(new Label { Text = "  枠キャラ:", AutoSize = true, Margin = new Padding(8, 6, 2, 0) });
+        _cbCharacter.Items.Add("自動（セーブ）");
+        foreach (var c in CharacterChoices) _cbCharacter.Items.Add(c);
+        _cbCharacter.SelectedIndex = 0;
+        top.Controls.Add(_cbCharacter);
 
         _status.Dock = DockStyle.Top;
         _status.AutoSize = false;
@@ -195,6 +210,11 @@ public sealed class MainForm : Form
             }
             else _ocr.SaveTitleCropsDir = null;
         };
+
+        _cbCharacter.SelectedIndexChanged += (_, _) =>
+            _loop.CharacterOverride = _cbCharacter.SelectedIndex <= 0
+                ? null
+                : (string)_cbCharacter.SelectedItem!;
 
         _list.SelectedIndexChanged += (_, _) => UpdateThumbnail();
 

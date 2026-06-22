@@ -1,4 +1,4 @@
-using StS2Toys.Models;
+using StS2Shared.Models;
 
 namespace StS2Toys;
 

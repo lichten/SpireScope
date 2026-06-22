@@ -93,11 +93,11 @@ public static class ImageOps
     }
 
     /// <summary>
-    /// カードの青フレーム色のマスクを作る。実機計測ではフレームは B が突出した青
-    /// （例 RGB(18,91,129)〜(31,108,148)）。「B が高く・B−R が大・B−G が一定以上・R が低い」で判定し、
-    /// 青緑の絵（B≈G）やオレンジ/緑の絵（B 低）・暗い背景を除外する。長さ w*h（行優先）。
+    /// カードのフレーム色のマスクを作る（長さ w*h・行優先）。枠色の判定はキャラ別の
+    /// <see cref="FrameColorProfile"/> に委譲する。Defect の実測青（B 突出）や、未実測キャラ向けの
+    /// 色相非依存な彩度リングなどを差し替えられる。背景・絵の除外は後段の形状フィルタと協働する。
     /// </summary>
-    public static bool[] BuildFrameMask(Bitmap src, int minB, int minBminusR, int minBminusG, int maxR)
+    public static bool[] BuildFrameMask(Bitmap src, FrameColorProfile profile)
     {
         int w = src.Width, h = src.Height;
         var mask = new bool[w * h];
@@ -113,8 +113,7 @@ public static class ImageOps
                 {
                     int p = x * 4;
                     int b = row[p], g = row[p + 1], r = row[p + 2];
-                    mask[y * w + x] =
-                        b >= minB && (b - r) >= minBminusR && (b - g) >= minBminusG && r <= maxR;
+                    mask[y * w + x] = profile.Matches(r, g, b);
                 }
             }
         }

@@ -1,5 +1,6 @@
 using StS2Capture.Capture;
 using StS2Capture.Recognition;
+using StS2Shared.Services;
 
 namespace StS2Capture;
 
@@ -27,8 +28,18 @@ public sealed class CaptureLoop : IDisposable
 
     public int IntervalMs { get; set; } = 800;
 
+    /// <summary>
+    /// 枠色プロファイルを選ぶキャラの手動上書き（正規化 ID、例 "DEFECT"）。
+    /// null/空なら current_run.save から自動解決する。ゲーム未起動での調整に使う。
+    /// </summary>
+    public string? CharacterOverride { get; set; }
+
     IFrameSource _frameSource;
     ICardRecognizer _recognizer;
+
+    // current_run.save の mtime キャッシュ（毎フレームの再読込を避ける）。
+    string? _saveCharCacheId;
+    DateTime _saveCharCacheMtime;
 
     readonly object _swap = new();
     CancellationTokenSource? _cts;
@@ -119,6 +130,29 @@ public sealed class CaptureLoop : IDisposable
         return preview;
     }
 
+    /// <summary>
+    /// 枠色プロファイル選択用に現在キャラの正規化 ID を解決する。手動上書き優先、
+    /// 次に current_run.save（mtime が変わった時だけ再読込）。解決できなければ null。
+    /// </summary>
+    string? ResolveCharacterId()
+    {
+        var ov = CharacterOverride;
+        if (!string.IsNullOrWhiteSpace(ov)) return ov;
+        try
+        {
+            var path = SaveDataService.GetDefaultSavePath();
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
+            var mtime = File.GetLastWriteTimeUtc(path);
+            if (mtime != _saveCharCacheMtime)
+            {
+                _saveCharCacheMtime = mtime;
+                _saveCharCacheId = SaveDataService.TryGetCurrentCharacterId();
+            }
+            return _saveCharCacheId;
+        }
+        catch { return null; }
+    }
+
     void Loop(CancellationToken token)
     {
         while (!token.IsCancellationRequested)
@@ -156,13 +190,19 @@ public sealed class CaptureLoop : IDisposable
                 return;
             }
 
+            // 現在キャラを解決し、対応する枠色プロファイルを認識器（=矩形検出器）へ設定する。
+            var charId = ResolveCharacterId();
+            var profile = FrameColorProfile.ForCharacter(charId);
+            recognizer.FrameProfile = profile;
+
             var recognition = recognizer.Recognize(frame);
             int distinct = recognition.Cards.Select(c => c.CardId).Distinct().Count();
             bool isCardScreen = distinct >= CardScreenThreshold;
 
+            var ctx = $"[キャラ:{charId ?? "自動?"} 枠:{profile.Name}]";
             var status = isCardScreen
-                ? $"カード提示画面：{distinct} 枚検出（{recognizer.Name} / {source.Name}）"
-                : $"カード提示画面なし：検出 {distinct} 枚（{recognizer.Name} / {source.Name}）";
+                ? $"カード提示画面：{distinct} 枚検出（{recognizer.Name} / {source.Name}）{ctx}"
+                : $"カード提示画面なし：検出 {distinct} 枚（{recognizer.Name} / {source.Name}）{ctx}";
 
             // ライブ表示用に縮小プレビューを作る（カード枠＝緑・タイトル帯＝赤を重畳。所有権は UI）。
             var preview = MakePreview(frame, PreviewMaxWidth, recognition.CardBoxes, recognition.TitleBands);

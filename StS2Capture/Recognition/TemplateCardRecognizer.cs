@@ -33,6 +33,13 @@ public sealed class TemplateCardRecognizer : ICardRecognizer
 
     public bool IsAvailable => _portraitsDir is not null;
 
+    /// <summary>枠色プロファイル（キャラ別）。矩形検出器へ転送する。</summary>
+    public FrameColorProfile FrameProfile
+    {
+        get => _detector.ActiveProfile;
+        set => _detector.ActiveProfile = value;
+    }
+
     public readonly record struct Match(string CardId, double Distance, double Confidence);
 
     public RecognitionResult Recognize(Bitmap frame)

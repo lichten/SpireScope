@@ -29,6 +29,13 @@ public sealed class OcrCardRecognizer : ICardRecognizer
     /// <summary>カード矩形検出器（縁色しきい値の調整用に公開）。</summary>
     public CardRegionDetector Detector => _detector;
 
+    /// <summary>枠色プロファイル（キャラ別）。矩形検出器へ転送する。</summary>
+    public FrameColorProfile FrameProfile
+    {
+        get => _detector.ActiveProfile;
+        set => _detector.ActiveProfile = value;
+    }
+
     /// <summary>OCR エンジンが利用可能か（言語パック未導入だと null）。</summary>
     public bool IsAvailable => _engine is not null;
 

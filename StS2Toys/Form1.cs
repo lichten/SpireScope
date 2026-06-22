@@ -1,4 +1,4 @@
-using StS2Toys.Models;
+using StS2Shared.Models;
 using StS2Toys.Services;
 using StS2Shared.Services;
 

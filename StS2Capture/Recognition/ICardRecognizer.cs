@@ -10,6 +10,12 @@ public interface ICardRecognizer
     string Name { get; }
 
     /// <summary>
+    /// カード矩形検出に使う枠色プロファイル（キャラ別）。CaptureLoop が現在キャラに応じて設定する。
+    /// 内部の <see cref="CardRegionDetector"/> へ転送する。
+    /// </summary>
+    FrameColorProfile FrameProfile { get; set; }
+
+    /// <summary>
     /// フレームから検出したカード（重複排除済み）と、診断用の OCR テキスト行を返す。
     /// </summary>
     RecognitionResult Recognize(Bitmap frame);

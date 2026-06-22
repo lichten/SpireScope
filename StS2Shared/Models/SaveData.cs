@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace StS2Toys.Models;
+namespace StS2Shared.Models;
 
 public class RunSaveData
 {
