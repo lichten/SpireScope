@@ -1,7 +1,9 @@
 using StS2Capture;
 using StS2Capture.Capture;
 using StS2Capture.Recognition;
+using StS2Shared.Models;
 using StS2Shared.Services;
+using StS2Toys.Services;
 
 namespace StS2Toys;
 
@@ -44,6 +46,13 @@ public sealed class LiveCaptureForm : Form
     readonly SplitContainer _left = new();
     readonly SplitContainer _right = new();
 
+    // 現在状態パネル（current_run.save 由来）。
+    readonly SplitContainer _mainSplit = new();
+    readonly Label _stateText = new();
+    readonly ListView _relicList = new();
+    readonly System.Windows.Forms.Timer _saveTimer = new() { Interval = 1000 };
+    DateTime _lastSaveMtime;
+
     string _lastSignature = "";
     readonly string? _portraitsDir = ResolvePortraitsDir();
 
@@ -66,6 +75,10 @@ public sealed class LiveCaptureForm : Form
 
         _rbWgc.Checked = true;
         _rbTemplate.Checked = true;
+
+        _saveTimer.Tick += (_, _) => RefreshSaveState();
+        _saveTimer.Start();
+        RefreshSaveState();
 
         UpdateStartupStatus();
     }
@@ -144,7 +157,41 @@ public sealed class LiveCaptureForm : Form
         _outer.Panel1.Controls.Add(_left);
         _outer.Panel2.Controls.Add(_right);
 
-        Controls.Add(_outer);
+        // 現在状態パネル（左）：サマリ（上）＋所有レリック一覧（下）。
+        _stateText.Dock = DockStyle.Top;
+        _stateText.AutoSize = false;
+        _stateText.Height = 150;
+        _stateText.Padding = new Padding(6, 4, 4, 4);
+        _stateText.Font = new Font(FontFamily.GenericSansSerif, 9f);
+        _stateText.Text = "セーブ読込待ち...";
+
+        _relicList.Dock = DockStyle.Fill;
+        _relicList.View = View.Details;
+        _relicList.FullRowSelect = true;
+        _relicList.Columns.Add("所有レリック", 200);
+        _relicList.Columns.Add("床", 45);
+
+        var statePanel = new Panel { Dock = DockStyle.Fill };
+        statePanel.Controls.Add(WithHeader("所有レリック", _relicList));
+        statePanel.Controls.Add(_stateText);
+        statePanel.Controls.Add(new Label
+        {
+            Text = "現在状態（current_run.save）",
+            Dock = DockStyle.Top,
+            Height = 18,
+            TextAlign = ContentAlignment.MiddleLeft,
+            BackColor = SystemColors.ControlDark,
+            ForeColor = SystemColors.ControlLightLight,
+            Padding = new Padding(4, 0, 0, 0),
+        });
+
+        // 左＝現在状態パネル / 右＝検出（カード・プレビュー）。
+        _mainSplit.Dock = DockStyle.Fill;
+        _mainSplit.Orientation = Orientation.Vertical;
+        _mainSplit.Panel1.Controls.Add(statePanel);
+        _mainSplit.Panel2.Controls.Add(_outer);
+
+        Controls.Add(_mainSplit);
         Controls.Add(_status);
         Controls.Add(top);
     }
@@ -153,7 +200,8 @@ public sealed class LiveCaptureForm : Form
     {
         base.OnLoad(e);
         // フォームが実サイズを持ってから SplitterDistance を設定（早すぎると例外になるため）。
-        SetSplitterDistance(_outer, (int)(_outer.Width * 0.62));
+        SetSplitterDistance(_mainSplit, 240);
+        SetSplitterDistance(_outer, (int)(_outer.Width * 0.55));
         SetSplitterDistance(_left, (int)(_left.Height * 0.45));
         SetSplitterDistance(_right, (int)(_right.Height * 0.5));
     }
@@ -211,8 +259,78 @@ public sealed class LiveCaptureForm : Form
 
         _list.SelectedIndexChanged += (_, _) => UpdateThumbnail();
 
-        FormClosed += (_, _) => _loop.Dispose();
+        FormClosed += (_, _) => { _saveTimer.Stop(); _saveTimer.Dispose(); _loop.Dispose(); };
     }
+
+    // ---- 現在状態（current_run.save） ----
+
+    void RefreshSaveState()
+    {
+        try
+        {
+            var path = SaveDataService.GetDefaultSavePath();
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            {
+                if (_lastSaveMtime != default) { _stateText.Text = "セーブ未検出"; _relicList.Items.Clear(); }
+                _lastSaveMtime = default;
+                return;
+            }
+            var mtime = File.GetLastWriteTimeUtc(path);
+            if (mtime == _lastSaveMtime) return;
+            _lastSaveMtime = mtime;
+            DisplaySaveState(SaveDataService.Load(path));
+        }
+        catch (Exception ex)
+        {
+            _stateText.Text = "セーブ読込エラー：" + ex.Message;
+        }
+    }
+
+    void DisplaySaveState(RunSaveData data)
+    {
+        bool jp = AppLanguage.IsJapanese;
+        var player = data.Players.FirstOrDefault();
+        if (player is null) { _stateText.Text = "プレイヤー情報なし"; _relicList.Items.Clear(); return; }
+
+        var charName = CardDatabaseService.GetName(player.CharacterId, jp);
+        var nodeType = data.MapPointHistory.LastOrDefault()?.LastOrDefault()?.MapPointType;
+        var lines = new List<string>
+        {
+            $"キャラ: {charName}",
+            $"Act: {data.CurrentActIndex + 1}    アセンション: {data.Ascension}",
+            $"HP: {player.CurrentHp}/{player.MaxHp}    ゴールド: {player.Gold}",
+            $"エナジー: {player.MaxEnergy}    デッキ: {player.Deck.Count} 枚",
+            $"現在ノード: {NodeTypeLabel(nodeType)}",
+        };
+        if (data.Acts.Count > data.CurrentActIndex && data.Acts[data.CurrentActIndex].Rooms is { } rooms)
+        {
+            if (!string.IsNullOrEmpty(rooms.BossId))
+                lines.Add($"ボス: {EncounterDatabaseService.GetEncounterName(rooms.BossId!, jp)}");
+        }
+        _stateText.Text = string.Join(Environment.NewLine, lines);
+
+        _relicList.BeginUpdate();
+        _relicList.Items.Clear();
+        foreach (var r in player.Relics)
+        {
+            var item = new ListViewItem(CardDatabaseService.GetRelicTitle(r.Id, jp));
+            item.SubItems.Add(r.FloorAddedToDeck.ToString());
+            _relicList.Items.Add(item);
+        }
+        _relicList.EndUpdate();
+    }
+
+    static string NodeTypeLabel(string? type) => type switch
+    {
+        "monster" => "通常戦闘",
+        "elite" => "エリート",
+        "boss" => "ボス",
+        "shop" => "ショップ",
+        "treasure" => "宝箱",
+        "rest_site" => "休憩",
+        null or "" => "-",
+        _ => type,
+    };
 
     void UpdateStartupStatus()
     {
