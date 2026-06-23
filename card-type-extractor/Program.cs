@@ -1831,11 +1831,11 @@ Console.WriteLine(kwOutPath);
     }
     else
     {
-        // 探索対象: 各サブディレクトリ（beta 等）+ ルート直下（ルートは subdir 名 "" で表す）
-        var searchDirs = Directory.GetDirectories(relicsDir)
-            .Select(d => (name: Path.GetFileName(d)!, full: d))
-            .Append(("", relicsDir))
-            .ToList();
+        // 探索対象: ルート直下（完成版）を最優先し、その後に各サブディレクトリ（beta 等）。
+        // beta と完成版が併存する場合は完成版を採用し、beta はフォールバックのみにする。
+        var searchDirs = new List<(string name, string full)> { ("", relicsDir) };
+        searchDirs.AddRange(Directory.GetDirectories(relicsDir)
+            .Select(d => (name: Path.GetFileName(d)!, full: d)));
 
         string? Find(string raw)
         {
