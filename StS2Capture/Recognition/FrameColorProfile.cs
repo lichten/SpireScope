@@ -82,6 +82,22 @@ public sealed class FrameColorProfile
             r >= 130 && r <= 215 && g >= 50 && g <= 130);
 
     /// <summary>
+    /// colorless カードの実機計測に合わせたカード外枠プロファイル。外枠はニュートラルグレー
+    /// （≈ RGB(92,92,92)、無彩色・中明度）。キャラ非依存で、ショップ／報酬等の colorless カードを
+    /// キャラ枠と同時に拾うために使う。下部テキスト台もグレーで一緒に拾うため fill が高めになる
+    /// ので <see cref="MaxFill"/> を 0.80 に緩める（提供スクショで2枚とも検出・誤検出なしを確認）。
+    /// </summary>
+    public static FrameColorProfile ColorlessGray { get; } = new(
+        "Colorless(灰・実測)",
+        static (r, g, b) =>
+        {
+            int max = Math.Max(r, Math.Max(g, b));
+            int min = Math.Min(r, Math.Min(g, b));
+            return (max - min) <= 16 && max >= 70 && max <= 135;
+        },
+        maxFill: 0.80);
+
+    /// <summary>
     /// 色相非依存の彩度リング。彩度 S が高く・明度 V が中程度以上のピクセルを枠候補にする。
     /// 未実測キャラ／セーブ未検出時のベストエフォート。枠は細い均一色リング（低 fill）で
     /// 形状フィルタを通り、塗り潰しの絵（高 fill）や暗い背景（低 S/V）は除外される前提。

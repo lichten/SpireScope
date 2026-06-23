@@ -14,14 +14,20 @@ public sealed class CardRegionDetector
     /// </summary>
     public FrameColorProfile ActiveProfile { get; set; } = FrameColorProfile.DefectBlue;
 
-    // カード形状フィルタ（フレーム幅比・縦横比）。充填率しきい値は ActiveProfile から読む
-    // （色相非依存リングは絵で埋まり高 fill になるためプロファイル単位で持たせる）。
+    /// <summary>
+    /// true の間、キャラ枠に加えて colorless（無彩色グレー枠）カードも同時に検出する。
+    /// colorless はショップ／報酬等で全キャラに出るため既定で有効。
+    /// </summary>
+    public bool IncludeColorless { get; set; } = true;
+
+    // カード形状フィルタ（フレーム幅比・縦横比）。充填率しきい値は各プロファイルから読む
+    // （色相非依存リングや colorless は絵・テキスト台で埋まり高 fill になるためプロファイル単位）。
     public double MinWidthRatio { get; set; } = 0.05;
     public double MaxWidthRatio { get; set; } = 0.33;
     public double MinAspect { get; set; } = 1.10; // H/W
     public double MaxAspect { get; set; } = 1.80;
 
-    /// <summary>直近に作ったマスク（デバッグ保存用）。</summary>
+    /// <summary>直近に作ったマスク（デバッグ保存用。複数プロファイルの論理和）。</summary>
     public bool[]? LastMask { get; private set; }
     public int LastMaskW { get; private set; }
     public int LastMaskH { get; private set; }
@@ -29,15 +35,27 @@ public sealed class CardRegionDetector
     public List<Rectangle> Detect(Bitmap frame)
     {
         int w = frame.Width, h = frame.Height;
-        var mask = ImageOps.BuildFrameMask(frame, ActiveProfile);
+        LastMask = null; LastMaskW = w; LastMaskH = h;
+
+        var boxes = DetectWith(ActiveProfile, frame, w, h);
+        if (IncludeColorless && !ReferenceEquals(ActiveProfile, FrameColorProfile.ColorlessGray))
+            boxes.AddRange(DetectWith(FrameColorProfile.ColorlessGray, frame, w, h));
+
+        return MergeOverlaps(boxes).OrderBy(b => b.Left).ToList();
+    }
+
+    /// <summary>1 プロファイルでマスク→膨張→連結成分→形状フィルタを行い、合格矩形を返す。</summary>
+    List<Rectangle> DetectWith(FrameColorProfile profile, Bitmap frame, int w, int h)
+    {
+        var mask = ImageOps.BuildFrameMask(frame, profile);
 
         int dilate = Math.Max(2, w / 400);
         var dil = Dilate(mask, w, h, dilate);
-        LastMask = dil; LastMaskW = w; LastMaskH = h;
+        AccumulateMask(dil); // デバッグ保存用に論理和を蓄積
 
         int minW = (int)(w * MinWidthRatio);
         int maxW = (int)(w * MaxWidthRatio);
-        double minFill = ActiveProfile.MinFill, maxFill = ActiveProfile.MaxFill;
+        double minFill = profile.MinFill, maxFill = profile.MaxFill;
 
         var boxes = new List<Rectangle>();
         foreach (var (box, pixels) in ConnectedComponents(dil, w, h, minArea: minW * minW / 4))
@@ -49,8 +67,13 @@ public sealed class CardRegionDetector
             if (fill < minFill || fill > maxFill) continue;
             boxes.Add(box);
         }
+        return boxes;
+    }
 
-        return MergeOverlaps(boxes).OrderBy(b => b.Left).ToList();
+    void AccumulateMask(bool[] dil)
+    {
+        if (LastMask is null) { LastMask = (bool[])dil.Clone(); return; }
+        for (int i = 0; i < LastMask.Length; i++) LastMask[i] |= dil[i];
     }
 
     /// <summary>
