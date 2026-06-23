@@ -14,13 +14,12 @@ public sealed class CardRegionDetector
     /// </summary>
     public FrameColorProfile ActiveProfile { get; set; } = FrameColorProfile.DefectBlue;
 
-    // カード形状フィルタ（フレーム幅比・縦横比・リング状の充填率）。
+    // カード形状フィルタ（フレーム幅比・縦横比）。充填率しきい値は ActiveProfile から読む
+    // （色相非依存リングは絵で埋まり高 fill になるためプロファイル単位で持たせる）。
     public double MinWidthRatio { get; set; } = 0.05;
     public double MaxWidthRatio { get; set; } = 0.33;
     public double MinAspect { get; set; } = 1.10; // H/W
     public double MaxAspect { get; set; } = 1.80;
-    public double MinFill { get; set; } = 0.015;
-    public double MaxFill { get; set; } = 0.65;
 
     /// <summary>直近に作ったマスク（デバッグ保存用）。</summary>
     public bool[]? LastMask { get; private set; }
@@ -38,6 +37,7 @@ public sealed class CardRegionDetector
 
         int minW = (int)(w * MinWidthRatio);
         int maxW = (int)(w * MaxWidthRatio);
+        double minFill = ActiveProfile.MinFill, maxFill = ActiveProfile.MaxFill;
 
         var boxes = new List<Rectangle>();
         foreach (var (box, pixels) in ConnectedComponents(dil, w, h, minArea: minW * minW / 4))
@@ -46,7 +46,7 @@ public sealed class CardRegionDetector
             double aspect = (double)box.Height / box.Width;
             if (aspect < MinAspect || aspect > MaxAspect) continue;
             double fill = (double)pixels / (box.Width * box.Height);
-            if (fill < MinFill || fill > MaxFill) continue;
+            if (fill < minFill || fill > maxFill) continue;
             boxes.Add(box);
         }
 

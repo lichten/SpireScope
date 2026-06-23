@@ -11,10 +11,17 @@ public sealed class FrameColorProfile
     public string Name { get; }
     readonly Func<int, int, int, bool> _matches;
 
-    public FrameColorProfile(string name, Func<int, int, int, bool> matches)
+    /// <summary>カード形状フィルタの充填率しきい値（連結成分のリング状の密度）。プロファイル単位。</summary>
+    public double MinFill { get; }
+    public double MaxFill { get; }
+
+    public FrameColorProfile(string name, Func<int, int, int, bool> matches,
+        double minFill = 0.015, double maxFill = 0.65)
     {
         Name = name;
         _matches = matches;
+        MinFill = minFill;
+        MaxFill = maxFill;
     }
 
     /// <summary>(r,g,b) が枠色か。</summary>
@@ -27,6 +34,17 @@ public sealed class FrameColorProfile
     public static FrameColorProfile DefectBlue { get; } = new(
         "Defect(青・実測)",
         static (r, g, b) => b >= 95 && (b - r) >= 50 && (b - g) >= 14 && r <= 80);
+
+    /// <summary>
+    /// Ironclad の実機計測に合わせたカード外枠プロファイル。外枠は濃い赤茶（≈ RGB(137,54,37)）。
+    /// 明るい純赤の絵（R が高い）・レアリティのシアン枠（G/B が高い）・グレー（R-G 小）を除外し、
+    /// 外枠の細リングだけを拾う（提供スクショで3枚とも低 fill で検出を確認）。
+    /// </summary>
+    public static FrameColorProfile IroncladRed { get; } = new(
+        "Ironclad(赤茶・実測)",
+        static (r, g, b) =>
+            r >= 90 && r <= 150 && g >= 38 && g <= 80 && b >= 22 && b <= 60 &&
+            (r - g) >= 55 && (r - g) <= 105 && (r - b) >= 60);
 
     /// <summary>
     /// 色相非依存の彩度リング。彩度 S が高く・明度 V が中程度以上のピクセルを枠候補にする。
@@ -44,12 +62,15 @@ public sealed class FrameColorProfile
             double s = (double)(max - min) / max;
             double v = max / 255.0;
             return s >= 0.30 && v >= 0.18;
-        });
+        },
+        // 色相非依存ゆえ彩度の高い絵で内部が埋まる。塗り潰しカードを許容するため MaxFill を上げる。
+        maxFill: 0.85);
 
     /// <summary>キャラ正規化 ID（大文字、例 "DEFECT"）→ 実測プロファイル。未登録は彩度リングに落ちる。</summary>
     static readonly Dictionary<string, FrameColorProfile> Measured = new(StringComparer.OrdinalIgnoreCase)
     {
         ["DEFECT"] = DefectBlue,
+        ["IRONCLAD"] = IroncladRed,
     };
 
     /// <summary>実測プロファイルを持つキャラ ID の一覧（UI の手動上書き候補に使う）。</summary>
