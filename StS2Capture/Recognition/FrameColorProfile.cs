@@ -71,6 +71,17 @@ public sealed class FrameColorProfile
             r >= 95 && r <= 170 && g >= 40 && g <= 90 && b >= 55 && b <= 120);
 
     /// <summary>
+    /// Regent の実機計測に合わせたカード外枠プロファイル。外枠は鮮やかなオレンジ
+    /// （≈ RGB(171,90,0)、B がほぼ 0）。紫/マゼンタの絵（B が高い）・シアン・黄緑・グレーを除外し、
+    /// 外枠の細リングだけを拾う（提供スクショで3枚とも低 fill で検出を確認）。
+    /// </summary>
+    public static FrameColorProfile RegentOrange { get; } = new(
+        "Regent(橙・実測)",
+        static (r, g, b) =>
+            (r - g) >= 50 && (r - g) <= 120 && (g - b) >= 40 && b <= 35 &&
+            r >= 130 && r <= 215 && g >= 50 && g <= 130);
+
+    /// <summary>
     /// 色相非依存の彩度リング。彩度 S が高く・明度 V が中程度以上のピクセルを枠候補にする。
     /// 未実測キャラ／セーブ未検出時のベストエフォート。枠は細い均一色リング（低 fill）で
     /// 形状フィルタを通り、塗り潰しの絵（高 fill）や暗い背景（低 S/V）は除外される前提。
@@ -97,6 +108,7 @@ public sealed class FrameColorProfile
         ["IRONCLAD"] = IroncladRed,
         ["SILENT"] = SilentGreen,
         ["NECROBINDER"] = NecrobinderRose,
+        ["REGENT"] = RegentOrange,
     };
 
     /// <summary>実測プロファイルを持つキャラ ID の一覧（UI の手動上書き候補に使う）。</summary>
