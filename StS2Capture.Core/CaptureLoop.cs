@@ -18,7 +18,8 @@ public sealed class CaptureLoop : IDisposable
         IReadOnlyList<OcrTextSpan> TextSpans,
         IReadOnlyList<Rectangle> CardBoxes,
         IReadOnlyList<Rectangle> TitleBands,
-        Bitmap? Preview);
+        Bitmap? Preview,
+        ShopItemRecognizer.Result? Shop = null);
 
     /// <summary>ライブ表示用の縮小プレビューの最大幅（px）。</summary>
     public int PreviewMaxWidth { get; set; } = 480;
@@ -33,6 +34,12 @@ public sealed class CaptureLoop : IDisposable
     /// null/空なら current_run.save から自動解決する。ゲーム未起動での調整に使う。
     /// </summary>
     public string? CharacterOverride { get; set; }
+
+    /// <summary>
+    /// 非 null の間、各サイクルでカード認識と同じフレームに対しショップ probe も行い、結果を
+    /// <see cref="Result.Shop"/> に載せる（カード検出とショップ検出を1パスに統合）。null なら従来どおり非実行。
+    /// </summary>
+    public ShopItemRecognizer? ShopRecognizer { get; set; }
 
     IFrameSource _frameSource;
     ICardRecognizer _recognizer;
@@ -104,9 +111,11 @@ public sealed class CaptureLoop : IDisposable
         catch { return null; }
     }
 
-    /// <summary>原寸フレームから縮小コピーを作り、カード枠（緑）とタイトル帯（赤）を重畳する。</summary>
+    /// <summary>原寸フレームから縮小コピーを作り、カード枠（緑）・タイトル帯（赤）・
+    /// ショップスロット（採用=緑/不採用=赤）を重畳する。ショップ矩形はショップ画面時のみ。</summary>
     static Bitmap MakePreview(Bitmap frame, int maxWidth,
-        IReadOnlyList<Rectangle> cardBoxes, IReadOnlyList<Rectangle> titleBands)
+        IReadOnlyList<Rectangle> cardBoxes, IReadOnlyList<Rectangle> titleBands,
+        ShopItemRecognizer.Result? shop)
     {
         double scale = frame.Width <= maxWidth ? 1.0 : (double)maxWidth / frame.Width;
         int w = (int)Math.Round(frame.Width * scale);
@@ -127,6 +136,11 @@ public sealed class CaptureLoop : IDisposable
         // タイトル帯＝赤。
         using (var red = new Pen(Color.Red, 2f))
             foreach (var b in titleBands) g.DrawRectangle(red, Scaled(b));
+        // ショップスロット（ショップ画面時のみ）。採用=緑/不採用=赤。
+        if (shop is { IsShop: true })
+            foreach (var it in shop.Items)
+                using (var pen = new Pen(it.Accepted ? Color.Lime : Color.Red, 2f))
+                    g.DrawRectangle(pen, Scaled(it.Region));
         return preview;
     }
 
@@ -199,17 +213,36 @@ public sealed class CaptureLoop : IDisposable
             int distinct = recognition.Cards.Select(c => c.CardId).Distinct().Count();
             bool isCardScreen = distinct >= CardScreenThreshold;
 
-            var ctx = $"[キャラ:{charId ?? "自動?"} 枠:{profile.Name}]";
-            var status = isCardScreen
-                ? $"カード提示画面：{distinct} 枚検出（{recognizer.Name} / {source.Name}）{ctx}"
-                : $"カード提示画面なし：検出 {distinct} 枚（{recognizer.Name} / {source.Name}）{ctx}";
+            // 同一フレームに対してショップ probe も実行（設定時）。カード検出と1パスに統合。
+            ShopItemRecognizer.Result? shop = null;
+            var shopReco = ShopRecognizer;
+            if (shopReco is not null)
+            {
+                var client = WindowClientArea.Resolve(game.Value.Handle, frame.Width, frame.Height);
+                try { shop = shopReco.Detect(frame, client); } catch { /* 失敗時はショップなし扱い */ }
+            }
 
-            // ライブ表示用に縮小プレビューを作る（カード枠＝緑・タイトル帯＝赤を重畳。所有権は UI）。
-            var preview = MakePreview(frame, PreviewMaxWidth, recognition.CardBoxes, recognition.TitleBands);
+            var ctx = $"[キャラ:{charId ?? "自動?"} 枠:{profile.Name}]";
+            string status;
+            if (shop is { IsShop: true })
+            {
+                int acc = shop.Items.Count(i => i.Accepted);
+                status = $"ショップ画面：レリック/ポーション {acc} 件（{source.Name}）{ctx}";
+            }
+            else
+            {
+                status = isCardScreen
+                    ? $"カード提示画面：{distinct} 枚検出（{recognizer.Name} / {source.Name}）{ctx}"
+                    : $"カード提示画面なし：検出 {distinct} 枚（{recognizer.Name} / {source.Name}）{ctx}";
+            }
+
+            // ライブ表示用に縮小プレビューを作る（カード枠/タイトル帯/ショップ枠を重畳。所有権は UI）。
+            var preview = MakePreview(frame, PreviewMaxWidth,
+                recognition.CardBoxes, recognition.TitleBands, shop);
 
             Updated?.Invoke(new Result(status, isCardScreen,
                 recognition.Cards, recognition.TextSpans,
-                recognition.CardBoxes, recognition.TitleBands, preview));
+                recognition.CardBoxes, recognition.TitleBands, preview, shop));
         }
         catch (Exception ex)
         {

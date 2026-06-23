@@ -26,7 +26,6 @@ public sealed class LiveCaptureForm : Form
     readonly RadioButton _rbWgc = new() { Text = "WGC", AutoSize = true };
     readonly RadioButton _rbGdi = new() { Text = "GDI", AutoSize = true };
     readonly Button _btnCapture = new() { Text = "手動キャプチャ", AutoSize = true };
-    readonly Button _btnShop = new() { Text = "ショップ検出", AutoSize = true };
     readonly Button _btnLinks = new() { Text = "リンク設定", AutoSize = true };
     readonly CheckBox _cbAuto = new() { Text = "自動監視", AutoSize = true };
     readonly ComboBox _cbCharacter = new()
@@ -77,6 +76,8 @@ public sealed class LiveCaptureForm : Form
 
         // 既定：WGC（GPU 描画対応・主）＋ Template（OCR 言語パック非依存で堅い）。
         _loop = new CaptureLoop(new WgcFrameSource(), _template);
+        // カード検出と同じサイクルでショップ検出も行う（更新経路を1本化し自動監視と競合させない）。
+        _loop.ShopRecognizer = _shop;
         _loop.Updated += OnLoopUpdated;
 
         BuildLayout();
@@ -108,7 +109,6 @@ public sealed class LiveCaptureForm : Form
         top.Controls.Add(RadioGroup("  取得:", _rbWgc, _rbGdi));
         top.Controls.Add(_cbAuto);
         top.Controls.Add(_btnCapture);
-        top.Controls.Add(_btnShop);
         top.Controls.Add(_btnLinks);
         top.Controls.Add(new Label { Text = "  枠キャラ:", AutoSize = true, Margin = new Padding(8, 6, 2, 0) });
         _cbCharacter.Items.Add("自動（セーブ）");
@@ -278,7 +278,6 @@ public sealed class LiveCaptureForm : Form
         };
 
         _btnCapture.Click += (_, _) => Task.Run(_loop.CaptureOnce);
-        _btnShop.Click += (_, _) => RunShopDetection();
         _btnLinks.Click += (_, _) => EditLinkTemplates();
 
         // 検出結果リスト（カード／ショップ）右クリックで情報ページリンクを開く。
@@ -431,9 +430,14 @@ public sealed class LiveCaptureForm : Form
         _capturePreview.Image = result.Preview;
         oldPreview?.Dispose();
 
+        bool isShop = result.Shop is { IsShop: true };
         var signature = string.Join("|",
             result.Cards.Select(c => $"{c.CardId}:{c.Confidence:F2}"))
-            + "##" + string.Join("|", result.TextSpans.Select(s => s.Text));
+            + "##" + string.Join("|", result.TextSpans.Select(s => s.Text))
+            + "##SHOP:" + (isShop
+                ? string.Join("|", result.Shop!.Items.Select(i =>
+                    $"{i.Kind}:{string.Join(",", i.Candidates.Select(c => c.Id))}"))
+                : "");
         if (signature == _lastSignature) return;
         _lastSignature = signature;
 
@@ -451,9 +455,19 @@ public sealed class LiveCaptureForm : Form
         }
         _list.EndUpdate();
 
+        // ショップ画面ならショップ候補、そうでなければ OCR テキスト行を同じリストに描画（更新経路は1本）。
         _ocrList.BeginUpdate();
         _ocrList.Items.Clear();
-        foreach (var s in result.TextSpans)
+        if (isShop)
+            foreach (var lvi in BuildShopRows(result.Shop!)) _ocrList.Items.Add(lvi);
+        else
+            foreach (var lvi in BuildOcrRows(result.TextSpans)) _ocrList.Items.Add(lvi);
+        _ocrList.EndUpdate();
+    }
+
+    static IEnumerable<ListViewItem> BuildOcrRows(IReadOnlyList<OcrTextSpan> spans)
+    {
+        foreach (var s in spans)
         {
             var item = new ListViewItem(s.Text);
             item.SubItems.Add(s.Source == "title" ? "帯" : "全");
@@ -466,72 +480,12 @@ public sealed class LiveCaptureForm : Form
                     : Color.FromArgb(220, 245, 220);
             else if (s.Source == "title")
                 item.BackColor = Color.FromArgb(245, 245, 245);
-            _ocrList.Items.Add(item);
+            yield return item;
         }
-        _ocrList.EndUpdate();
     }
 
-    void RunShopDetection()
+    static IEnumerable<ListViewItem> BuildShopRows(ShopItemRecognizer.Result res)
     {
-        Task.Run(() =>
-        {
-            var game = GameWindowLocator.Find();
-            var bmp = _loop.CaptureRawFrame();
-            if (bmp is null)
-            {
-                SafeStatus("ショップ検出：キャプチャ失敗（ゲーム未検出/取得不可）");
-                return;
-            }
-            var client = game is null
-                ? new Rectangle(0, 0, bmp.Width, bmp.Height)
-                : WindowClientArea.Resolve(game.Value.Handle, bmp.Width, bmp.Height);
-            ShopItemRecognizer.Result res;
-            try { res = _shop.Detect(bmp, client); }
-            catch (Exception ex) { bmp.Dispose(); SafeStatus($"ショップ検出エラー：{ex.Message}"); return; }
-
-            var preview = BuildShopPreview(bmp, client, res);
-            bmp.Dispose();
-            if (IsDisposed) { preview.Dispose(); return; }
-            try { BeginInvoke(() => ApplyShopResult(res, preview, client)); }
-            catch { preview.Dispose(); }
-        });
-    }
-
-    void SafeStatus(string text)
-    {
-        if (IsDisposed) return;
-        try { BeginInvoke(() => _status.Text = text); } catch { /* 破棄中 */ }
-    }
-
-    static Bitmap BuildShopPreview(Bitmap frame, Rectangle client, ShopItemRecognizer.Result res)
-    {
-        const int maxW = 480;
-        double scale = frame.Width <= maxW ? 1.0 : (double)maxW / frame.Width;
-        int w = (int)Math.Round(frame.Width * scale);
-        int h = Math.Max(1, (int)Math.Round(frame.Height * scale));
-        var preview = new Bitmap(w, h);
-        using var g = Graphics.FromImage(preview);
-        g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-        g.DrawImage(frame, 0, 0, w, h);
-        Rectangle S(Rectangle b) => new(
-            (int)(b.Left * scale), (int)(b.Top * scale),
-            Math.Max(1, (int)(b.Width * scale)), Math.Max(1, (int)(b.Height * scale)));
-        using (var yellow = new Pen(Color.Gold, 1f)) g.DrawRectangle(yellow, S(client));
-        foreach (var it in res.Items)
-            using (var pen = new Pen(it.Accepted ? Color.Lime : Color.Red, 2f))
-                g.DrawRectangle(pen, S(it.Region));
-        return preview;
-    }
-
-    void ApplyShopResult(ShopItemRecognizer.Result res, Bitmap preview, Rectangle client)
-    {
-        var old = _capturePreview.Image;
-        _capturePreview.Image = preview;
-        old?.Dispose();
-        _lastSignature = ""; // 次のライブ更新でリスト再描画させる
-
-        _ocrList.BeginUpdate();
-        _ocrList.Items.Clear();
         foreach (var it in res.Items)
         {
             var label = it.Candidates.Count == 0
@@ -551,13 +505,8 @@ public sealed class LiveCaptureForm : Form
             if (it.Accepted)
                 lvi.BackColor = it.Kind == ShopItemRecognizer.Kind.Relic
                     ? Color.FromArgb(220, 245, 220) : Color.FromArgb(255, 235, 200);
-            _ocrList.Items.Add(lvi);
+            yield return lvi;
         }
-        _ocrList.EndUpdate();
-
-        int acc = res.Items.Count(i => i.Accepted);
-        _status.Text = $"ショップ検出：{(res.IsShop ? "ショップ" : "非ショップ")}" +
-            $"（一致 {acc}/{res.Items.Count}・client {client.Width}x{client.Height}）";
     }
 
     void UpdateThumbnail()
