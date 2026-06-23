@@ -78,12 +78,10 @@ public sealed class MainForm : Form
             Padding = new Padding(8, 8, 8, 4),
             WrapContents = true,
         };
-        top.Controls.Add(new Label { Text = "認識:", AutoSize = true, Margin = new Padding(0, 6, 2, 0) });
-        top.Controls.Add(_rbOcr);
-        top.Controls.Add(_rbTemplate);
-        top.Controls.Add(new Label { Text = "  取得:", AutoSize = true, Margin = new Padding(8, 6, 2, 0) });
-        top.Controls.Add(_rbWgc);
-        top.Controls.Add(_rbGdi);
+        // 認識（OCR/Template）と取得（WGC/GDI）はそれぞれ別の親コンテナに入れて
+        // 独立した相互排他グループにする（同一親だと 4 つで 1 グループ化してしまう）。
+        top.Controls.Add(RadioGroup("認識:", _rbOcr, _rbTemplate));
+        top.Controls.Add(RadioGroup("  取得:", _rbWgc, _rbGdi));
         top.Controls.Add(_cbAuto);
         top.Controls.Add(_btnCapture);
         top.Controls.Add(_btnSave);
@@ -165,6 +163,26 @@ public sealed class MainForm : Form
         int max = extent - sc.Panel2MinSize - sc.SplitterWidth;
         if (max < min) return;
         try { sc.SplitterDistance = Math.Clamp(distance, min, max); } catch { }
+    }
+
+    /// <summary>
+    /// ラベル＋ラジオ群を独立した親（FlowLayoutPanel）にまとめて返す。
+    /// ラジオは直接の親ごとに相互排他グループになるため、論理グループごとに本メソッドで包む。
+    /// </summary>
+    static Control RadioGroup(string label, params RadioButton[] radios)
+    {
+        var group = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty,
+        };
+        group.Controls.Add(new Label { Text = label, AutoSize = true, Margin = new Padding(0, 6, 2, 0) });
+        foreach (var rb in radios) group.Controls.Add(rb);
+        return group;
     }
 
     /// <summary>コントロールの上に見出しラベルを付けた Panel を返す。</summary>
