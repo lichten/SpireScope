@@ -58,6 +58,19 @@ public sealed class FrameColorProfile
             r >= 30 && r <= 95 && b >= 12 && b <= 55);
 
     /// <summary>
+    /// Necrobinder の実機計測に合わせたカード外枠プロファイル。外枠はくすんだ赤紫／ローズ
+    /// （≈ RGB(142,66,94)、B が G より高いのが特徴）。紫の絵（B≥R）・茶色の絵（B≤G）・
+    /// レアリティのシアン枠・グレーを除外し、外枠の細リングだけを拾う
+    /// （提供スクショで3枚とも低 fill で検出を確認）。
+    /// </summary>
+    public static FrameColorProfile NecrobinderRose { get; } = new(
+        "Necrobinder(赤紫・実測)",
+        static (r, g, b) =>
+            (r - g) >= 50 && (r - g) <= 95 && (b - g) >= 12 &&
+            (r - b) >= 20 && (r - b) <= 70 &&
+            r >= 95 && r <= 170 && g >= 40 && g <= 90 && b >= 55 && b <= 120);
+
+    /// <summary>
     /// 色相非依存の彩度リング。彩度 S が高く・明度 V が中程度以上のピクセルを枠候補にする。
     /// 未実測キャラ／セーブ未検出時のベストエフォート。枠は細い均一色リング（低 fill）で
     /// 形状フィルタを通り、塗り潰しの絵（高 fill）や暗い背景（低 S/V）は除外される前提。
@@ -83,6 +96,7 @@ public sealed class FrameColorProfile
         ["DEFECT"] = DefectBlue,
         ["IRONCLAD"] = IroncladRed,
         ["SILENT"] = SilentGreen,
+        ["NECROBINDER"] = NecrobinderRose,
     };
 
     /// <summary>実測プロファイルを持つキャラ ID の一覧（UI の手動上書き候補に使う）。</summary>
