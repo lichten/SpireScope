@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using StS2Capture;
 using StS2Capture.Capture;
 using StS2Capture.Recognition;
@@ -26,6 +27,7 @@ public sealed class LiveCaptureForm : Form
     readonly RadioButton _rbGdi = new() { Text = "GDI", AutoSize = true };
     readonly Button _btnCapture = new() { Text = "手動キャプチャ", AutoSize = true };
     readonly Button _btnShop = new() { Text = "ショップ検出", AutoSize = true };
+    readonly Button _btnLinks = new() { Text = "リンク設定", AutoSize = true };
     readonly CheckBox _cbAuto = new() { Text = "自動監視", AutoSize = true };
     readonly ComboBox _cbCharacter = new()
     {
@@ -52,6 +54,13 @@ public sealed class LiveCaptureForm : Form
     readonly ListView _relicList = new();
     readonly System.Windows.Forms.Timer _saveTimer = new() { Interval = 1000 };
     DateTime _lastSaveMtime;
+
+    // 情報ページリンク（URL テンプレート）。検出結果の右クリックで開く。
+    readonly ContextMenuStrip _linkMenu = new();
+    List<UrlTemplate> _templates = UrlTemplateService.Load();
+
+    /// <summary>リストアイテムに付与する、リンク生成用の種別＋ID。</summary>
+    sealed record LinkTarget(string Kind, string Id);
 
     string _lastSignature = "";
     readonly string? _portraitsDir = ResolvePortraitsDir();
@@ -102,6 +111,7 @@ public sealed class LiveCaptureForm : Form
         top.Controls.Add(_cbAuto);
         top.Controls.Add(_btnCapture);
         top.Controls.Add(_btnShop);
+        top.Controls.Add(_btnLinks);
         top.Controls.Add(new Label { Text = "  枠キャラ:", AutoSize = true, Margin = new Padding(8, 6, 2, 0) });
         _cbCharacter.Items.Add("自動（セーブ）");
         foreach (var c in CharacterChoices) _cbCharacter.Items.Add(c);
@@ -251,6 +261,12 @@ public sealed class LiveCaptureForm : Form
 
         _btnCapture.Click += (_, _) => Task.Run(_loop.CaptureOnce);
         _btnShop.Click += (_, _) => RunShopDetection();
+        _btnLinks.Click += (_, _) => EditLinkTemplates();
+
+        // 検出結果リスト（カード／ショップ）右クリックで情報ページリンクを開く。
+        _list.ContextMenuStrip = _linkMenu;
+        _ocrList.ContextMenuStrip = _linkMenu;
+        _linkMenu.Opening += OnLinkMenuOpening;
 
         _cbCharacter.SelectedIndexChanged += (_, _) =>
             _loop.CharacterOverride = _cbCharacter.SelectedIndex <= 0
@@ -332,6 +348,44 @@ public sealed class LiveCaptureForm : Form
         _ => type,
     };
 
+    // ---- 情報ページリンク ----
+
+    void EditLinkTemplates()
+    {
+        using var dlg = new UrlTemplateSettingsForm();
+        if (dlg.ShowDialog(this) == DialogResult.OK)
+            _templates = UrlTemplateService.Load();
+    }
+
+    void OnLinkMenuOpening(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        _linkMenu.Items.Clear();
+        var lv = _linkMenu.SourceControl as ListView;
+        var target = lv is { SelectedItems.Count: > 0 } ? lv.SelectedItems[0].Tag as LinkTarget : null;
+        if (target is null) { e.Cancel = true; return; }
+
+        var links = SiteLinkService.BuildLinks(_templates, target.Kind, target.Id);
+        if (links.Count == 0)
+        {
+            var none = _linkMenu.Items.Add("（リンク設定なし）");
+            none.Enabled = false;
+            return;
+        }
+        foreach (var link in links)
+        {
+            var url = link.Url;
+            var item = new ToolStripMenuItem($"{link.Label}: {url}");
+            item.Click += (_, _) => OpenUrl(url);
+            _linkMenu.Items.Add(item);
+        }
+    }
+
+    void OpenUrl(string url)
+    {
+        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
+        catch (Exception ex) { _status.Text = $"リンク起動エラー：{ex.Message}"; }
+    }
+
     void UpdateStartupStatus()
     {
         var game = GameWindowLocator.Find();
@@ -374,7 +428,7 @@ public sealed class LiveCaptureForm : Form
             item.SubItems.Add(CardDatabaseService.GetName(c.CardId, japanese: true));
             item.SubItems.Add(c.Confidence.ToString("F2"));
             item.SubItems.Add(c.Recognizer);
-            item.Tag = c.CardId;
+            item.Tag = new LinkTarget("card", c.CardId);
             _list.Items.Add(item);
         }
         _list.EndUpdate();
@@ -387,6 +441,7 @@ public sealed class LiveCaptureForm : Form
             item.SubItems.Add(s.Source == "title" ? "帯" : "全");
             item.SubItems.Add(s.MatchedCardId ?? "(none)");
             item.SubItems.Add(s.Distance?.ToString() ?? "-");
+            if (s.MatchedCardId is not null) item.Tag = new LinkTarget("card", s.MatchedCardId);
             if (s.MatchedCardId is not null)
                 item.BackColor = s.Source == "title"
                     ? Color.FromArgb(255, 235, 200)
@@ -471,6 +526,10 @@ public sealed class LiveCaptureForm : Form
             lvi.SubItems.Add(it.Kind == ShopItemRecognizer.Kind.Relic ? "R" : "P");
             lvi.SubItems.Add(it.Accepted ? (it.Candidates.Count > 1 ? $"OK×{it.Candidates.Count}" : "OK") : "-");
             lvi.SubItems.Add(dist);
+            if (it.Candidates.Count > 0)
+                lvi.Tag = new LinkTarget(
+                    it.Kind == ShopItemRecognizer.Kind.Relic ? "relic" : "potion",
+                    it.Candidates[0].Id);
             if (it.Accepted)
                 lvi.BackColor = it.Kind == ShopItemRecognizer.Kind.Relic
                     ? Color.FromArgb(220, 245, 220) : Color.FromArgb(255, 235, 200);
@@ -487,8 +546,10 @@ public sealed class LiveCaptureForm : Form
     {
         var old = _thumb.Image;
         Image? img = null;
-        if (_list.SelectedItems.Count > 0 && _list.SelectedItems[0].Tag is string cardId && _portraitsDir is not null)
+        if (_list.SelectedItems.Count > 0 && _list.SelectedItems[0].Tag is LinkTarget { Kind: "card" } lt
+            && _portraitsDir is not null)
         {
+            var cardId = lt.Id;
             var path = CardImageService.GetSourcePath(_portraitsDir, cardId);
             if (path is not null && File.Exists(path))
             {
