@@ -46,6 +46,13 @@ public class ActRooms
     [JsonPropertyName("elite_encounters_visited")]
     public int EliteEncountersVisited { get; init; }
 
+    // 通常戦闘（セーブは weak/normal 階層を normal_encounter_ids に統合）。
+    [JsonPropertyName("normal_encounter_ids")]
+    public List<string> NormalEncounterIds { get; init; } = [];
+
+    [JsonPropertyName("normal_encounters_visited")]
+    public int NormalEncountersVisited { get; init; }
+
     [JsonPropertyName("boss_encounters_visited")]
     public int BossEncountersVisited { get; init; }
 }
