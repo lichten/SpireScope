@@ -27,6 +27,11 @@ public partial class DeckOverviewForm : Form
     readonly HashSet<string> _collapsedSections = new();
     List<(Rectangle Rect, string Key)> _sectionHeaderMap = [];
 
+    // キャラクター概観モード（5キャラ統合）。EnableCharacterMode で有効化。
+    static readonly string[] CharacterLabels = { "Necrobinder", "Ironclad", "Silent", "Defect", "Regent" };
+    bool _characterMode;
+    string? _autoCharacterId;
+
     public DeckOverviewForm()
     {
         InitializeComponent();
@@ -52,13 +57,15 @@ public partial class DeckOverviewForm : Form
     public void UpdateDeck(IReadOnlyList<DeckCard> cards)
     {
         _cards = cards;
-        if (Visible) RecomposeIfNeeded();
+        if (_characterMode) ApplyCharacter();
+        else if (Visible) RecomposeIfNeeded();
     }
 
     public void UpdateRelics(IReadOnlyList<RelicEntry> relics)
     {
         _relics = relics;
-        if (Visible) RecomposeIfNeeded();
+        if (_characterMode) ApplyCharacter();
+        else if (Visible) RecomposeIfNeeded();
     }
 
     public void SetTitle(string titleEn, string titleJa)
@@ -92,6 +99,52 @@ public partial class DeckOverviewForm : Form
         _statsPanel.Visible = false;
         if (Visible) RecomposeIfNeeded();
     }
+
+    /// <summary>キャラクター概観モードを有効化する。上部にキャラ選択ドロップダウンを表示し、
+    /// 「自動（セーブ）」+5キャラを選べるようにする。5つの個別概観フォームの統合先。</summary>
+    public void EnableCharacterMode()
+    {
+        _characterMode = true;
+        _charSelector.Items.Clear();
+        _charSelector.Items.Add("自動（セーブ）");
+        foreach (var l in CharacterLabels) _charSelector.Items.Add(l);
+        _charSelector.SelectedIndexChanged -= OnCharSelectorChanged;
+        _charSelector.SelectedIndexChanged += OnCharSelectorChanged;
+        _charSelector.SelectedIndex = 0;
+        _charPanel.Visible = true;
+    }
+
+    void OnCharSelectorChanged(object? sender, EventArgs e) => ApplyCharacter();
+
+    /// <summary>進行中ランのキャラクター（"CHARACTER.DEFECT" 等）を通知する。
+    /// セレクタが「自動」のとき、このキャラの概観へ追従する。</summary>
+    public void SetCurrentCharacter(string? characterId)
+    {
+        _autoCharacterId = SaveDataService.NormalizeCharacterId(characterId);
+        if (_characterMode && _charSelector.SelectedIndex <= 0) ApplyCharacter();
+    }
+
+    void ApplyCharacter()
+    {
+        if (!_characterMode) return;
+        // index<=0 は「自動（セーブ）」。それ以外は選択中のキャラ名。
+        string? label = _charSelector.SelectedIndex <= 0
+            ? CharacterLabels.FirstOrDefault(l => l.ToUpperInvariant() == _autoCharacterId)
+            : _charSelector.SelectedItem as string;
+        if (string.IsNullOrEmpty(label)) return; // キャラ未判定時は前回表示を維持
+
+        SetKeywordGroups(
+            CharacterMechanics.MechanicsFor(label).Select(m => (m.EnLabel, m.JaLabel, m.Filter)).ToArray(),
+            $"{label} Overview", $"{label}概観");
+        SetStatsText(BuildCharacterStats(label, _cards ?? []));
+        if (Visible) RecomposeIfNeeded();
+    }
+
+    static string BuildCharacterStats(string label, IReadOnlyList<DeckCard> deck) =>
+        string.Join("  ", CharacterMechanics.MechanicsFor(label)
+            .Select(m => AppLanguage.IsJapanese
+                ? $"{m.JaLabel}: {deck.Where(c => m.Filter(c.Id)).Sum(c => c.Count)}枚"
+                : $"{m.EnLabel}: {deck.Where(c => m.Filter(c.Id)).Sum(c => c.Count)}"));
 
     void RecomposeIfNeeded()
     {

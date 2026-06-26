@@ -29,11 +29,7 @@ namespace StS2Toys
             btnEncounterOverview = new Button();
             btnHpHistory = new Button();
             lblGroupOther = new Label();
-            btnRegentOverview = new Button();
-            btnDefectOverview = new Button();
-            btnSilentOverview = new Button();
-            btnIroncladOverview = new Button();
-            btnNecroOverview = new Button();
+            btnCharacterOverview = new Button();
             btnDisappearanceOverview = new Button();
             btnCombinedOverview = new Button();
             lblGroupOverview = new Label();
@@ -199,11 +195,7 @@ namespace StS2Toys
             panelSideButtons.Controls.Add(btnEncounterOverview);
             panelSideButtons.Controls.Add(btnHpHistory);
             panelSideButtons.Controls.Add(lblGroupOther);
-            panelSideButtons.Controls.Add(btnRegentOverview);
-            panelSideButtons.Controls.Add(btnDefectOverview);
-            panelSideButtons.Controls.Add(btnSilentOverview);
-            panelSideButtons.Controls.Add(btnIroncladOverview);
-            panelSideButtons.Controls.Add(btnNecroOverview);
+            panelSideButtons.Controls.Add(btnCharacterOverview);
             panelSideButtons.Controls.Add(btnDisappearanceOverview);
             panelSideButtons.Controls.Add(btnCombinedOverview);
             panelSideButtons.Controls.Add(lblGroupOverview);
@@ -260,55 +252,15 @@ namespace StS2Toys
             lblGroupOther.Text = "その他";
             lblGroupOther.TextAlign = ContentAlignment.MiddleLeft;
             // 
-            // btnRegentOverview
+            // btnCharacterOverview
             // 
-            btnRegentOverview.Dock = DockStyle.Top;
-            btnRegentOverview.Location = new Point(0, 288);
-            btnRegentOverview.Name = "btnRegentOverview";
-            btnRegentOverview.Size = new Size(150, 30);
-            btnRegentOverview.TabIndex = 12;
-            btnRegentOverview.Text = "○ Regent概観";
-            btnRegentOverview.Click += BtnRegentOverview_Click;
-            // 
-            // btnDefectOverview
-            // 
-            btnDefectOverview.Dock = DockStyle.Top;
-            btnDefectOverview.Location = new Point(0, 258);
-            btnDefectOverview.Name = "btnDefectOverview";
-            btnDefectOverview.Size = new Size(150, 30);
-            btnDefectOverview.TabIndex = 11;
-            btnDefectOverview.Text = "○ Defect概観";
-            btnDefectOverview.Click += BtnDefectOverview_Click;
-            // 
-            // btnSilentOverview
-            // 
-            btnSilentOverview.Dock = DockStyle.Top;
-            btnSilentOverview.Location = new Point(0, 228);
-            btnSilentOverview.Name = "btnSilentOverview";
-            btnSilentOverview.Size = new Size(150, 30);
-            btnSilentOverview.TabIndex = 10;
-            btnSilentOverview.Text = "○ Silent概観";
-            btnSilentOverview.Click += BtnSilentOverview_Click;
-            // 
-            // btnIroncladOverview
-            // 
-            btnIroncladOverview.Dock = DockStyle.Top;
-            btnIroncladOverview.Location = new Point(0, 198);
-            btnIroncladOverview.Name = "btnIroncladOverview";
-            btnIroncladOverview.Size = new Size(150, 30);
-            btnIroncladOverview.TabIndex = 9;
-            btnIroncladOverview.Text = "○ Ironclad概観";
-            btnIroncladOverview.Click += BtnIroncladOverview_Click;
-            // 
-            // btnNecroOverview
-            // 
-            btnNecroOverview.Dock = DockStyle.Top;
-            btnNecroOverview.Location = new Point(0, 168);
-            btnNecroOverview.Name = "btnNecroOverview";
-            btnNecroOverview.Size = new Size(150, 30);
-            btnNecroOverview.TabIndex = 8;
-            btnNecroOverview.Text = "○ Necrobinder概観";
-            btnNecroOverview.Click += BtnNecroOverview_Click;
+            btnCharacterOverview.Dock = DockStyle.Top;
+            btnCharacterOverview.Location = new Point(0, 168);
+            btnCharacterOverview.Name = "btnCharacterOverview";
+            btnCharacterOverview.Size = new Size(150, 30);
+            btnCharacterOverview.TabIndex = 8;
+            btnCharacterOverview.Text = "○ キャラクター概観";
+            btnCharacterOverview.Click += BtnCharacterOverview_Click;
             // 
             // btnDisappearanceOverview
             // 
@@ -531,12 +483,8 @@ namespace StS2Toys
         private Button btnHpHistory;
         private Button btnEncounterOverview;
         private Button btnFilterBlock;
-        private Button btnNecroOverview;
+        private Button btnCharacterOverview;
         private Button btnDisappearanceOverview;
-        private Button btnIroncladOverview;
-        private Button btnSilentOverview;
-        private Button btnDefectOverview;
-        private Button btnRegentOverview;
         private Label lblGroupOverview;
         private Label lblGroupOther;
         private SplitContainer splitContainer;
