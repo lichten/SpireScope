@@ -219,7 +219,7 @@ namespace StS2Toys
             // btnFilterBlock
             // 
             btnFilterBlock.Dock = DockStyle.Top;
-            btnFilterBlock.Location = new Point(0, 366);
+            btnFilterBlock.Location = new Point(0, 396);
             btnFilterBlock.Name = "btnFilterBlock";
             btnFilterBlock.Size = new Size(150, 30);
             btnFilterBlock.TabIndex = 7;
@@ -229,7 +229,7 @@ namespace StS2Toys
             // btnEncounterOverview
             // 
             btnEncounterOverview.Dock = DockStyle.Top;
-            btnEncounterOverview.Location = new Point(0, 336);
+            btnEncounterOverview.Location = new Point(0, 366);
             btnEncounterOverview.Name = "btnEncounterOverview";
             btnEncounterOverview.Size = new Size(150, 30);
             btnEncounterOverview.TabIndex = 6;
@@ -239,7 +239,7 @@ namespace StS2Toys
             // btnHpHistory
             // 
             btnHpHistory.Dock = DockStyle.Top;
-            btnHpHistory.Location = new Point(0, 306);
+            btnHpHistory.Location = new Point(0, 336);
             btnHpHistory.Name = "btnHpHistory";
             btnHpHistory.Size = new Size(150, 30);
             btnHpHistory.TabIndex = 5;
@@ -252,7 +252,7 @@ namespace StS2Toys
             lblGroupOther.Dock = DockStyle.Top;
             lblGroupOther.Font = new Font("Segoe UI", 7.5F, FontStyle.Bold);
             lblGroupOther.ForeColor = Color.White;
-            lblGroupOther.Location = new Point(0, 288);
+            lblGroupOther.Location = new Point(0, 318);
             lblGroupOther.Name = "lblGroupOther";
             lblGroupOther.Padding = new Padding(4, 0, 0, 0);
             lblGroupOther.Size = new Size(150, 18);
@@ -263,7 +263,7 @@ namespace StS2Toys
             // btnRegentOverview
             // 
             btnRegentOverview.Dock = DockStyle.Top;
-            btnRegentOverview.Location = new Point(0, 258);
+            btnRegentOverview.Location = new Point(0, 288);
             btnRegentOverview.Name = "btnRegentOverview";
             btnRegentOverview.Size = new Size(150, 30);
             btnRegentOverview.TabIndex = 12;
@@ -273,7 +273,7 @@ namespace StS2Toys
             // btnDefectOverview
             // 
             btnDefectOverview.Dock = DockStyle.Top;
-            btnDefectOverview.Location = new Point(0, 228);
+            btnDefectOverview.Location = new Point(0, 258);
             btnDefectOverview.Name = "btnDefectOverview";
             btnDefectOverview.Size = new Size(150, 30);
             btnDefectOverview.TabIndex = 11;
@@ -283,7 +283,7 @@ namespace StS2Toys
             // btnSilentOverview
             // 
             btnSilentOverview.Dock = DockStyle.Top;
-            btnSilentOverview.Location = new Point(0, 198);
+            btnSilentOverview.Location = new Point(0, 228);
             btnSilentOverview.Name = "btnSilentOverview";
             btnSilentOverview.Size = new Size(150, 30);
             btnSilentOverview.TabIndex = 10;
@@ -293,7 +293,7 @@ namespace StS2Toys
             // btnIroncladOverview
             // 
             btnIroncladOverview.Dock = DockStyle.Top;
-            btnIroncladOverview.Location = new Point(0, 168);
+            btnIroncladOverview.Location = new Point(0, 198);
             btnIroncladOverview.Name = "btnIroncladOverview";
             btnIroncladOverview.Size = new Size(150, 30);
             btnIroncladOverview.TabIndex = 9;
@@ -303,7 +303,7 @@ namespace StS2Toys
             // btnNecroOverview
             // 
             btnNecroOverview.Dock = DockStyle.Top;
-            btnNecroOverview.Location = new Point(0, 138);
+            btnNecroOverview.Location = new Point(0, 168);
             btnNecroOverview.Name = "btnNecroOverview";
             btnNecroOverview.Size = new Size(150, 30);
             btnNecroOverview.TabIndex = 8;
@@ -313,7 +313,7 @@ namespace StS2Toys
             // btnDisappearanceOverview
             // 
             btnDisappearanceOverview.Dock = DockStyle.Top;
-            btnDisappearanceOverview.Location = new Point(0, 108);
+            btnDisappearanceOverview.Location = new Point(0, 138);
             btnDisappearanceOverview.Name = "btnDisappearanceOverview";
             btnDisappearanceOverview.Size = new Size(150, 30);
             btnDisappearanceOverview.TabIndex = 15;
@@ -323,7 +323,7 @@ namespace StS2Toys
             // btnCombinedOverview
             // 
             btnCombinedOverview.Dock = DockStyle.Top;
-            btnCombinedOverview.Location = new Point(0, 78);
+            btnCombinedOverview.Location = new Point(0, 108);
             btnCombinedOverview.Name = "btnCombinedOverview";
             btnCombinedOverview.Size = new Size(150, 30);
             btnCombinedOverview.TabIndex = 2;
@@ -336,7 +336,7 @@ namespace StS2Toys
             lblGroupOverview.Dock = DockStyle.Top;
             lblGroupOverview.Font = new Font("Segoe UI", 7.5F, FontStyle.Bold);
             lblGroupOverview.ForeColor = Color.White;
-            lblGroupOverview.Location = new Point(0, 60);
+            lblGroupOverview.Location = new Point(0, 90);
             lblGroupOverview.Name = "lblGroupOverview";
             lblGroupOverview.Padding = new Padding(4, 0, 0, 0);
             lblGroupOverview.Size = new Size(150, 18);
@@ -347,7 +347,7 @@ namespace StS2Toys
             // btnCardDetail
             // 
             btnCardDetail.Dock = DockStyle.Top;
-            btnCardDetail.Location = new Point(0, 30);
+            btnCardDetail.Location = new Point(0, 60);
             btnCardDetail.Name = "btnCardDetail";
             btnCardDetail.Size = new Size(150, 30);
             btnCardDetail.TabIndex = 1;
@@ -357,15 +357,15 @@ namespace StS2Toys
             // btnImageViewer
             // 
             btnImageViewer.Dock = DockStyle.Top;
-            btnImageViewer.Location = new Point(0, 0);
+            btnImageViewer.Location = new Point(0, 30);
             btnImageViewer.Name = "btnImageViewer";
             btnImageViewer.Size = new Size(150, 30);
             btnImageViewer.TabIndex = 0;
             btnImageViewer.Text = "○ 画像ビューア";
             btnImageViewer.Click += BtnImageViewer_Click;
-            //
+            // 
             // btnLiveCapture
-            //
+            // 
             btnLiveCapture.Dock = DockStyle.Top;
             btnLiveCapture.Location = new Point(0, 0);
             btnLiveCapture.Name = "btnLiveCapture";

@@ -13,41 +13,16 @@ namespace StS2Toys;
 /// ショップのレリック／ポーションを検出して一覧表示する。検出・キャプチャのロジックは
 /// StS2Capture.Core を流用（仕様書フェーズ2）。現在状態パネルや情報ページリンクはフェーズ3/4 で統合。
 /// </summary>
-public sealed class LiveCaptureForm : Form
+public partial class LiveCaptureForm : Form
 {
     readonly CaptureLoop _loop;
     readonly ShopItemRecognizer _shop = new();
     readonly ScreenRecognizer _screen;
 
-    readonly Label _status = new();
-    readonly RadioButton _rbWgc = new() { Text = "WGC", AutoSize = true };
-    readonly RadioButton _rbGdi = new() { Text = "GDI", AutoSize = true };
-    readonly Button _btnCapture = new() { Text = "手動キャプチャ", AutoSize = true };
-    readonly Button _btnLinks = new() { Text = "リンク設定", AutoSize = true };
-    readonly CheckBox _cbAuto = new() { Text = "自動監視", AutoSize = true };
-    readonly ComboBox _cbCharacter = new()
-    {
-        DropDownStyle = ComboBoxStyle.DropDownList,
-        Width = 150,
-        Margin = new Padding(8, 3, 0, 0),
-    };
-
     // 枠色プロファイルの手動上書き候補。先頭は「自動（セーブから解決）」。
     static readonly string[] CharacterChoices =
         { "DEFECT", "SILENT", "IRONCLAD", "NECROBINDER", "REGENT" };
 
-    readonly ListView _list = new();
-    readonly ListView _ocrList = new();
-    readonly PictureBox _capturePreview = new();
-    readonly PictureBox _thumb = new();
-    readonly SplitContainer _outer = new();
-    readonly SplitContainer _left = new();
-    readonly SplitContainer _right = new();
-
-    // 現在状態パネル（current_run.save 由来）。
-    readonly SplitContainer _mainSplit = new();
-    readonly Label _stateText = new();
-    readonly ListView _relicList = new();
     readonly System.Windows.Forms.Timer _saveTimer = new() { Interval = 1000 };
     DateTime _lastSaveMtime;
 
@@ -63,11 +38,6 @@ public sealed class LiveCaptureForm : Form
 
     public LiveCaptureForm()
     {
-        Text = "ライブキャプチャ（カード／ショップ検出）";
-        Width = 760;
-        Height = 580;
-        StartPosition = FormStartPosition.Manual;
-
         // 固定矩形レイアウト方式：画面（カードを選択／ショップ）ごとに固定座標を probe して
         // カード・レリック・ポーションを1パスで検出する（枠色は候補プールの絞り込みにのみ使用）。
         _screen = new ScreenRecognizer(_shop);
@@ -77,7 +47,13 @@ public sealed class LiveCaptureForm : Form
         _loop.ScreenRecognizer = _screen;
         _loop.Updated += OnLoopUpdated;
 
-        BuildLayout();
+        InitializeComponent();
+
+        // 枠キャラ候補の投入（先頭は「自動（セーブから解決）」）。
+        _cbCharacter.Items.Add("自動（セーブ）");
+        foreach (var c in CharacterChoices) _cbCharacter.Items.Add(c);
+        _cbCharacter.SelectedIndex = 0;
+
         WireEvents();
 
         _rbWgc.Checked = true;
@@ -87,115 +63,6 @@ public sealed class LiveCaptureForm : Form
         RefreshSaveState();
 
         UpdateStartupStatus();
-    }
-
-    void BuildLayout()
-    {
-        var top = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            AutoSize = true,
-            FlowDirection = FlowDirection.LeftToRight,
-            Padding = new Padding(8, 8, 8, 4),
-            WrapContents = true,
-        };
-        // 取得（WGC/GDI）の相互排他ラジオ群。
-        top.Controls.Add(RadioGroup("取得:", _rbWgc, _rbGdi));
-        top.Controls.Add(_cbAuto);
-        top.Controls.Add(_btnCapture);
-        top.Controls.Add(_btnLinks);
-        top.Controls.Add(new Label { Text = "  枠キャラ:", AutoSize = true, Margin = new Padding(8, 6, 2, 0) });
-        _cbCharacter.Items.Add("自動（セーブ）");
-        foreach (var c in CharacterChoices) _cbCharacter.Items.Add(c);
-        _cbCharacter.SelectedIndex = 0;
-        top.Controls.Add(_cbCharacter);
-
-        _status.Dock = DockStyle.Top;
-        _status.AutoSize = false;
-        _status.Height = 26;
-        _status.Padding = new Padding(8, 4, 8, 4);
-        _status.Text = "初期化中...";
-
-        _list.Dock = DockStyle.Fill;
-        _list.View = View.Details;
-        _list.FullRowSelect = true;
-        _list.HideSelection = false;
-        _list.Columns.Add("CardId", 180);
-        _list.Columns.Add("EN", 130);
-        _list.Columns.Add("JP", 120);
-        _list.Columns.Add("確信度", 60);
-        _list.Columns.Add("認識器", 70);
-
-        _ocrList.Dock = DockStyle.Fill;
-        _ocrList.View = View.Details;
-        _ocrList.FullRowSelect = true;
-        _ocrList.Columns.Add("検出テキスト／候補", 240);
-        _ocrList.Columns.Add("種別", 45);
-        _ocrList.Columns.Add("一致", 80);
-        _ocrList.Columns.Add("距離", 90);
-
-        _capturePreview.Dock = DockStyle.Fill;
-        _capturePreview.SizeMode = PictureBoxSizeMode.Zoom;
-        _capturePreview.BackColor = SystemColors.ControlDarkDark;
-
-        _thumb.Dock = DockStyle.Fill;
-        _thumb.SizeMode = PictureBoxSizeMode.Zoom;
-        _thumb.BackColor = SystemColors.ControlLight;
-
-        // 左：検出カード（上）＋ テキスト/ショップ候補（下）
-        _left.Dock = DockStyle.Fill;
-        _left.Orientation = Orientation.Horizontal;
-        _left.Panel1.Controls.Add(_list);
-        _left.Panel2.Controls.Add(WithHeader("ショップ候補（レリック／ポーション）", _ocrList));
-
-        // 右：キャプチャプレビュー（上）＋ portrait サムネ（下）
-        _right.Dock = DockStyle.Fill;
-        _right.Orientation = Orientation.Horizontal;
-        _right.Panel1.Controls.Add(WithHeader("キャプチャ画像（縮小プレビュー）", _capturePreview));
-        _right.Panel2.Controls.Add(WithHeader("選択カードの portrait", _thumb));
-
-        _outer.Dock = DockStyle.Fill;
-        _outer.Orientation = Orientation.Vertical;
-        _outer.Panel1.Controls.Add(_left);
-        _outer.Panel2.Controls.Add(_right);
-
-        // 現在状態パネル（左）：サマリ（上）＋所有レリック一覧（下）。
-        _stateText.Dock = DockStyle.Top;
-        _stateText.AutoSize = false;
-        _stateText.Height = 150;
-        _stateText.Padding = new Padding(6, 4, 4, 4);
-        _stateText.Font = new Font(FontFamily.GenericSansSerif, 9f);
-        _stateText.Text = "セーブ読込待ち...";
-
-        _relicList.Dock = DockStyle.Fill;
-        _relicList.View = View.Details;
-        _relicList.FullRowSelect = true;
-        _relicList.Columns.Add("所有レリック", 200);
-        _relicList.Columns.Add("床", 45);
-
-        var statePanel = new Panel { Dock = DockStyle.Fill };
-        statePanel.Controls.Add(WithHeader("所有レリック", _relicList));
-        statePanel.Controls.Add(_stateText);
-        statePanel.Controls.Add(new Label
-        {
-            Text = "現在状態（current_run.save）",
-            Dock = DockStyle.Top,
-            Height = 18,
-            TextAlign = ContentAlignment.MiddleLeft,
-            BackColor = SystemColors.ControlDark,
-            ForeColor = SystemColors.ControlLightLight,
-            Padding = new Padding(4, 0, 0, 0),
-        });
-
-        // 左＝現在状態パネル / 右＝検出（カード・プレビュー）。
-        _mainSplit.Dock = DockStyle.Fill;
-        _mainSplit.Orientation = Orientation.Vertical;
-        _mainSplit.Panel1.Controls.Add(statePanel);
-        _mainSplit.Panel2.Controls.Add(_outer);
-
-        Controls.Add(_mainSplit);
-        Controls.Add(_status);
-        Controls.Add(top);
     }
 
     protected override void OnLoad(EventArgs e)
@@ -215,46 +82,6 @@ public sealed class LiveCaptureForm : Form
         int max = extent - sc.Panel2MinSize - sc.SplitterWidth;
         if (max < min) return;
         try { sc.SplitterDistance = Math.Clamp(distance, min, max); } catch { }
-    }
-
-    /// <summary>
-    /// ラベル＋ラジオ群を独立した親（FlowLayoutPanel）にまとめて返す。
-    /// ラジオは直接の親ごとに相互排他グループになるため、論理グループごとに本メソッドで包む。
-    /// </summary>
-    static Control RadioGroup(string label, params RadioButton[] radios)
-    {
-        var group = new FlowLayoutPanel
-        {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
-            Margin = Padding.Empty,
-            Padding = Padding.Empty,
-        };
-        group.Controls.Add(new Label { Text = label, AutoSize = true, Margin = new Padding(0, 6, 2, 0) });
-        foreach (var rb in radios) group.Controls.Add(rb);
-        return group;
-    }
-
-    /// <summary>コントロールの上に見出しラベルを付けた Panel を返す。</summary>
-    static Control WithHeader(string title, Control inner)
-    {
-        var panel = new Panel { Dock = DockStyle.Fill };
-        inner.Dock = DockStyle.Fill;
-        var header = new Label
-        {
-            Text = title,
-            Dock = DockStyle.Top,
-            Height = 18,
-            TextAlign = ContentAlignment.MiddleLeft,
-            BackColor = SystemColors.ControlDark,
-            ForeColor = SystemColors.ControlLightLight,
-            Padding = new Padding(4, 0, 0, 0),
-        };
-        panel.Controls.Add(inner);
-        panel.Controls.Add(header);
-        return panel;
     }
 
     void WireEvents()

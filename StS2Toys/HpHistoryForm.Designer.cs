@@ -36,7 +36,7 @@ namespace StS2Toys
             _splitContainer.Panel1.Controls.Add(_chartBox);
 
             // ---- _listView ----
-            _listView.Columns.AddRange([colAct, colFloor, colType, colHp, colChange, colDamage, colHeal]);
+            _listView.Columns.AddRange(new ColumnHeader[] { colAct, colFloor, colType, colHp, colChange, colDamage, colHeal });
             _listView.Dock                            = DockStyle.Fill;
             _listView.FullRowSelect                   = true;
             _listView.GridLines                       = true;
