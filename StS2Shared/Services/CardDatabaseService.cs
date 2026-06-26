@@ -130,10 +130,14 @@ public static class CardDatabaseService
     public static string GetRelicTitle(string id, bool japanese = false)
     {
         var loc = japanese ? _loc.JpnRelics : _loc.EngRelics;
-        var key = id + ".title";
-        if (loc.TryGetValue(key, out var title) && !string.IsNullOrWhiteSpace(title))
+        // ローカライズのキーは接頭辞なし（"AKABEKO.title"）。セーブ等の ID は接頭辞付き
+        // （"RELIC.AKABEKO"）で来るため、そのまま／接頭辞除去の両方で引く。
+        var raw = ToRawId(id);
+        if (loc.TryGetValue(id + ".title", out var title) && !string.IsNullOrWhiteSpace(title))
             return title;
-        return ToTitleCase(id.Replace('_', ' '));
+        if (loc.TryGetValue(raw + ".title", out var rawTitle) && !string.IsNullOrWhiteSpace(rawTitle))
+            return rawTitle;
+        return ToTitleCase(raw.Replace('_', ' '));
     }
 
     /// <summary>
@@ -723,10 +727,13 @@ public static class CardDatabaseService
     public static string GetEventTitle(string id, bool japanese = false)
     {
         var loc = japanese ? _loc.JpnEvents : _loc.EngEvents;
-        var key = id + ".title";
-        if (loc.TryGetValue(key, out var title) && !string.IsNullOrWhiteSpace(title))
+        // relics 同様、ローカライズのキーは接頭辞なし。"EVENT.NEOW" 等の接頭辞付き ID も引けるよう両対応。
+        var raw = ToRawId(id);
+        if (loc.TryGetValue(id + ".title", out var title) && !string.IsNullOrWhiteSpace(title))
             return title;
-        return ToTitleCase(id.Replace('_', ' '));
+        if (loc.TryGetValue(raw + ".title", out var rawTitle) && !string.IsNullOrWhiteSpace(rawTitle))
+            return rawTitle;
+        return ToTitleCase(raw.Replace('_', ' '));
     }
 
     public static (string En, string Ja) GetEventDescription(string id)
