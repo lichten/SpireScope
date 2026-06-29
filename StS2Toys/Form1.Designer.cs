@@ -25,7 +25,6 @@ namespace StS2Toys
             lblInfo = new Label();
             splitContainerOuter = new SplitContainer();
             panelSideButtons = new Panel();
-            btnFilterBlock = new Button();
             btnEncounterOverview = new Button();
             btnHpHistory = new Button();
             lblGroupOther = new Label();
@@ -188,7 +187,6 @@ namespace StS2Toys
             // 
             // panelSideButtons
             // 
-            panelSideButtons.Controls.Add(btnFilterBlock);
             panelSideButtons.Controls.Add(btnEncounterOverview);
             panelSideButtons.Controls.Add(btnHpHistory);
             panelSideButtons.Controls.Add(lblGroupOther);
@@ -201,17 +199,7 @@ namespace StS2Toys
             panelSideButtons.Name = "panelSideButtons";
             panelSideButtons.Size = new Size(150, 424);
             panelSideButtons.TabIndex = 0;
-            // 
-            // btnFilterBlock
-            // 
-            btnFilterBlock.Dock = DockStyle.Top;
-            btnFilterBlock.Location = new Point(0, 276);
-            btnFilterBlock.Name = "btnFilterBlock";
-            btnFilterBlock.Size = new Size(150, 30);
-            btnFilterBlock.TabIndex = 7;
-            btnFilterBlock.Text = "○ ブロック関連絞り込み";
-            btnFilterBlock.Click += BtnFilterBlock_Click;
-            // 
+            //
             // btnEncounterOverview
             // 
             btnEncounterOverview.Dock = DockStyle.Top;
@@ -442,7 +430,6 @@ namespace StS2Toys
         private Button btnCombinedOverview;
         private Button btnHpHistory;
         private Button btnEncounterOverview;
-        private Button btnFilterBlock;
         private Button btnCharacterOverview;
         private Label lblGroupOverview;
         private Label lblGroupOther;

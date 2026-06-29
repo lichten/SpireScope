@@ -27,9 +27,6 @@ namespace StS2Toys
         private int _sortColumn = -1;
         private bool _sortAscending = true;
 
-        // ブロック関連カード絞り込み
-        private bool _blockFilter = false;
-
         static string[] DeckColumnTexts => AppLanguage.IsJapanese
             ? ["カード名 (EN)", "カード名 (JP)", "コスト", "種別", "エンチャント", "枚数"]
             : ["Card Name (EN)", "Card Name (JP)", "Cost", "Type", "Enchantment", "Count"];
@@ -301,16 +298,12 @@ namespace StS2Toys
         {
             if (_lastDeckCards is null) return;
 
-            var blockCards = _lastDeckCards.Where(c => CardDatabaseService.IsBlockGiver(c.Id)).ToList();
             int total = _lastDeckCards.Sum(c => c.Count);
-            int blockCount = blockCards.Sum(c => c.Count);
 
-            var cards = _blockFilter ? (IReadOnlyList<DeckCard>)blockCards : _lastDeckCards;
+            var cards = _lastDeckCards;
 
             bool ja = AppLanguage.IsJapanese;
-            lblDeckTitle.Text = _blockFilter
-                ? (ja ? $"デッキ（ブロック関連 {blockCount}/{total}枚）" : $"Deck (Block-related {blockCount}/{total})")
-                : (ja ? $"デッキ ({total}枚)" : $"Deck ({total})");
+            lblDeckTitle.Text = ja ? $"デッキ ({total}枚)" : $"Deck ({total})";
 
             var colTexts = DeckColumnTexts;
             for (int ci = 0; ci < listViewDeck.Columns.Count; ci++)
@@ -611,19 +604,6 @@ namespace StS2Toys
         {
             btnLiveCapture.Text = visible ? "● ライブキャプチャ" : "○ ライブキャプチャ";
             btnLiveCapture.ForeColor = visible ? Color.DarkBlue : SystemColors.ControlText;
-        }
-
-        void BtnFilterBlock_Click(object? sender, EventArgs e)
-        {
-            _blockFilter = !_blockFilter;
-            UpdateBlockFilterButton(_blockFilter);
-            RefreshDeckList();
-        }
-
-        void UpdateBlockFilterButton(bool active)
-        {
-            btnFilterBlock.Text = active ? "● ブロック関連のみ" : "○ ブロック関連絞り込み";
-            btnFilterBlock.ForeColor = active ? Color.DarkBlue : SystemColors.ControlText;
         }
 
         void BtnHpHistory_Click(object? sender, EventArgs e)
