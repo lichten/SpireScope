@@ -32,8 +32,6 @@ namespace StS2Toys
             btnCharacterOverview = new Button();
             btnCombinedOverview = new Button();
             lblGroupOverview = new Label();
-            btnCardDetail = new Button();
-            btnImageViewer = new Button();
             btnLiveCapture = new Button();
             splitContainer = new SplitContainer();
             listViewDeck = new ListView();
@@ -197,8 +195,6 @@ namespace StS2Toys
             panelSideButtons.Controls.Add(btnCharacterOverview);
             panelSideButtons.Controls.Add(btnCombinedOverview);
             panelSideButtons.Controls.Add(lblGroupOverview);
-            panelSideButtons.Controls.Add(btnCardDetail);
-            panelSideButtons.Controls.Add(btnImageViewer);
             panelSideButtons.Controls.Add(btnLiveCapture);
             panelSideButtons.Dock = DockStyle.Fill;
             panelSideButtons.Location = new Point(0, 0);
@@ -283,27 +279,7 @@ namespace StS2Toys
             lblGroupOverview.TabIndex = 14;
             lblGroupOverview.Text = "概観";
             lblGroupOverview.TextAlign = ContentAlignment.MiddleLeft;
-            // 
-            // btnCardDetail
-            // 
-            btnCardDetail.Dock = DockStyle.Top;
-            btnCardDetail.Location = new Point(0, 60);
-            btnCardDetail.Name = "btnCardDetail";
-            btnCardDetail.Size = new Size(150, 30);
-            btnCardDetail.TabIndex = 1;
-            btnCardDetail.Text = "○ カード詳細";
-            btnCardDetail.Click += BtnCardDetail_Click;
-            // 
-            // btnImageViewer
-            // 
-            btnImageViewer.Dock = DockStyle.Top;
-            btnImageViewer.Location = new Point(0, 30);
-            btnImageViewer.Name = "btnImageViewer";
-            btnImageViewer.Size = new Size(150, 30);
-            btnImageViewer.TabIndex = 0;
-            btnImageViewer.Text = "○ 画像ビューア";
-            btnImageViewer.Click += BtnImageViewer_Click;
-            // 
+            //
             // btnLiveCapture
             // 
             btnLiveCapture.Dock = DockStyle.Top;
@@ -346,7 +322,6 @@ namespace StS2Toys
             listViewDeck.UseCompatibleStateImageBehavior = false;
             listViewDeck.View = View.Details;
             listViewDeck.ColumnClick += ListViewDeck_ColumnClick;
-            listViewDeck.SelectedIndexChanged += ListViewDeck_SelectedIndexChanged;
             // 
             // colCardName
             // 
@@ -403,7 +378,6 @@ namespace StS2Toys
             listViewRelics.TabIndex = 0;
             listViewRelics.UseCompatibleStateImageBehavior = false;
             listViewRelics.View = View.Details;
-            listViewRelics.SelectedIndexChanged += ListViewRelics_SelectedIndexChanged;
             // 
             // colRelicName
             // 
@@ -464,9 +438,7 @@ namespace StS2Toys
         private Label lblInfo;
         private SplitContainer splitContainerOuter;
         private Panel panelSideButtons;
-        private Button btnImageViewer;
         private Button btnLiveCapture;
-        private Button btnCardDetail;
         private Button btnCombinedOverview;
         private Button btnHpHistory;
         private Button btnEncounterOverview;

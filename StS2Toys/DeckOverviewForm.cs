@@ -660,12 +660,38 @@ public partial class DeckOverviewForm : Form
             new RectangleF(rect.X + 2, rect.Y + 2, rect.Width - 4, rect.Height - 4), fmt);
     }
 
+    private static string? _portraitsDir;
+
+    internal static string? FindCardImage(string cardId, string? typeHint = null)
+    {
+        // サブディレクトリ/type 付きファイル名の対応は StS2Shared の CardImageService に一元化。
+        var dir = GetPortraitsDir();
+        if (dir is null) return null;
+        var path = CardImageService.GetSourcePath(dir, cardId);
+        return path is not null && File.Exists(path) ? path : null;
+    }
+
+    static string? GetPortraitsDir()
+    {
+        if (_portraitsDir != null) return _portraitsDir;
+
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
+        {
+            var candidate = Path.Combine(dir.FullName, "tools", "extracted", "images", "card_portraits_png");
+            if (Directory.Exists(candidate))
+                return _portraitsDir = candidate;
+            dir = dir.Parent;
+        }
+        return null;
+    }
+
     Bitmap? GetCardThumbnail(string cardId, string type)
     {
         var cacheKey = cardId + "|" + type;
         if (_imageCache.TryGetValue(cacheKey, out var cached)) return cached;
 
-        var path = CardImageViewerForm.FindCardImage(cardId, type);
+        var path = FindCardImage(cardId, type);
         if (path is not null)
         {
             try

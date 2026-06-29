@@ -9,16 +9,12 @@ namespace StS2Toys
         private FileSystemWatcher? _watcher;
         private readonly System.Windows.Forms.Timer _reloadTimer = new() { Interval = 500 };
         private readonly System.Windows.Forms.Timer _flashTimer = new() { Interval = 2000 };
-        private CardImageViewerForm? _imageViewer;
-        private CardDetailForm? _detailViewer;
         private DeckOverviewForm? _combinedOverview;
         private DeckOverviewForm? _characterOverview;
         private EncounterOverviewForm? _encounterOverview;
         private HpHistoryForm? _hpHistory;
         private LiveCaptureForm? _liveCapture;
         private SubWindowSettings? _liveCaptureSettings;
-        private SubWindowSettings? _imageViewerSettings;
-        private SubWindowSettings? _cardDetailSettings;
         private SubWindowSettings? _combinedOverviewSettings;
         private SubWindowSettings? _encounterOverviewSettings;
         private SubWindowSettings? _hpHistorySettings;
@@ -64,8 +60,6 @@ namespace StS2Toys
             StopWatching();
             _reloadTimer.Dispose();
             _flashTimer.Dispose();
-            _imageViewer?.Close();
-            _detailViewer?.Close();
             _combinedOverview?.Close();
             _encounterOverview?.Close();
             _hpHistory?.Close();
@@ -77,8 +71,6 @@ namespace StS2Toys
             var app = WindowSettingsService.Load();
             AppLanguage.IsJapanese = app.Language != "en";
             UpdateLangButton();
-            _imageViewerSettings = app.ImageViewer;
-            _cardDetailSettings = app.CardDetail;
             _combinedOverviewSettings = app.CombinedOverview;
             _encounterOverviewSettings = app.EncounterOverview;
             _hpHistorySettings = app.HpHistory;
@@ -103,10 +95,6 @@ namespace StS2Toys
 
         void SaveWindowSettings()
         {
-            if (_imageViewer is { IsDisposed: false })
-                _imageViewerSettings = WindowToSub(_imageViewer);
-            if (_detailViewer is { IsDisposed: false })
-                _cardDetailSettings = WindowToSub(_detailViewer);
             if (_combinedOverview is { IsDisposed: false })
                 _combinedOverviewSettings = WindowToSub(_combinedOverview);
             if (_characterOverview is { IsDisposed: false })
@@ -121,7 +109,7 @@ namespace StS2Toys
             var state = WindowState == FormWindowState.Minimized ? FormWindowState.Normal : WindowState;
             var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
             var main = new WindowSettings(bounds.X, bounds.Y, bounds.Width, bounds.Height, state.ToString());
-            WindowSettingsService.Save(new AppSettings(main, _imageViewerSettings, _cardDetailSettings, _hpHistorySettings, _encounterOverviewSettings, splitContainerOuter.SplitterDistance, _characterOverviewSettings, _combinedOverviewSettings, AppLanguage.IsJapanese ? "ja" : "en", _liveCaptureSettings));
+            WindowSettingsService.Save(new AppSettings(main, _hpHistorySettings, _encounterOverviewSettings, splitContainerOuter.SplitterDistance, _characterOverviewSettings, _combinedOverviewSettings, AppLanguage.IsJapanese ? "ja" : "en", _liveCaptureSettings));
         }
 
         static SubWindowSettings WindowToSub(Form form) =>
@@ -595,40 +583,6 @@ namespace StS2Toys
             }
             : type;
 
-        void BtnImageViewer_Click(object? sender, EventArgs e)
-        {
-            if (_imageViewer is null || _imageViewer.IsDisposed || !_imageViewer.Visible)
-            {
-                if (_imageViewer is null || _imageViewer.IsDisposed)
-                {
-                    _imageViewer = new CardImageViewerForm();
-                    ApplySubWindowSettings(_imageViewer, _imageViewerSettings, new Point(Right + 4, Top));
-                    _imageViewer.FormClosed += (_, _) =>
-                    {
-                        _imageViewerSettings = BoundsToSub(_imageViewer.Bounds);
-                        UpdateImageViewerButton(false);
-                    };
-                }
-                _imageViewer.Show(this);
-                UpdateImageViewerButton(true);
-
-                if (listViewDeck.SelectedItems.Count > 0 &&
-                    listViewDeck.SelectedItems[0].Tag is DeckCard selectedCard)
-                    _imageViewer.ShowCard(selectedCard.Id, selectedCard.Type);
-            }
-            else
-            {
-                _imageViewer.Hide();
-                UpdateImageViewerButton(false);
-            }
-        }
-
-        void UpdateImageViewerButton(bool visible)
-        {
-            btnImageViewer.Text = visible ? "● 画像ビューア" : "○ 画像ビューア";
-            btnImageViewer.ForeColor = visible ? Color.DarkBlue : SystemColors.ControlText;
-        }
-
         void BtnLiveCapture_Click(object? sender, EventArgs e)
         {
             if (_liveCapture is null || _liveCapture.IsDisposed || !_liveCapture.Visible)
@@ -657,41 +611,6 @@ namespace StS2Toys
         {
             btnLiveCapture.Text = visible ? "● ライブキャプチャ" : "○ ライブキャプチャ";
             btnLiveCapture.ForeColor = visible ? Color.DarkBlue : SystemColors.ControlText;
-        }
-
-        void BtnCardDetail_Click(object? sender, EventArgs e)
-        {
-            if (_detailViewer is null || _detailViewer.IsDisposed || !_detailViewer.Visible)
-            {
-                if (_detailViewer is null || _detailViewer.IsDisposed)
-                {
-                    _detailViewer = new CardDetailForm();
-                    ApplySubWindowSettings(_detailViewer, _cardDetailSettings, new Point(Right + 4, Top));
-                    _detailViewer.FormClosed += (_, _) =>
-                    {
-                        _cardDetailSettings = BoundsToSub(_detailViewer.Bounds);
-                        UpdateCardDetailButton(false);
-                    };
-                }
-                _detailViewer.Show(this);
-                UpdateCardDetailButton(true);
-
-                if (listViewDeck.SelectedItems.Count > 0 && listViewDeck.SelectedItems[0].Tag is DeckCard selDeck)
-                    _detailViewer.UpdateCard(selDeck.Id, isRelic: false, selDeck.EnchantmentId, selDeck.EnchantmentAmount);
-                else if (listViewRelics.SelectedItems.Count > 0 && listViewRelics.SelectedItems[0].Tag is string relicId)
-                    _detailViewer.UpdateCard(relicId, isRelic: true);
-            }
-            else
-            {
-                _detailViewer.Hide();
-                UpdateCardDetailButton(false);
-            }
-        }
-
-        void UpdateCardDetailButton(bool visible)
-        {
-            btnCardDetail.Text = visible ? "● カード詳細" : "○ カード詳細";
-            btnCardDetail.ForeColor = visible ? Color.DarkGreen : SystemColors.ControlText;
         }
 
         void BtnFilterBlock_Click(object? sender, EventArgs e)
@@ -743,25 +662,6 @@ namespace StS2Toys
             if (_hpHistory is null || _hpHistory.IsDisposed || !_hpHistory.Visible) return;
             if (_lastRunData is null) return;
             _hpHistory.UpdateHistory(_lastRunData.MapPointHistory);
-        }
-
-        void ListViewDeck_SelectedIndexChanged(object? sender, EventArgs e)
-        {
-            if (listViewDeck.SelectedItems.Count == 0) return;
-            if (listViewDeck.SelectedItems[0].Tag is not DeckCard card) return;
-
-            if (_imageViewer is { IsDisposed: false } iv && iv.Visible)
-                iv.ShowCard(card.Id, card.Type);
-            if (_detailViewer is { IsDisposed: false } dv && dv.Visible)
-                dv.UpdateCard(card.Id, isRelic: false, card.EnchantmentId, card.EnchantmentAmount);
-        }
-
-        void ListViewRelics_SelectedIndexChanged(object? sender, EventArgs e)
-        {
-            if (_detailViewer is null || _detailViewer.IsDisposed || !_detailViewer.Visible) return;
-            if (listViewRelics.SelectedItems.Count == 0) return;
-            if (listViewRelics.SelectedItems[0].Tag is not string id) return;
-            _detailViewer.UpdateCard(id, isRelic: true);
         }
     }
 
