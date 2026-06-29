@@ -2710,18 +2710,25 @@ static string BuildEncounterPage(string encId, CharData[] chars, HashSet<string>
             var img = monstersWithImg.Contains(dir)
                 ? $"""<img src="{basePath}images/monsters/{dir}.png" alt="{m.EnLabel}" class="monster-thumb">"""
                 : $"""<div class="monster-thumb monster-thumb-missing">?</div>""";
+            var combat = BuildMonsterCombatSection(dir, basePath);
+            var combatBlock = combat != "" ? $"""<div style="margin-top:10px">{combat}</div>""" : "";
             return $"""
-              <a href="{basePath}monsters/{dir}.html" class="monster-card">
-                {img}
-                <div class="monster-name-ja">{m.JaLabel}</div>
-                <div class="monster-name-en">{m.EnLabel}</div>
-              </a>
+              <div style="border:1px solid #eee;border-radius:8px;padding:12px;margin-bottom:12px">
+                <a href="{basePath}monsters/{dir}.html" style="display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit">
+                  {img}
+                  <div>
+                    <div style="font-weight:600">{m.JaLabel}</div>
+                    <div style="color:#999;font-size:12px">{m.EnLabel}</div>
+                  </div>
+                </a>
+                {combatBlock}
+              </div>
             """;
         }));
         monsterSection = $"""
         <section class="section">
           <h2 class="section-title">登場モンスター</h2>
-          <div class="monster-grid">{cards}</div>
+          {cards}
         </section>
         """;
     }
@@ -4711,6 +4718,136 @@ static string ExtractPageTitle(string filePath)
 
     // ── モンスター詳細ページ ──────────────────────────────────────────────────────
 
+    // intent カテゴリ → 日本語ラベル・バッジ色（spirecodex の Type 列相当）
+    static readonly (string Cat, string Ja, string Color)[] _intentMeta =
+    {
+        ("ATTACK",      "攻撃",       "#b03030"),
+        ("BUFF",        "強化",       "#2e7d32"),
+        ("DEFEND",      "防御",       "#1565c0"),
+        ("DEBUFF",      "弱体",       "#6a1b9a"),
+        ("CARD_DEBUFF", "カード弱体", "#6a1b9a"),
+        ("HEAL",        "回復",       "#2e7d32"),
+        ("STATUS",      "状態異常",   "#8d6e63"),
+        ("STUN",        "スタン",     "#f9a825"),
+        ("SLEEP",       "睡眠",       "#78909c"),
+        ("SUMMON",      "召喚",       "#00838f"),
+        ("ESCAPE",      "逃走",       "#9e9e9e"),
+        ("DEATH_BLOW",  "致命の一撃", "#b03030"),
+    };
+
+    static string IntentBadge(string cat)
+    {
+        var meta = _intentMeta.FirstOrDefault(x => x.Cat == cat);
+        var ja    = meta.Cat != null ? meta.Ja    : cat;
+        var color = meta.Cat != null ? meta.Color : "#888";
+        return $"""<span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;color:#fff;background:{color};margin-right:3px">{ja}</span>""";
+    }
+
+    // 値（base）＋上位アセンション値を "base（asc）" 形式に。asc が無い/同値なら base のみ。
+    static string FmtVal(int? b, int? a) =>
+        !b.HasValue ? "" : (a.HasValue && a != b ? $"{b}（{a}）" : $"{b}");
+
+    /// <summary>
+    /// モンスターの戦闘ステータスブロック（HP・開始パワー・ムーブ表・行動パターン）を HTML で返す。
+    /// 戦闘データが無いモンスターは空文字（呼び出し側でセクションを出さない）。
+    /// モンスター個別ページとエンカウンターページの双方から使う。
+    /// </summary>
+    static string BuildMonsterCombatSection(string dirName, string basePath)
+    {
+        var c = MonsterCombatService.Get(dirName);
+        if (c is null) return "";
+
+        // HP
+        var hpRow = "";
+        if (c.Hp is { Min: { } min })
+        {
+            var max = c.Hp.Max ?? min;
+            var hpText = min == max ? $"{min}" : $"{min}–{max}";
+            if (c.Hp.MinAsc is { } aMin)
+            {
+                var aMax = c.Hp.MaxAsc ?? aMin;
+                var ascTxt = aMin == aMax ? $"{aMin}" : $"{aMin}–{aMax}";
+                if (ascTxt != hpText)
+                    hpText += $""" <span style="color:#999">（上位 {ascTxt}）</span>""";
+            }
+            hpRow = $"""<div style="margin-bottom:8px"><b>HP</b> {hpText}</div>""";
+        }
+
+        // 開始時パワー
+        var spRow = "";
+        if (c.StartingPowers.Count > 0)
+        {
+            var chips = string.Concat(c.StartingPowers.Select(pid =>
+            {
+                var nameJa = System.Net.WebUtility.HtmlEncode(MonsterCombatService.GetPowerName(pid, japanese: true));
+                var desc   = System.Net.WebUtility.HtmlEncode(MonsterCombatService.GetPowerDescription(pid, japanese: true));
+                return $"""<span title="{desc}" style="display:inline-block;padding:2px 8px;margin:0 4px 4px 0;border-radius:10px;background:#efe6f5;color:#4a148c;font-size:12px">{nameJa}</span>""";
+            }));
+            spRow = $"""<div style="margin-bottom:8px"><b>開始時パワー</b> {chips}</div>""";
+        }
+
+        // ムーブ表
+        var moveTable = "";
+        if (c.Moves.Count > 0)
+        {
+            var rows = string.Concat(c.Moves.Select(mv =>
+            {
+                var nameEn = System.Net.WebUtility.HtmlEncode(MonsterCombatService.GetMoveName(dirName, mv.Id));
+                var nameJa = System.Net.WebUtility.HtmlEncode(MonsterCombatService.GetMoveName(dirName, mv.Id, japanese: true));
+                var nameCell = nameJa != nameEn
+                    ? $"""{nameJa}<div style="color:#999;font-size:11px">{nameEn}</div>"""
+                    : nameEn;
+                var badges = string.Concat(mv.Intents.Select(IntentBadge));
+
+                var effs = new List<string>();
+                if (mv.Damage.HasValue)
+                {
+                    var hit = mv.Hits is > 1 ? $"×{mv.Hits}" : "";
+                    effs.Add($"{FmtVal(mv.Damage, mv.DamageAsc)}{hit} ダメージ");
+                }
+                if (mv.Block.HasValue) effs.Add($"ブロック {FmtVal(mv.Block, mv.BlockAsc)}");
+                foreach (var p in mv.Powers)
+                {
+                    var pn = System.Net.WebUtility.HtmlEncode(MonsterCombatService.GetPowerName(p.Id, japanese: true));
+                    effs.Add(p.Value.HasValue ? $"{pn} {FmtVal(p.Value, p.ValueAsc)}" : pn);
+                }
+                var effCell = string.Join("　", effs);
+
+                return $"""
+                  <tr style="border-top:1px solid #eee">
+                    <td style="padding:6px 10px;vertical-align:top">{nameCell}</td>
+                    <td style="padding:6px 10px;vertical-align:top;white-space:nowrap">{badges}</td>
+                    <td style="padding:6px 10px;vertical-align:top">{effCell}</td>
+                  </tr>
+                """;
+            }));
+            moveTable = $"""
+                <table style="border-collapse:collapse;width:100%;font-size:14px;margin-bottom:4px">
+                  <thead><tr style="text-align:left;color:#666;font-size:12px">
+                    <th style="padding:4px 10px">ムーブ</th><th style="padding:4px 10px">種別</th><th style="padding:4px 10px">効果</th>
+                  </tr></thead>
+                  <tbody>{rows}</tbody>
+                </table>
+                """;
+        }
+
+        // 行動パターン（手動アノテーション）
+        var patRow = "";
+        if (MonsterCombatService.GetMovePattern(dirName) is { } pat && (pat.Ja != "" || pat.En != ""))
+        {
+            var ja = System.Net.WebUtility.HtmlEncode(pat.Ja);
+            var en = System.Net.WebUtility.HtmlEncode(pat.En);
+            patRow = $"""
+                <div style="margin-top:8px"><b>行動パターン</b>
+                  <div>{(ja != "" ? ja : en)}</div>
+                  {(ja != "" && en != "" ? $"""<div style="color:#999;font-size:12px">{en}</div>""" : "")}
+                </div>
+                """;
+        }
+
+        return hpRow + spRow + moveTable + patRow;
+    }
+
     static string BuildMonsterPage(string dirName, CharData[] chars, bool hasGif = false, bool hasImg = false)
     {
         const string basePath = "../";
@@ -4746,6 +4883,14 @@ static string ExtractPageTitle(string filePath)
                 <div style="text-align:center;margin-bottom:24px;color:#bbb;font-size:13px">アニメーション未生成</div>
                 """;
         }
+
+        var combatHtml = BuildMonsterCombatSection(dirName, basePath);
+        var combatSection = combatHtml != "" ? $"""
+            <section class="section">
+              <h2 class="section-title">戦闘データ</h2>
+              {combatHtml}
+            </section>
+            """ : "";
 
         var encounterIds = MonsterDatabaseService.GetEncounterIdsForMonster(dirName);
         string encounterSection;
@@ -4788,6 +4933,7 @@ static string ExtractPageTitle(string filePath)
               {(nameJa != nameEn ? $"""<div class="card-title-ja">{nameJa}</div>""" : "")}
             </div>
             {imageSection}
+            {combatSection}
             {encounterSection}
             """;
 

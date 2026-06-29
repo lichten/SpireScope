@@ -95,8 +95,22 @@ $pck = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\SlayTheSp
 - `potion_descriptions.json` — ポーションの EN/JP 説明文（生テキスト＝タグ・`{Var}` 保持）。ローカライズの `{ID}.description` から生成
 - `potion_descriptions_resolved.json` — `{Var}` を `potion_stats.json` の値で実数解決（色タグ保持）。`relic_descriptions_resolved.json` と同方式
 
+**モンスター戦闘 JSON（card-type-extractor 生成、`Resources/{version}/`）**
+- `monster_combat.json` — モンスターの HP・ムーブ・インテント種別・ダメージ/ブロック値・開始パワー。
+  各 `Models.Monsters` クラスの IL から抽出する（spirecodex.com/encounter 相当のデータ）。
+  - HP: `get_MinInitialHp`/`get_MaxInitialHp`（`AscensionHelper.GetValueIfAscension(level, asc, base)` の ldc.i4 列で base=末尾・asc=中間、または単一 ldc=base）
+  - ムーブ: `GenerateMoveStateMachine()` の `new MoveState("X_MOVE", Cb, new 〇〇Intent(dmg[,hits]), ...)`。
+    `ldstr` の id から `_MOVE`/末尾数字を剥がす（ローカライズ `monsters.json` の `{ID}.moves.{KEY}` と一致）。
+    インテント種別は MoveState ctor 引数の `newobj`（Single/MultiAttackIntent→ATTACK, Buff/Defend/Debuff/Stun…）
+  - ダメージ/連撃: attack intent ctor 引数（getter or リテラル）。ブロック/付与パワー: ムーブ本体（async → 入れ子 `<Cb>d__N.MoveNext`）の `GainBlock` / `PowerCmd.Apply<Power>`
+  - 開始パワー: `AfterAddedToRoom`（async）の `PowerCmd.Apply<Power>` 総称引数
+  - 動的値（`Func`/計算式）はフィールド省略（欠損）で出力しページ側フォールバック。`MonsterCombatService` が読む
+- `monster_move_patterns.json`（**手動管理**・バージョン非依存 = `Resources/` 直下）— AI 行動シーケンスの自然文 EN/JA
+  （`{Var:format}` ではなく `patternEn`/`patternJa`）。`MoveStateMachine` の分岐ロジックは静的抽出が不確実なため手動アノテーション。
+  エンカウンターに出る主要モンスターから段階的に追記する運用。`MonsterCombatService.GetMovePattern` が読む
+
 **ローカライゼーション JSON（バージョン管理 = `Resources/{version}/localization/{eng,jpn}/`）**
-- `relics` / `card_keywords` / `afflictions` / `enchantments` / `encounters` / `acts` / `events` / `ancients` / `potions` / `rest_site_ui` の各 `.json`。
+- `relics` / `card_keywords` / `afflictions` / `enchantments` / `encounters` / `acts` / `events` / `ancients` / `potions` / `rest_site_ui` / `monsters` / `intents` / `powers` の各 `.json`。
   `tools/extracted` はゲーム更新時に内容が変わるため、card-type-extractor が抽出時に各バージョンフォルダへ**生のままコピー**して版を固定する。
   読み込みは各サービス（`KeywordDatabaseService` / `EncounterDatabaseService` / `AncientDatabaseService` / `CardDatabaseService` / `RestSiteOptionService`）が
   `ResourceResolver.ResolveVersioned(asm, "localization.{lang}.{file}.json")` で最新版を解決する。
@@ -109,6 +123,7 @@ $pck = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\SlayTheSp
 |---|---|
 | `Services/CardDatabaseService.cs` | カード名・説明・コスト・タイプ・シナジー判定。`_regentStarSpend` 等の HashSet はクラス初期化時に一括計算される |
 | `Services/EncounterDatabaseService.cs` | エンカウンター・アクト名の EN/JP ルックアップ |
+| `Services/MonsterCombatService.cs` | モンスター戦闘データ（`monster_combat.json`）＋行動パターン（`monster_move_patterns.json`）。ムーブ名/インテント名/パワー名/説明は `monsters`/`intents`/`powers` ローカライズから解決 |
 | `Services/DescriptionFormatter.cs` | `[gold]...[/gold]` 等の BBタグと `{Var:format}` テンプレートを除去・解決 |
 | `CharacterMechanics.cs` | キャラクター × メカニクスのフィルタ定義（`Func<string, bool>` の配列）。CardBrowser のサイドバー構造と 1:1 対応 |
 

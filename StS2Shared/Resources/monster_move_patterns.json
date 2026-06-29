@@ -1,0 +1,18 @@
+{
+  "bowlbug_rock": {
+    "patternEn": "Always uses Headbutt. If its attack is fully blocked it becomes Dizzy (Stunned) and skips its next turn.",
+    "patternJa": "常に「ヘッドバット」を使う。攻撃を完全に防がれると「ふらつき」（スタン）状態になり、次のターンを飛ばす。"
+  },
+  "bowlbug_nectar": {
+    "patternEn": "Opens with Thrash, then Buff, then always uses Thrash.",
+    "patternJa": "初手は「スラッシュ」、次に「強化」、以降は常に「スラッシュ」。"
+  },
+  "bowlbug_egg": {
+    "patternEn": "Always uses Bite.",
+    "patternJa": "常に「噛みつき」を使う。"
+  },
+  "axebot": {
+    "patternEn": "Alternates between Hammer Uppercut and The One-Two. Uses Boot Up (Block + Strength) when it respawns.",
+    "patternJa": "「ハンマーアッパーカット」と「ワンツー」を交互に使う。復活時は「起動」（ブロック＋筋力）を行う。"
+  }
+}

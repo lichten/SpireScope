@@ -1371,7 +1371,8 @@ Console.WriteLine(kwOutPath);
     string[] locFiles =
     {
         "relics", "card_keywords", "afflictions", "enchantments",
-        "encounters", "acts", "events", "ancients", "potions", "rest_site_ui"
+        "encounters", "acts", "events", "ancients", "potions", "rest_site_ui",
+        "monsters", "intents", "powers"
     };
     foreach (var lang in new[] { "eng", "jpn" })
     {
@@ -1646,6 +1647,80 @@ Console.WriteLine(kwOutPath);
         "{\n" + string.Join(",\n", encLines) + "\n}\n");
     Console.Error.WriteLine($"Extracted {encMap.Count} encounter→monster mappings.");
     Console.WriteLine(Path.Combine(outDir2, "encounter_monsters.json"));
+
+    // ---- monster_combat.json（モンスターの HP・ムーブ・インテント・開始パワー）----
+    // DLL の各 MonsterModel から IL 抽出（Step1 デコンパイルで確定したパターン）。
+    //  HP   : get_MinInitialHp / get_MaxInitialHp（GetValueIfAscension(level, asc, base) or 単一 ldc）
+    //  Move : GenerateMoveStateMachine の new MoveState("X_MOVE", Cb, new 〇〇Intent(dmg[,hits]), ...)
+    //  効果 : ムーブ本体（async → 入れ子 <Cb>d__N.MoveNext）の GainBlock / PowerCmd.Apply<Power>
+    //  開始 : AfterAddedToRoom の PowerCmd.Apply<Power>（総称引数）
+    // 動的値（Func/計算式）は欠損（フィールド省略）で出力し、ページ側でフォールバックさせる。
+    {
+        // intent 型名 → カテゴリ（localization intents.json のキーに対応）
+        static string? IntentCat(string t) => t switch
+        {
+            "SingleAttackIntent" or "MultiAttackIntent" or "AttackIntent" => "ATTACK",
+            "BuffIntent"       => "BUFF",
+            "DefendIntent"     => "DEFEND",
+            "DebuffIntent"     => "DEBUFF",
+            "CardDebuffIntent" => "CARD_DEBUFF",
+            "HealIntent"       => "HEAL",
+            "StatusIntent"     => "STATUS",
+            "StunIntent"       => "STUN",
+            "SleepIntent"      => "SLEEP",
+            "SummonIntent"     => "SUMMON",
+            "EscapeIntent"     => "ESCAPE",
+            "DeathBlowIntent"  => "DEATH_BLOW",
+            _ => null,   // Hidden/Unknown 等は非表示
+        };
+
+        var combat = new SortedDictionary<string, string>(StringComparer.Ordinal); // id → JSON 行
+
+        foreach (var th in mr.TypeDefinitions)
+        {
+            var td = mr.GetTypeDefinition(th);
+            if (mr.GetString(td.Namespace) != monNs) continue;
+            var cls = mr.GetString(td.Name);
+            if (cls.StartsWith('<') || cls.Contains("Mock") || cls.Contains("Deprecated")) continue;
+            var id = CamelToUpperSnake(cls).ToLowerInvariant();
+            if (!monsterIdToKey.ContainsKey(id)) continue;
+
+            // メソッド名 → ハンドル（getter / コールバックは一意。重複時は後勝ち）
+            var methods = new Dictionary<string, MethodDefinitionHandle>(StringComparer.Ordinal);
+            foreach (var mh in td.GetMethods())
+                methods[mr.GetString(mr.GetMethodDefinition(mh).Name)] = mh;
+
+            (int? b, int? a) Getter(string n) =>
+                methods.TryGetValue(n, out var h) ? ResolveIntGetter(mr, peReader, h) : (null, null);
+
+            var (minB, minA) = Getter("get_MinInitialHp");
+            var (maxB, maxA) = Getter("get_MaxInitialHp");
+
+            var startPowers = CollectAppliedPowers(mr, peReader, td, methods, "AfterAddedToRoom");
+
+            var moves = ParseMonsterMoves(mr, peReader, td, methods, IntentCat);
+
+            var parts = new List<string>();
+            var hp = new List<string>();
+            if (minB.HasValue) hp.Add($"\"min\": {minB.Value}");
+            if (maxB.HasValue) hp.Add($"\"max\": {maxB.Value}");
+            if (minA.HasValue) hp.Add($"\"minAsc\": {minA.Value}");
+            if (maxA.HasValue) hp.Add($"\"maxAsc\": {maxA.Value}");
+            if (hp.Count > 0) parts.Add($"    \"hp\": {{ {string.Join(", ", hp)} }}");
+            if (startPowers.Count > 0)
+                parts.Add($"    \"startingPowers\": [{string.Join(", ", startPowers.Select(J))}]");
+            if (moves.Count > 0)
+                parts.Add("    \"moves\": [\n" + string.Join(",\n", moves) + "\n    ]");
+
+            if (parts.Count > 0)
+                combat[id] = $"  {J(id)}: {{\n" + string.Join(",\n", parts) + "\n  }";
+        }
+
+        WriteJson(Path.Combine(outDir2, "monster_combat.json"),
+            "{\n" + string.Join(",\n", combat.Values) + "\n}\n");
+        Console.Error.WriteLine($"Extracted combat data for {combat.Count} monsters.");
+        Console.WriteLine(Path.Combine(outDir2, "monster_combat.json"));
+    }
 
     // ---- event_acts.json ----
     const string actNs = "MegaCrit.Sts2.Core.Models.Acts";
@@ -2879,4 +2954,246 @@ static string ResolveCtorDeclaringType(MetadataReader mr, int token)
     }
     catch { }
     return "";
+}
+
+// JSON 文字列リテラル（モンスター抽出ヘルパー共用）
+static string Js(string s) => JsonSerializer.Serialize(s,
+    new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+
+// int を返す getter（HP/ダメージ/ブロック/付与量）の IL から (base, ascension) を解決する。
+//  パターン1: ldc.i4 <enum>; ldc.i4 <asc>; ldc.i4 <base>; call AscensionHelper.GetValueIfAscension; ret
+//             → base=末尾 ldc, asc=末尾から2番目（enum は無視）
+//  パターン2: ldc.i4 <n>; ret（単一リテラル）→ base=その値, asc=null
+//  それ以外（フィールド参照・計算式・Func）→ (null,null)
+static (int? baseV, int? ascV) ResolveIntGetter(MetadataReader mr, PEReader peReader, MethodDefinitionHandle mh)
+{
+    var md = mr.GetMethodDefinition(mh);
+    if (md.RelativeVirtualAddress == 0) return (null, null);
+    var il = peReader.GetMethodBody(md.RelativeVirtualAddress)?.GetILBytes();
+    if (il == null) return (null, null);
+
+    var ldcs = new List<int>();
+    bool ascCall = false;
+    for (int i = 0; i < il.Length; )
+    {
+        if ((il[i] == 0x28 || il[i] == 0x6F) && i + 4 < il.Length) // call/callvirt
+        {
+            int tok = il[i+1] | (il[i+2]<<8) | (il[i+3]<<16) | (il[i+4]<<24);
+            if (ResolveMethodName(mr, tok) == "GetValueIfAscension") ascCall = true;
+            i += 5; continue;
+        }
+        var (v, size) = ReadLdcI4(il, i);
+        if (v.HasValue) ldcs.Add(v.Value);
+        i += size;
+    }
+
+    if (ascCall && ldcs.Count >= 2) return (ldcs[^1], ldcs[^2]);
+    if (!ascCall && ldcs.Count >= 1) return (ldcs[^1], null);
+    return (null, null);
+}
+
+// GenerateMoveStateMachine の IL から各 MoveState を抽出し、整形済みムーブ JSON 行のリストを返す。
+// new MoveState("X_MOVE", Callback, new 〇〇Intent(dmg[,hits]), ...) を線形走査で復元する。
+static List<string> ParseMonsterMoves(MetadataReader mr, PEReader peReader, TypeDefinition td,
+    Dictionary<string, MethodDefinitionHandle> methods, Func<string, string?> intentCat)
+{
+    var result = new List<string>();
+    if (!methods.TryGetValue("GenerateMoveStateMachine", out var gmh)) return result;
+    var gmd = mr.GetMethodDefinition(gmh);
+    if (gmd.RelativeVirtualAddress == 0) return result;
+    var il = peReader.GetMethodBody(gmd.RelativeVirtualAddress)?.GetILBytes();
+    if (il == null) return result;
+
+    string? curStr = null, curCb = null;
+    var curIntents = new List<string>();
+    int? dmg = null, dmgA = null, hits = null;
+    int? lastInt = null, lastIntA = null, prevInt = null, prevIntA = null;
+    var seen = new HashSet<string>(StringComparer.Ordinal);
+
+    void Push(int? v, int? a) { prevInt = lastInt; prevIntA = lastIntA; lastInt = v; lastIntA = a; }
+
+    for (int i = 0; i < il.Length; )
+    {
+        byte op = il[i];
+
+        if (op == 0x72 && i + 4 < il.Length) // ldstr（ムーブ id）
+        {
+            int tok = il[i+1] | (il[i+2]<<8) | (il[i+3]<<16) | (il[i+4]<<24);
+            try { curStr = mr.GetUserString(MetadataTokens.UserStringHandle(tok & 0xFFFFFF)); } catch { }
+            i += 5; continue;
+        }
+        if (op == 0xFE && i + 5 < il.Length && il[i+1] == 0x06) // ldftn（コールバック）
+        {
+            int tok = il[i+2] | (il[i+3]<<8) | (il[i+4]<<16) | (il[i+5]<<24);
+            var nm = ResolveMethodName(mr, tok);
+            if (!string.IsNullOrEmpty(nm) && !nm.StartsWith('<')) curCb = nm;
+            i += 6; continue;
+        }
+        if ((op == 0x28 || op == 0x6F) && i + 4 < il.Length) // call/callvirt（getter の int 値）
+        {
+            int tok = il[i+1] | (il[i+2]<<8) | (il[i+3]<<16) | (il[i+4]<<24);
+            var nm = ResolveMethodName(mr, tok);
+            if (nm.StartsWith("get_") && methods.TryGetValue(nm, out var gh))
+            {
+                var (b, a) = ResolveIntGetter(mr, peReader, gh);
+                if (b.HasValue) Push(b, a);
+            }
+            i += 5; continue;
+        }
+        if (op == 0x73 && i + 4 < il.Length) // newobj（Intent / MoveState）
+        {
+            int tok = il[i+1] | (il[i+2]<<8) | (il[i+3]<<16) | (il[i+4]<<24);
+            var t = ResolveCtorDeclaringType(mr, tok);
+            if (t == "MoveState")
+            {
+                if (curStr != null)
+                {
+                    var rawId  = curStr.EndsWith("_MOVE") ? curStr[..^5] : curStr;
+                    var dispId = Regex.Replace(rawId, @"\d+$", "");   // THRASH2 → THRASH
+                    if (dispId.Length > 0 && seen.Add(dispId))
+                    {
+                        var (block, blockA, powers) = curCb != null
+                            ? ParseMoveBody(mr, peReader, td, methods, curCb)
+                            : (null, null, new List<string>());
+                        var cats = curIntents.Select(intentCat).Where(c => c != null)
+                            .Distinct().ToList();
+
+                        var fields = new List<string> { $"\"id\": {Js(dispId)}" };
+                        if (cats.Count > 0)
+                            fields.Add($"\"intents\": [{string.Join(", ", cats.Select(c => Js(c!)))}]");
+                        if (dmg.HasValue)   fields.Add($"\"damage\": {dmg.Value}");
+                        if (dmgA.HasValue)  fields.Add($"\"damageAsc\": {dmgA.Value}");
+                        if (hits is > 1)    fields.Add($"\"hits\": {hits.Value}");
+                        if (block.HasValue) fields.Add($"\"block\": {block.Value}");
+                        if (blockA.HasValue)fields.Add($"\"blockAsc\": {blockA.Value}");
+                        if (powers.Count > 0)
+                            fields.Add($"\"powers\": [{string.Join(", ", powers)}]");
+                        result.Add("      { " + string.Join(", ", fields) + " }");
+                    }
+                }
+                curStr = null; curCb = null; curIntents.Clear();
+                dmg = dmgA = hits = null;
+                lastInt = lastIntA = prevInt = prevIntA = null;
+                i += 5; continue;
+            }
+            if (t.EndsWith("Intent"))
+            {
+                curIntents.Add(t);
+                if (t == "SingleAttackIntent")      { dmg = lastInt; dmgA = lastIntA; }
+                else if (t == "MultiAttackIntent")  { dmg = prevInt; dmgA = prevIntA; hits = lastInt; }
+                i += 5; continue;
+            }
+            i += 5; continue; // その他 newobj は無視
+        }
+
+        var (v, size) = ReadLdcI4(il, i);
+        if (v.HasValue) Push(v, null);
+        i += size;
+    }
+    return result;
+}
+
+// ムーブ本体（async コールバック → 入れ子 <Cb>d__N.MoveNext）から block / 付与パワーを抽出する。
+//  block        : CreatureCmd.GainBlock が呼ばれ、名前に "Block" を含む getter があればその値
+//  powers       : PowerCmd.Apply<Power> の総称引数（Power 型名）。付与量は名前に Damage/Block を含まない
+//                 getter が 1 個・パワーが 1 個のときのみ value を付与（リテラル量は欠損）
+// メソッドの IL を返す。async メソッドは入れ子ステートマシン <name>d__N.MoveNext を、
+// 通常メソッドはそのまま返す（モンスターのコールバック・AfterAddedToRoom 等は async）。
+static byte[]? GetBodyIl(MetadataReader mr, PEReader peReader, TypeDefinition outerTd,
+    Dictionary<string, MethodDefinitionHandle> outerMethods, string name)
+{
+    foreach (var nh in outerTd.GetNestedTypes())
+    {
+        var nt = mr.GetTypeDefinition(nh);
+        if (!mr.GetString(nt.Name).StartsWith($"<{name}>")) continue;
+        foreach (var mh in nt.GetMethods())
+        {
+            var md = mr.GetMethodDefinition(mh);
+            if (mr.GetString(md.Name) != "MoveNext" || md.RelativeVirtualAddress == 0) continue;
+            return peReader.GetMethodBody(md.RelativeVirtualAddress)?.GetILBytes();
+        }
+    }
+    if (outerMethods.TryGetValue(name, out var dh))
+    {
+        var md = mr.GetMethodDefinition(dh);
+        if (md.RelativeVirtualAddress != 0)
+            return peReader.GetMethodBody(md.RelativeVirtualAddress)?.GetILBytes();
+    }
+    return null;
+}
+
+// 指定メソッド（async 可）の本体から PowerCmd.Apply<Power> の総称引数（Power 型名）を収集する。
+// 開始パワー（AfterAddedToRoom）抽出に使用。
+static List<string> CollectAppliedPowers(MetadataReader mr, PEReader peReader, TypeDefinition td,
+    Dictionary<string, MethodDefinitionHandle> methods, string methodName)
+{
+    var il = GetBodyIl(mr, peReader, td, methods, methodName);
+    var powers = new List<string>();
+    if (il == null) return powers;
+    for (int i = 0; i + 4 < il.Length; )
+    {
+        if (il[i] == 0x28 || il[i] == 0x6F)
+        {
+            int tok = il[i+1] | (il[i+2]<<8) | (il[i+3]<<16) | (il[i+4]<<24);
+            var pa = ResolveMethodSpecFirstArg(mr, tok);
+            if (!string.IsNullOrEmpty(pa) && pa.EndsWith("Power")) powers.Add(CamelToUpperSnake(pa));
+            i += 5; continue;
+        }
+        var (_, size) = ReadLdcI4(il, i);
+        i += size;
+    }
+    return powers.Distinct().ToList();
+}
+
+static (int? block, int? blockA, List<string> powers) ParseMoveBody(
+    MetadataReader mr, PEReader peReader, TypeDefinition outerTd,
+    Dictionary<string, MethodDefinitionHandle> outerMethods, string cbName)
+{
+    var il = GetBodyIl(mr, peReader, outerTd, outerMethods, cbName);
+    if (il == null) return (null, null, new List<string>());
+
+    int? block = null, blockA = null;
+    bool gainBlock = false;
+    var amountGetters = new List<(int? b, int? a)>();
+    var powers = new List<string>();
+
+    for (int i = 0; i < il.Length; )
+    {
+        if ((il[i] == 0x28 || il[i] == 0x6F) && i + 4 < il.Length) // call/callvirt
+        {
+            int tok = il[i+1] | (il[i+2]<<8) | (il[i+3]<<16) | (il[i+4]<<24);
+            var nm = ResolveMethodName(mr, tok);
+            if (nm == "GainBlock") gainBlock = true;
+            else if (nm.StartsWith("get_") && outerMethods.TryGetValue(nm, out var gh))
+            {
+                var (b, a) = ResolveIntGetter(mr, peReader, gh);
+                var low = nm.ToLowerInvariant();
+                if (low.Contains("block")) { if (b.HasValue) { block = b; blockA = a; } }
+                else if (!low.Contains("damage") && b.HasValue) amountGetters.Add((b, a));
+            }
+            else
+            {
+                var pa = ResolveMethodSpecFirstArg(mr, tok); // Apply<Power>
+                if (!string.IsNullOrEmpty(pa) && pa.EndsWith("Power"))
+                    powers.Add(CamelToUpperSnake(pa));
+            }
+            i += 5; continue;
+        }
+        var (_, size) = ReadLdcI4(il, i);
+        i += size;
+    }
+
+    if (!gainBlock) { block = null; blockA = null; }
+    powers = powers.Distinct().ToList();
+
+    var powerJson = new List<string>();
+    foreach (var pid in powers)
+    {
+        if (powers.Count == 1 && amountGetters.Count == 1 && amountGetters[0].b.HasValue)
+            powerJson.Add($"{{ \"id\": {Js(pid)}, \"value\": {amountGetters[0].b}" +
+                          (amountGetters[0].a.HasValue ? $", \"valueAsc\": {amountGetters[0].a}" : "") + " }");
+        else
+            powerJson.Add($"{{ \"id\": {Js(pid)} }}");
+    }
+    return (block, blockA, powerJson);
 }
