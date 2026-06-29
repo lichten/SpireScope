@@ -37,6 +37,8 @@ public partial class DeckOverviewForm : Form
     bool _characterMode;
     // キャラクター概観の先頭に「戦闘中に消滅する」グループを表示する（旧「デッキ枚数理論値」フォームの統合先）。
     bool _showDisposableGroup;
+    // キャラクター概観に「ブロック関連」クロス集計グループを表示する。
+    bool _showBlockGroup;
     string? _autoCharacterId;
 
     public DeckOverviewForm()
@@ -114,6 +116,7 @@ public partial class DeckOverviewForm : Form
     {
         _characterMode = true;
         _showDisposableGroup = true;
+        _showBlockGroup = true;
         _charSelector.Items.Clear();
         _charSelector.Items.Add("自動（セーブ）");
         foreach (var l in CharacterLabels) _charSelector.Items.Add(l);
@@ -366,6 +369,16 @@ public partial class DeckOverviewForm : Form
             foreach (var c in cardGroup)  assignedCards.Add(c);
             foreach (var r in relicGroup) assignedRelics.Add(r);
             result.Add((ja ? labelJa : labelEn, cardGroup, relicGroup));
+        }
+
+        // 「ブロック関連」クロス集計グループ。該当カードは assignedCards に登録して「その他」と重複させない
+        // （メカニクス群・消滅群との重複表示は許容＝クロス集計）。
+        if (_showBlockGroup)
+        {
+            var block = cards.Where(c => CardDatabaseService.IsBlockGiver(c.Id))
+                             .OrderBy(c => ja ? c.NameJa : c.NameEn).ToList();
+            foreach (var c in block) assignedCards.Add(c);
+            result.Add((ja ? "ブロック関連" : "Block-related", block, new List<RelicEntry>()));
         }
 
         // 「戦闘中に消滅する」グループ（旧フォームの統合）。メカニクス群の後・「その他」の直前に出し、
