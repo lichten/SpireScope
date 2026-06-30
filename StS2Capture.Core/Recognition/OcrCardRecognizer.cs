@@ -1,9 +1,4 @@
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
-using Windows.Globalization;
-using Windows.Graphics.Imaging;
 using Windows.Media.Ocr;
-using Windows.Storage.Streams;
 
 namespace StS2Capture.Recognition;
 
@@ -23,7 +18,7 @@ public sealed class OcrCardRecognizer : ICardRecognizer
     public OcrCardRecognizer(CardNameIndex index)
     {
         _index = index;
-        _engine = CreateEngine();
+        _engine = OcrEngineHelper.CreateEngine();
     }
 
     /// <summary>カード矩形検出器（縁色しきい値の調整用に公開）。</summary>
@@ -49,16 +44,6 @@ public sealed class OcrCardRecognizer : ICardRecognizer
     public string? SaveTitleCropsDir { get; set; }
 
     static int _cropSeq;
-
-    static OcrEngine? CreateEngine()
-    {
-        // ユーザのプロファイル言語（多くは日本語）でエンジンを作る。
-        var engine = OcrEngine.TryCreateFromUserProfileLanguages();
-        if (engine is not null) return engine;
-        // フォールバックで英語を試す。
-        try { return OcrEngine.TryCreateFromLanguage(new Language("en")); }
-        catch { return null; }
-    }
 
     public RecognitionResult Recognize(Bitmap frame)
     {
@@ -142,15 +127,7 @@ public sealed class OcrCardRecognizer : ICardRecognizer
         else if (newIsTitle == prevIsTitle && confidence > prev.Confidence) found[cardId] = rc;
     }
 
-    OcrResult? RunOcr(Bitmap bmp)
-    {
-        SoftwareBitmap? sb = null;
-        try { sb = ToSoftwareBitmap(bmp); }
-        catch { return null; }
-        try { return _engine!.RecognizeAsync(sb).AsTask().GetAwaiter().GetResult(); }
-        catch { return null; }
-        finally { sb?.Dispose(); }
-    }
+    OcrResult? RunOcr(Bitmap bmp) => OcrEngineHelper.RunOcr(_engine!, bmp);
 
     void TrySaveCrop(Bitmap crop)
     {
@@ -193,26 +170,5 @@ public sealed class OcrCardRecognizer : ICardRecognizer
         }
         if (l == double.MaxValue) return Rectangle.Empty;
         return Rectangle.FromLTRB((int)l, (int)t, (int)r, (int)b);
-    }
-
-    /// <summary>System.Drawing.Bitmap → SoftwareBitmap(Bgra8)。</summary>
-    static SoftwareBitmap ToSoftwareBitmap(Bitmap bmp)
-    {
-        int w = bmp.Width, h = bmp.Height;
-        var data = bmp.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.ReadOnly,
-            PixelFormat.Format32bppArgb);
-        var bytes = new byte[w * 4 * h];
-        try
-        {
-            for (int y = 0; y < h; y++)
-                Marshal.Copy(data.Scan0 + y * data.Stride, bytes, y * w * 4, w * 4);
-        }
-        finally { bmp.UnlockBits(data); }
-
-        var sb = new SoftwareBitmap(BitmapPixelFormat.Bgra8, w, h, BitmapAlphaMode.Premultiplied);
-        using var dw = new DataWriter();
-        dw.WriteBytes(bytes);
-        sb.CopyFromBuffer(dw.DetachBuffer());
-        return sb;
     }
 }

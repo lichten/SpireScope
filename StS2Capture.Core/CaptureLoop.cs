@@ -299,6 +299,8 @@ public sealed class CaptureLoop : IDisposable
                 $"ショップ画面：カード {screen.Cards.Count}・レリック/ポーション {accessories} 件（{source.Name}）{ctx}",
             ScreenRecognizer.ScreenType.CardSelect =>
                 $"カードを選択画面：{screen.Cards.Count} 枚検出（{source.Name}）{ctx}",
+            ScreenRecognizer.ScreenType.AncientSelect =>
+                $"エンシェントレリック選択画面：{accessories} 件（{source.Name}）{ctx}",
             _ => $"対象画面なし（{source.Name}）{ctx}",
         };
 

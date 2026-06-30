@@ -71,15 +71,24 @@ public sealed class ShopItemRecognizer
     public Result Detect(Bitmap frame, Rectangle client)
     {
         var relicDb = EnsureDb(ref _relicDb, _relicsDir,
-            CardDatabaseService.GetAllRelicIds(), RelicImageService.GetSourcePath);
+            CardDatabaseService.GetAllRelicIds(), RelicImageService.GetSourcePath, ShopBackground);
         var potionDb = EnsureDb(ref _potionDb, _potionsDir,
-            PotionImageService.Ids, PotionImageService.GetSourcePath);
+            PotionImageService.Ids, PotionImageService.GetSourcePath, ShopBackground);
 
-        var items = new List<Item>(Slots.Count);
         int side = Math.Max(8, (int)(client.Height * SlotSizeFrac));
+        var items = ProbeSlots(frame, client, Slots, side, relicDb, potionDb, MaxDistance);
+        bool isShop = items.Count(i => i.Accepted) >= MinMatchesForShop;
+        return new Result(isShop, items);
+    }
+
+    /// <summary>固定スロット群を走査し、各スロットを relic/potion DB と照合した <see cref="Item"/> 列を返す。</summary>
+    List<Item> ProbeSlots(Bitmap frame, Rectangle client, IReadOnlyList<Slot> slots, int side,
+        Dictionary<string, float[]> relicDb, Dictionary<string, float[]> potionDb, double maxDistance)
+    {
+        var items = new List<Item>(slots.Count);
         var frameRect = new Rectangle(0, 0, frame.Width, frame.Height);
 
-        foreach (var slot in Slots)
+        foreach (var slot in slots)
         {
             int cx = client.X + (int)(client.Width * slot.CxFrac);
             int cy = client.Y + (int)(client.Height * slot.CyFrac);
@@ -89,16 +98,14 @@ public sealed class ShopItemRecognizer
 
             TrySaveCrop(frame, rect);
 
-            // クエリは実背景（羊皮紙）上にあるので合成なし。DB は背景合成済み。
+            // クエリは実背景上にあるので合成なし。DB は背景合成済み。
             var q = HsvHistogram.Compute(frame, rect, null, SatBins, ValBins);
             var db = slot.Kind == Kind.Relic ? relicDb : potionDb;
-            var cands = NearestCandidates(q, db, slot.Kind);
+            var cands = NearestCandidates(q, db, slot.Kind, maxDistance);
 
             items.Add(new Item(slot.Kind, rect, cands, cands.Count > 0));
         }
-
-        bool isShop = items.Count(i => i.Accepted) >= MinMatchesForShop;
-        return new Result(isShop, items);
+        return items;
     }
 
     static string NameOf(Kind kind, string id) =>
@@ -110,14 +117,14 @@ public sealed class ShopItemRecognizer
     /// best が <see cref="MaxDistance"/> 以内なら、best と best からタイ窓（<see cref="MinMargin"/>）以内の
     /// 近接候補を距離昇順で最大 <see cref="MaxCandidates"/> 件返す。圏外なら空（不採用）。
     /// </summary>
-    IReadOnlyList<Candidate> NearestCandidates(float[] q, Dictionary<string, float[]> db, Kind kind)
+    IReadOnlyList<Candidate> NearestCandidates(float[] q, Dictionary<string, float[]> db, Kind kind, double maxDistance)
     {
         var scored = new List<(string Id, double D)>(db.Count);
         foreach (var (id, h) in db) scored.Add((id, HsvHistogram.ChiSquare(q, h)));
         scored.Sort((a, b) => a.D.CompareTo(b.D));
 
         var result = new List<Candidate>();
-        if (scored.Count == 0 || scored[0].D > MaxDistance) return result;
+        if (scored.Count == 0 || scored[0].D > maxDistance) return result;
         double best = scored[0].D;
         foreach (var (id, d) in scored)
         {
@@ -128,7 +135,7 @@ public sealed class ShopItemRecognizer
     }
 
     Dictionary<string, float[]> EnsureDb(ref Dictionary<string, float[]>? cache, string? dir,
-        IEnumerable<string> ids, Func<string, string, string?> resolve)
+        IEnumerable<string> ids, Func<string, string, string?> resolve, Color background)
     {
         if (cache is not null) return cache;
         cache = new(StringComparer.Ordinal);
@@ -140,9 +147,9 @@ public sealed class ShopItemRecognizer
             try
             {
                 using var bmp = new Bitmap(path);
-                // 透過余白をトリムしてアートを枠いっぱいに → ショップ背景色で合成してから集計（照合成立の鍵）。
+                // 透過余白をトリムしてアートを枠いっぱいに → 画面背景色で合成してから集計（照合成立の鍵）。
                 cache[id] = HsvHistogram.Compute(bmp,
-                    HsvHistogram.AlphaBoundingBox(bmp), ShopBackground, SatBins, ValBins);
+                    HsvHistogram.AlphaBoundingBox(bmp), background, SatBins, ValBins);
             }
             catch { /* 壊れた画像はスキップ */ }
         }

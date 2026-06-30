@@ -645,12 +645,13 @@ namespace StS2Toys
             _capturePreview.Image = result.Preview;
             oldPreview?.Dispose();
 
-            bool isShop = result.Shop is { IsShop: true };
+            // ショップ・エンシェントレリック選択はどちらもレリック/ポーション行（result.Shop.Items）を持つ。
+            bool hasShopItems = result.Shop is { Items.Count: > 0 };
             var signature = string.Join("|",
                 result.Cards.Select(c => $"{c.CardId}:{c.Confidence:F2}"))
                 + "##" + string.Join("|", result.TextSpans.Select(s => s.Text))
-                + "##SHOP:" + (isShop
-                    ? string.Join("|", result.Shop!.Items.Select(i =>
+                + "##SHOP:" + (hasShopItems
+                    ? result.Screen + "|" + string.Join("|", result.Shop!.Items.Select(i =>
                         $"{i.Kind}:{string.Join(",", i.Candidates.Select(c => c.Id))}"))
                     : "");
             if (signature == _lastSignature) return;
@@ -670,10 +671,13 @@ namespace StS2Toys
             }
             _list.EndUpdate();
 
-            // ショップ画面ならショップ候補、そうでなければ OCR テキスト行を同じリストに描画（更新経路は1本）。
+            // ショップ／エンシェントレリック選択ならレリック行、そうでなければ OCR テキスト行を描画（更新経路は1本）。
+            _ocrHeaderLabel.Text = result.Screen == ScreenRecognizer.ScreenType.AncientSelect
+                ? "エンシェントレリック候補"
+                : "ショップ候補（レリック／ポーション）";
             _ocrList.BeginUpdate();
             _ocrList.Items.Clear();
-            if (isShop)
+            if (hasShopItems)
                 foreach (var lvi in BuildShopRows(result.Shop!)) _ocrList.Items.Add(lvi);
             else
                 foreach (var lvi in BuildOcrRows(result.TextSpans)) _ocrList.Items.Add(lvi);

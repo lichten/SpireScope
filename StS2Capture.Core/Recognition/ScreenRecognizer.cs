@@ -13,7 +13,7 @@ namespace StS2Capture.Recognition;
 /// </summary>
 public sealed class ScreenRecognizer
 {
-    public enum ScreenType { Unknown, CardSelect, Shop }
+    public enum ScreenType { Unknown, CardSelect, Shop, AncientSelect }
 
     /// <summary>カード全体矩形をクライアント相対で表す（中心 + 大きさ）。アート窓・枠帯はここから導出する。</summary>
     public readonly record struct CardSlot(double CxFrac, double CyFrac, double WFrac, double HFrac);
@@ -32,6 +32,9 @@ public sealed class ScreenRecognizer
 
     /// <summary>カード選択画面とみなす最小の確信一致カード数。</summary>
     public int MinCardsForSelect { get; set; } = 2;
+
+    /// <summary>カード選択判定に必要な1枚あたり最低確信度（誤検出防止。実機で較正）。</summary>
+    public double MinSelectConfidence { get; set; } = 0.30;
 
     /// <summary>portrait 下端トリム（種別装飾を除外。<see cref="TemplateCardRecognizer"/> と同値）。</summary>
     const double PortraitBottomTrim = 0.15;
@@ -68,6 +71,7 @@ public sealed class ScreenRecognizer
     static int _cropSeq;
 
     readonly ShopItemRecognizer _shop;
+    readonly AncientRelicRecognizer _ancient = new();
     readonly string? _portraitsDir = ResolvePortraitsDir();
 
     // キャラ正規化キー（大文字、"" = ニュートラル）→ (CardId, 正規化 HSV ヒストグラム)。遅延構築。
@@ -92,9 +96,20 @@ public sealed class ScreenRecognizer
             return new ScreenResult(ScreenType.Shop, shopCards, shop, CardRects(client, ShopCardSlots));
         }
 
-        // 2) ショップでなければカード選択スロットを probe。
+        // 2) エンシェントレリック選択画面（固定バンドのレリック名を OCR 照合）。
+        ShopItemRecognizer.Result? ancient = null;
+        try { ancient = _ancient.Detect(frame, client); } catch { /* 失敗時は非該当扱い */ }
+        if (ancient is { IsShop: true })
+            return new ScreenResult(ScreenType.AncientSelect,
+                Array.Empty<RecognizedCard>(), ancient, Array.Empty<Rectangle>());
+
+        // 3) いずれでもなければカード選択スロットを probe。
         var cards = ProbeCards(frame, client, CardSelectSlots, currentCharacterId);
-        if (cards.Count >= MinCardsForSelect)
+        // 相異なるカードが必要数あり、かつ確信カードも必要数ある場合のみ「カードを選択」とみなす。
+        // （同一カードばかり＝誤検出、全て低確信＝枠色類似イラストの誤一致を弾く）
+        int distinctCards = cards.Select(c => c.CardId).Distinct().Count();
+        int confidentCards = cards.Count(c => c.Confidence >= MinSelectConfidence);
+        if (distinctCards >= MinCardsForSelect && confidentCards >= MinCardsForSelect)
             return new ScreenResult(ScreenType.CardSelect, cards, null, CardRects(client, CardSelectSlots));
 
         return new ScreenResult(ScreenType.Unknown, Array.Empty<RecognizedCard>(), null, Array.Empty<Rectangle>());

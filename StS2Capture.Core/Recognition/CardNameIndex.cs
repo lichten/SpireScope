@@ -27,6 +27,21 @@ public sealed class CardNameIndex
         return idx;
     }
 
+    /// <summary>
+    /// 全レリック名（EN/JP）→ レリック ID の索引。エンシェントレリック選択画面の名前テキスト照合に使う。
+    /// <see cref="Match.CardId"/> にはレリック ID が入る（クラスは汎用）。
+    /// </summary>
+    public static CardNameIndex BuildRelics()
+    {
+        var idx = new CardNameIndex();
+        foreach (var id in CardDatabaseService.GetAllRelicIds())
+        {
+            idx.Add(CardDatabaseService.GetRelicTitle(id, japanese: false), id);
+            idx.Add(CardDatabaseService.GetRelicTitle(id, japanese: true), id);
+        }
+        return idx;
+    }
+
     void Add(string name, string cardId)
     {
         var norm = Normalize(name);
