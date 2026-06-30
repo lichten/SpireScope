@@ -11,8 +11,7 @@ record AppSettings(
     int? SidePanelWidth = null,
     SubWindowSettings? CharacterOverview = null,
     SubWindowSettings? CombinedOverview = null,
-    string? Language = null,
-    SubWindowSettings? LiveCapture = null);
+    string? Language = null);
 
 static class WindowSettingsService
 {

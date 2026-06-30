@@ -1,3 +1,7 @@
+using System.Diagnostics;
+using StS2Capture;
+using StS2Capture.Capture;
+using StS2Capture.Recognition;
 using StS2Shared.Models;
 using StS2Toys.Services;
 using StS2Shared.Services;
@@ -13,8 +17,6 @@ namespace StS2Toys
         private DeckOverviewForm? _characterOverview;
         private EncounterOverviewForm? _encounterOverview;
         private HpHistoryForm? _hpHistory;
-        private LiveCaptureForm? _liveCapture;
-        private SubWindowSettings? _liveCaptureSettings;
         private SubWindowSettings? _combinedOverviewSettings;
         private SubWindowSettings? _encounterOverviewSettings;
         private SubWindowSettings? _hpHistorySettings;
@@ -23,21 +25,43 @@ namespace StS2Toys
         private IReadOnlyList<RelicEntry>? _lastRelics;
         private RunSaveData? _lastRunData;
 
-        // デッキリストのソート状態
-        private int _sortColumn = -1;
-        private bool _sortAscending = true;
+        // ---- ライブキャプチャ（カード／ショップ検出。旧 LiveCaptureForm から統合） ----
+        private readonly CaptureLoop _loop;
+        private readonly ShopItemRecognizer _shop = new();
+        private readonly ScreenRecognizer _screen;
+        private string _lastSignature = "";
+        private readonly ContextMenuStrip _linkMenu = new();
+        private List<UrlTemplate> _templates = UrlTemplateService.Load();
 
-        static string[] DeckColumnTexts => AppLanguage.IsJapanese
-            ? ["カード名 (EN)", "カード名 (JP)", "コスト", "種別", "エンチャント", "枚数"]
-            : ["Card Name (EN)", "Card Name (JP)", "Cost", "Type", "Enchantment", "Count"];
+        // 枠色プロファイルの手動上書き候補。先頭は「自動（セーブから解決）」。
+        static readonly string[] CharacterChoices =
+            { "DEFECT", "SILENT", "IRONCLAD", "NECROBINDER", "REGENT" };
+
+        /// <summary>検出結果リスト行に付与する、リンク生成用の種別＋ID。</summary>
+        sealed record LinkTarget(string Kind, string Id);
 
         public Form1()
         {
+            // 固定矩形レイアウト方式：画面ごとに固定座標を probe してカード・レリック・ポーションを検出。
+            _screen = new ScreenRecognizer(_shop);
+            _loop = new CaptureLoop(new WgcFrameSource());
+            _loop.ScreenRecognizer = _screen;
+            _loop.Updated += OnLoopUpdated;
+
             InitializeComponent();
             Load += Form1_Load;
             FormClosing += Form1_FormClosing;
             _reloadTimer.Tick += (_, _) => { _reloadTimer.Stop(); ReloadCurrentFile(); };
             _flashTimer.Tick += (_, _) => { _flashTimer.Stop(); lblUpdateFlash.Text = ""; };
+
+            // 枠キャラ候補（先頭は「自動（セーブから解決）」）。
+            _cbCharacter.Items.Add("自動（セーブ）");
+            foreach (var c in CharacterChoices) _cbCharacter.Items.Add(c);
+            _cbCharacter.SelectedIndex = 0;
+
+            WireCaptureEvents();
+            _rbWgc.Checked = true;
+            UpdateStartupStatus();
         }
 
         void Form1_Load(object? sender, EventArgs e)
@@ -49,6 +73,10 @@ namespace StS2Toys
                 OpenFile(defaultPath);
                 RestoreSubWindowVisibility();
             }
+
+            // キャプチャ内容ペインの初期分割（実サイズ確定後に設定）。
+            SetSplitterDistance(_outer, (int)(_outer.Width * 0.55));
+            SetSplitterDistance(_left, (int)(_left.Height * 0.5));
         }
 
         void Form1_FormClosing(object? sender, FormClosingEventArgs e)
@@ -61,6 +89,7 @@ namespace StS2Toys
             _encounterOverview?.Close();
             _hpHistory?.Close();
             _characterOverview?.Close();
+            _loop.Dispose();
         }
 
         void RestoreWindowSettings()
@@ -72,7 +101,6 @@ namespace StS2Toys
             _encounterOverviewSettings = app.EncounterOverview;
             _hpHistorySettings = app.HpHistory;
             _characterOverviewSettings = app.CharacterOverview;
-            _liveCaptureSettings = app.LiveCapture;
 
             if (app.SidePanelWidth is int w)
                 splitContainerOuter.SplitterDistance = w;
@@ -100,13 +128,11 @@ namespace StS2Toys
                 _encounterOverviewSettings = WindowToSub(_encounterOverview);
             if (_hpHistory is { IsDisposed: false })
                 _hpHistorySettings = WindowToSub(_hpHistory);
-            if (_liveCapture is { IsDisposed: false })
-                _liveCaptureSettings = WindowToSub(_liveCapture);
 
             var state = WindowState == FormWindowState.Minimized ? FormWindowState.Normal : WindowState;
             var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
             var main = new WindowSettings(bounds.X, bounds.Y, bounds.Width, bounds.Height, state.ToString());
-            WindowSettingsService.Save(new AppSettings(main, _hpHistorySettings, _encounterOverviewSettings, splitContainerOuter.SplitterDistance, _characterOverviewSettings, _combinedOverviewSettings, AppLanguage.IsJapanese ? "ja" : "en", _liveCaptureSettings));
+            WindowSettingsService.Save(new AppSettings(main, _hpHistorySettings, _encounterOverviewSettings, splitContainerOuter.SplitterDistance, _characterOverviewSettings, _combinedOverviewSettings, AppLanguage.IsJapanese ? "ja" : "en"));
         }
 
         static SubWindowSettings WindowToSub(Form form) =>
@@ -118,7 +144,6 @@ namespace StS2Toys
             if (_encounterOverviewSettings?.Visible == true)  BtnEncounterOverview_Click(null, EventArgs.Empty);
             if (_hpHistorySettings?.Visible == true)          BtnHpHistory_Click(null, EventArgs.Empty);
             if (_characterOverviewSettings?.Visible == true)  BtnCharacterOverview_Click(null, EventArgs.Empty);
-            if (_liveCaptureSettings?.Visible == true)           BtnLiveCapture_Click(null, EventArgs.Empty);
         }
 
         static SubWindowSettings BoundsToSub(Rectangle r) => new(r.X, r.Y, r.Width, r.Height);
@@ -290,45 +315,6 @@ namespace StS2Toys
                         g.Key.EnchantmentAmount);
                 })
                 .ToList();
-
-            RefreshDeckList();
-        }
-
-        void RefreshDeckList()
-        {
-            if (_lastDeckCards is null) return;
-
-            int total = _lastDeckCards.Sum(c => c.Count);
-
-            var cards = _lastDeckCards;
-
-            bool ja = AppLanguage.IsJapanese;
-            lblDeckTitle.Text = ja ? $"デッキ ({total}枚)" : $"Deck ({total})";
-
-            var colTexts = DeckColumnTexts;
-            for (int ci = 0; ci < listViewDeck.Columns.Count; ci++)
-                listViewDeck.Columns[ci].Text = colTexts[ci] + (ci == _sortColumn ? (_sortAscending ? " ▲" : " ▼") : "");
-
-            listViewDeck.BeginUpdate();
-            listViewDeck.Items.Clear();
-            foreach (var c in cards)
-            {
-                var item = new ListViewItem(c.NameEn);
-                item.SubItems.Add(c.NameJa);
-                item.SubItems.Add(c.Cost);
-                item.SubItems.Add(LocalizeType(c.Type));
-                item.SubItems.Add(CardDatabaseService.FormatEnchantmentLabel(c.EnchantmentId, c.EnchantmentAmount, japanese: true));
-                item.SubItems.Add(c.Count.ToString());
-                item.Tag = c;
-                listViewDeck.Items.Add(item);
-            }
-            listViewDeck.EndUpdate();
-
-            if (_sortColumn >= 0)
-                listViewDeck.ListViewItemSorter = new DeckItemComparer(_sortColumn, _sortAscending);
-
-            RefreshCombinedOverview();
-            RefreshCharacterOverview();
         }
 
         void DisplayRelics(PlayerData player)
@@ -339,21 +325,6 @@ namespace StS2Toys
                     CardDatabaseService.GetName(r.Id, japanese: false),
                     CardDatabaseService.GetName(r.Id, japanese: true)))
                 .ToList();
-
-            lblRelicsTitle.Text = AppLanguage.IsJapanese
-                ? $"レリック ({player.Relics.Count}個)"
-                : $"Relics ({player.Relics.Count})";
-
-            listViewRelics.BeginUpdate();
-            listViewRelics.Items.Clear();
-            foreach (var relic in _lastRelics)
-            {
-                var item = new ListViewItem(relic.NameEn);
-                item.SubItems.Add(relic.NameJa);
-                item.Tag = relic.Id;
-                listViewRelics.Items.Add(item);
-            }
-            listViewRelics.EndUpdate();
 
             RefreshCombinedOverview();
             RefreshCharacterOverview();
@@ -546,66 +517,6 @@ namespace StS2Toys
             _characterOverview.UpdateRelics(_lastRelics ?? []);
         }
 
-        void ListViewDeck_ColumnClick(object? sender, ColumnClickEventArgs e)
-        {
-            if (_sortColumn == e.Column)
-                _sortAscending = !_sortAscending;
-            else
-            {
-                _sortColumn = e.Column;
-                _sortAscending = true;
-            }
-
-            var colTexts = DeckColumnTexts;
-            for (int i = 0; i < listViewDeck.Columns.Count; i++)
-                listViewDeck.Columns[i].Text = colTexts[i] + (i == _sortColumn ? (_sortAscending ? " ▲" : " ▼") : "");
-
-            listViewDeck.ListViewItemSorter = new DeckItemComparer(_sortColumn, _sortAscending);
-        }
-
-        static string LocalizeType(string type) => AppLanguage.IsJapanese
-            ? type switch
-            {
-                "Attack" => "アタック",
-                "Skill"  => "スキル",
-                "Power"  => "パワー",
-                "Status" => "状態",
-                "Curse"  => "呪い",
-                "Quest"  => "クエスト",
-                _        => type
-            }
-            : type;
-
-        void BtnLiveCapture_Click(object? sender, EventArgs e)
-        {
-            if (_liveCapture is null || _liveCapture.IsDisposed || !_liveCapture.Visible)
-            {
-                if (_liveCapture is null || _liveCapture.IsDisposed)
-                {
-                    _liveCapture = new LiveCaptureForm();
-                    ApplySubWindowSettings(_liveCapture, _liveCaptureSettings, new Point(Right + 4, Top));
-                    _liveCapture.FormClosed += (_, _) =>
-                    {
-                        _liveCaptureSettings = BoundsToSub(_liveCapture.Bounds);
-                        UpdateLiveCaptureButton(false);
-                    };
-                }
-                _liveCapture.Show(this);
-                UpdateLiveCaptureButton(true);
-            }
-            else
-            {
-                _liveCapture.Hide();
-                UpdateLiveCaptureButton(false);
-            }
-        }
-
-        void UpdateLiveCaptureButton(bool visible)
-        {
-            btnLiveCapture.Text = visible ? "● ライブキャプチャ" : "○ ライブキャプチャ";
-            btnLiveCapture.ForeColor = visible ? Color.DarkBlue : SystemColors.ControlText;
-        }
-
         void BtnHpHistory_Click(object? sender, EventArgs e)
         {
             if (_hpHistory is null || _hpHistory.IsDisposed || !_hpHistory.Visible)
@@ -643,24 +554,182 @@ namespace StS2Toys
             if (_lastRunData is null) return;
             _hpHistory.UpdateHistory(_lastRunData.MapPointHistory);
         }
-    }
 
-    sealed class DeckItemComparer(int column, bool ascending) : System.Collections.IComparer
-    {
-        // 枚数カラム (index 3) は数値、それ以外は文字列比較
-        public int Compare(object? x, object? y)
+        // ---- ライブキャプチャ（旧 LiveCaptureForm から統合） ----
+
+        void WireCaptureEvents()
         {
-            var a = (ListViewItem)x!;
-            var b = (ListViewItem)y!;
-            string sa = column < a.SubItems.Count ? a.SubItems[column].Text : "";
-            string sb = column < b.SubItems.Count ? b.SubItems[column].Text : "";
+            _rbWgc.CheckedChanged += (_, _) => { if (_rbWgc.Checked) _loop.SetFrameSource(new WgcFrameSource()); };
+            _rbGdi.CheckedChanged += (_, _) => { if (_rbGdi.Checked) _loop.SetFrameSource(new GdiFrameSource()); };
 
-            // コスト (index 2) と枚数 (index 5) は数値比較
-            int result = column is 2 or 5 && int.TryParse(sa, out int ia) && int.TryParse(sb, out int ib)
-                ? ia.CompareTo(ib)
-                : string.Compare(sa, sb, StringComparison.CurrentCulture);
+            _cbAuto.CheckedChanged += (_, _) =>
+            {
+                if (_cbAuto.Checked) _loop.Start();
+                else _loop.Stop();
+            };
 
-            return ascending ? result : -result;
+            _btnCapture.Click += (_, _) => Task.Run(_loop.CaptureOnce);
+            _btnLinks.Click += (_, _) => EditLinkTemplates();
+
+            // 検出結果リスト（カード／ショップ）右クリックで情報ページリンクを開く。
+            _list.ContextMenuStrip = _linkMenu;
+            _ocrList.ContextMenuStrip = _linkMenu;
+            _linkMenu.Opening += OnLinkMenuOpening;
+
+            _cbCharacter.SelectedIndexChanged += (_, _) =>
+                _loop.CharacterOverride = _cbCharacter.SelectedIndex <= 0
+                    ? null
+                    : (string)_cbCharacter.SelectedItem!;
+        }
+
+        static void SetSplitterDistance(SplitContainer sc, int distance)
+        {
+            int extent = sc.Orientation == Orientation.Vertical ? sc.Width : sc.Height;
+            int min = sc.Panel1MinSize;
+            int max = extent - sc.Panel2MinSize - sc.SplitterWidth;
+            if (max < min) return;
+            try { sc.SplitterDistance = Math.Clamp(distance, min, max); } catch { }
+        }
+
+        void EditLinkTemplates()
+        {
+            using var dlg = new UrlTemplateSettingsForm();
+            if (dlg.ShowDialog(this) == DialogResult.OK)
+                _templates = UrlTemplateService.Load();
+        }
+
+        void OnLinkMenuOpening(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            _linkMenu.Items.Clear();
+            var lv = _linkMenu.SourceControl as ListView;
+            var target = lv is { SelectedItems.Count: > 0 } ? lv.SelectedItems[0].Tag as LinkTarget : null;
+            if (target is null) { e.Cancel = true; return; }
+
+            var links = SiteLinkService.BuildLinks(_templates, target.Kind, target.Id);
+            if (links.Count == 0)
+            {
+                var none = _linkMenu.Items.Add("（リンク設定なし）");
+                none.Enabled = false;
+                return;
+            }
+            foreach (var link in links)
+            {
+                var url = link.Url;
+                var item = new ToolStripMenuItem($"{link.Label}: {url}");
+                item.Click += (_, _) => OpenUrl(url);
+                _linkMenu.Items.Add(item);
+            }
+        }
+
+        void OpenUrl(string url)
+        {
+            try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
+            catch (Exception ex) { _status.Text = $"リンク起動エラー：{ex.Message}"; }
+        }
+
+        void UpdateStartupStatus()
+        {
+            var game = GameWindowLocator.Find();
+            var parts = new List<string>
+            {
+                game is null ? "ゲーム未検出" : $"ゲーム検出: {game.Value.Title}",
+            };
+            if (!_screen.IsAvailable) parts.Add("（注意: portraits ディレクトリ未検出）");
+            _status.Text = string.Join("  ", parts);
+        }
+
+        void OnLoopUpdated(CaptureLoop.Result result)
+        {
+            if (IsDisposed) return;
+            try { BeginInvoke(() => ApplyResult(result)); }
+            catch { /* フォーム破棄中 */ }
+        }
+
+        void ApplyResult(CaptureLoop.Result result)
+        {
+            _status.Text = result.Status;
+
+            var oldPreview = _capturePreview.Image;
+            _capturePreview.Image = result.Preview;
+            oldPreview?.Dispose();
+
+            bool isShop = result.Shop is { IsShop: true };
+            var signature = string.Join("|",
+                result.Cards.Select(c => $"{c.CardId}:{c.Confidence:F2}"))
+                + "##" + string.Join("|", result.TextSpans.Select(s => s.Text))
+                + "##SHOP:" + (isShop
+                    ? string.Join("|", result.Shop!.Items.Select(i =>
+                        $"{i.Kind}:{string.Join(",", i.Candidates.Select(c => c.Id))}"))
+                    : "");
+            if (signature == _lastSignature) return;
+            _lastSignature = signature;
+
+            _list.BeginUpdate();
+            _list.Items.Clear();
+            foreach (var c in result.Cards)
+            {
+                var item = new ListViewItem(c.CardId);
+                item.SubItems.Add(CardDatabaseService.GetName(c.CardId, japanese: false));
+                item.SubItems.Add(CardDatabaseService.GetName(c.CardId, japanese: true));
+                item.SubItems.Add(c.Confidence.ToString("F2"));
+                item.SubItems.Add(c.Recognizer);
+                item.Tag = new LinkTarget("card", c.CardId);
+                _list.Items.Add(item);
+            }
+            _list.EndUpdate();
+
+            // ショップ画面ならショップ候補、そうでなければ OCR テキスト行を同じリストに描画（更新経路は1本）。
+            _ocrList.BeginUpdate();
+            _ocrList.Items.Clear();
+            if (isShop)
+                foreach (var lvi in BuildShopRows(result.Shop!)) _ocrList.Items.Add(lvi);
+            else
+                foreach (var lvi in BuildOcrRows(result.TextSpans)) _ocrList.Items.Add(lvi);
+            _ocrList.EndUpdate();
+        }
+
+        static IEnumerable<ListViewItem> BuildOcrRows(IReadOnlyList<OcrTextSpan> spans)
+        {
+            foreach (var s in spans)
+            {
+                var item = new ListViewItem(s.Text);
+                item.SubItems.Add(s.Source == "title" ? "帯" : "全");
+                item.SubItems.Add(s.MatchedCardId ?? "(none)");
+                item.SubItems.Add(s.Distance?.ToString() ?? "-");
+                if (s.MatchedCardId is not null) item.Tag = new LinkTarget("card", s.MatchedCardId);
+                if (s.MatchedCardId is not null)
+                    item.BackColor = s.Source == "title"
+                        ? Color.FromArgb(255, 235, 200)
+                        : Color.FromArgb(220, 245, 220);
+                else if (s.Source == "title")
+                    item.BackColor = Color.FromArgb(245, 245, 245);
+                yield return item;
+            }
+        }
+
+        static IEnumerable<ListViewItem> BuildShopRows(ShopItemRecognizer.Result res)
+        {
+            foreach (var it in res.Items)
+            {
+                var label = it.Candidates.Count == 0
+                    ? "(no match)"
+                    : string.Join(" / ", it.Candidates.Select(c => $"{c.Name} [{c.Id}]"));
+                var dist = it.Candidates.Count == 0
+                    ? "-"
+                    : string.Join(" / ", it.Candidates.Select(c => c.Distance.ToString("F2")));
+                var lvi = new ListViewItem(label);
+                lvi.SubItems.Add(it.Kind == ShopItemRecognizer.Kind.Relic ? "R" : "P");
+                lvi.SubItems.Add(it.Accepted ? (it.Candidates.Count > 1 ? $"OK×{it.Candidates.Count}" : "OK") : "-");
+                lvi.SubItems.Add(dist);
+                if (it.Candidates.Count > 0)
+                    lvi.Tag = new LinkTarget(
+                        it.Kind == ShopItemRecognizer.Kind.Relic ? "relic" : "potion",
+                        it.Candidates[0].Id);
+                if (it.Accepted)
+                    lvi.BackColor = it.Kind == ShopItemRecognizer.Kind.Relic
+                        ? Color.FromArgb(220, 245, 220) : Color.FromArgb(255, 235, 200);
+                yield return lvi;
+            }
         }
     }
 }
