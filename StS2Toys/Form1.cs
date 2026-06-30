@@ -35,10 +35,6 @@ namespace StS2Toys
         private readonly ContextMenuStrip _linkMenu = new();
         private List<UrlTemplate> _templates = UrlTemplateService.Load();
 
-        // 枠色プロファイルの手動上書き候補。先頭は「自動（セーブから解決）」。
-        static readonly string[] CharacterChoices =
-            { "DEFECT", "SILENT", "IRONCLAD", "NECROBINDER", "REGENT" };
-
         /// <summary>検出結果リスト行に付与する、リンク生成用の種別＋ID。</summary>
         sealed record LinkTarget(string Kind, string Id);
 
@@ -55,11 +51,6 @@ namespace StS2Toys
             FormClosing += Form1_FormClosing;
             _reloadTimer.Tick += (_, _) => { _reloadTimer.Stop(); ReloadCurrentFile(); };
             _flashTimer.Tick += (_, _) => { _flashTimer.Stop(); lblUpdateFlash.Text = ""; };
-
-            // 枠キャラ候補（先頭は「自動（セーブから解決）」）。
-            _cbCharacter.Items.Add("自動（セーブ）");
-            foreach (var c in CharacterChoices) _cbCharacter.Items.Add(c);
-            _cbCharacter.SelectedIndex = 0;
 
             WireCaptureEvents();
             UpdateStartupStatus();
@@ -573,11 +564,6 @@ namespace StS2Toys
             _list.ContextMenuStrip = _linkMenu;
             _ocrList.ContextMenuStrip = _linkMenu;
             _linkMenu.Opening += OnLinkMenuOpening;
-
-            _cbCharacter.SelectedIndexChanged += (_, _) =>
-                _loop.CharacterOverride = _cbCharacter.SelectedIndex <= 0
-                    ? null
-                    : (string)_cbCharacter.SelectedItem!;
         }
 
         void BtnCaptureSource_Click(object? sender, EventArgs e)

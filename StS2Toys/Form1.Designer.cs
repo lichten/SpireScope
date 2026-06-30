@@ -32,12 +32,9 @@ namespace StS2Toys
             btnCharacterOverview = new Button();
             btnCombinedOverview = new Button();
             lblGroupOverview = new Label();
-            _top = new FlowLayoutPanel();
             _cbAuto = new CheckBox();
             _btnCapture = new Button();
             _btnLinks = new Button();
-            _lblCharacter = new Label();
-            _cbCharacter = new ComboBox();
             _status = new Label();
             _outer = new SplitContainer();
             _left = new SplitContainer();
@@ -63,7 +60,6 @@ namespace StS2Toys
             splitContainerOuter.Panel2.SuspendLayout();
             splitContainerOuter.SuspendLayout();
             panelSideButtons.SuspendLayout();
-            _top.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)_outer).BeginInit();
             _outer.Panel1.SuspendLayout();
             _outer.Panel2.SuspendLayout();
@@ -114,7 +110,6 @@ namespace StS2Toys
             //
             splitContainerOuter.Panel2.Controls.Add(_outer);
             splitContainerOuter.Panel2.Controls.Add(_status);
-            splitContainerOuter.Panel2.Controls.Add(_top);
             splitContainerOuter.Panel2MinSize = 200;
             splitContainerOuter.Size = new Size(800, 424);
             splitContainerOuter.SplitterDistance = 150;
@@ -318,18 +313,6 @@ namespace StS2Toys
             lblUpdateFlash.TabIndex = 20;
             lblUpdateFlash.TextAlign = ContentAlignment.MiddleLeft;
             //
-            // _top
-            //
-            _top.AutoSize = true;
-            _top.Controls.Add(_lblCharacter);
-            _top.Controls.Add(_cbCharacter);
-            _top.Dock = DockStyle.Top;
-            _top.Location = new Point(0, 0);
-            _top.Name = "_top";
-            _top.Padding = new Padding(8, 8, 8, 4);
-            _top.Size = new Size(646, 53);
-            _top.TabIndex = 2;
-            //
             // _cbAuto
             //
             _cbAuto.AutoSize = false;
@@ -360,25 +343,6 @@ namespace StS2Toys
             _btnLinks.Size = new Size(150, 30);
             _btnLinks.TabIndex = 25;
             _btnLinks.Text = "リンク設定";
-            //
-            // _lblCharacter
-            //
-            _lblCharacter.AutoSize = true;
-            _lblCharacter.Location = new Point(575, 14);
-            _lblCharacter.Margin = new Padding(8, 6, 2, 0);
-            _lblCharacter.Name = "_lblCharacter";
-            _lblCharacter.Size = new Size(82, 25);
-            _lblCharacter.TabIndex = 4;
-            _lblCharacter.Text = "  枠キャラ:";
-            //
-            // _cbCharacter
-            //
-            _cbCharacter.DropDownStyle = ComboBoxStyle.DropDownList;
-            _cbCharacter.Location = new Point(667, 11);
-            _cbCharacter.Margin = new Padding(8, 3, 0, 0);
-            _cbCharacter.Name = "_cbCharacter";
-            _cbCharacter.Size = new Size(150, 33);
-            _cbCharacter.TabIndex = 5;
             //
             // _status
             //
@@ -566,8 +530,6 @@ namespace StS2Toys
             ((System.ComponentModel.ISupportInitialize)splitContainerOuter).EndInit();
             splitContainerOuter.ResumeLayout(false);
             panelSideButtons.ResumeLayout(false);
-            _top.ResumeLayout(false);
-            _top.PerformLayout();
             _outer.Panel1.ResumeLayout(false);
             _outer.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)_outer).EndInit();
@@ -602,12 +564,9 @@ namespace StS2Toys
         private Button btnCaptureSource;
         private Label lblGroupSettings;
 
-        private FlowLayoutPanel _top;
         private CheckBox _cbAuto;
         private Button _btnCapture;
         private Button _btnLinks;
-        private Label _lblCharacter;
-        private ComboBox _cbCharacter;
         private Label _status;
         private SplitContainer _outer;
         private SplitContainer _left;
