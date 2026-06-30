@@ -560,10 +560,9 @@ namespace StS2Toys
             _btnCapture.Click += (_, _) => Task.Run(_loop.CaptureOnce);
             _btnLinks.Click += (_, _) => EditLinkTemplates();
 
-            // 検出結果リスト（カード／ショップ）右クリックで情報ページリンクを開く。
-            _list.ContextMenuStrip = _linkMenu;
-            _ocrList.ContextMenuStrip = _linkMenu;
-            _linkMenu.Opening += OnLinkMenuOpening;
+            // 検出結果リスト（カード／ショップ）左クリックで情報ページリンクを開く。
+            _list.MouseClick += OnListItemClick;
+            _ocrList.MouseClick += OnListItemClick;
         }
 
         void BtnCaptureSource_Click(object? sender, EventArgs e)
@@ -592,20 +591,18 @@ namespace StS2Toys
                 _templates = UrlTemplateService.Load();
         }
 
-        void OnLinkMenuOpening(object? sender, System.ComponentModel.CancelEventArgs e)
+        void OnListItemClick(object? sender, MouseEventArgs e)
         {
-            _linkMenu.Items.Clear();
-            var lv = _linkMenu.SourceControl as ListView;
-            var target = lv is { SelectedItems.Count: > 0 } ? lv.SelectedItems[0].Tag as LinkTarget : null;
-            if (target is null) { e.Cancel = true; return; }
+            if (e.Button != MouseButtons.Left) return;
+            if (sender is not ListView lv) return;
+            if (lv.HitTest(e.Location).Item is not { Tag: LinkTarget target }) return;
 
             var links = SiteLinkService.BuildLinks(_templates, target.Kind, target.Id);
-            if (links.Count == 0)
-            {
-                var none = _linkMenu.Items.Add("（リンク設定なし）");
-                none.Enabled = false;
-                return;
-            }
+            if (links.Count == 0) return;
+            if (links.Count == 1) { OpenUrl(links[0].Url); return; }
+
+            // 複数テンプレートはクリック位置のメニューで選択。
+            _linkMenu.Items.Clear();
             foreach (var link in links)
             {
                 var url = link.Url;
@@ -613,6 +610,7 @@ namespace StS2Toys
                 item.Click += (_, _) => OpenUrl(url);
                 _linkMenu.Items.Add(item);
             }
+            _linkMenu.Show(lv, e.Location);
         }
 
         void OpenUrl(string url)
