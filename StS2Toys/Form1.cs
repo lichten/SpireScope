@@ -260,12 +260,6 @@ namespace StS2Toys
             if (data.Players.Count == 0) return;
             var player = data.Players[0];
 
-            var characterEn = CardDatabaseService.GetName(player.CharacterId, japanese: false);
-            var characterJa = CardDatabaseService.GetName(player.CharacterId, japanese: true);
-            lblInfo.Text = AppLanguage.IsJapanese
-                ? $"キャラクター: {characterJa} ({characterEn})　アセンション: {data.Ascension}　Act: {data.CurrentActIndex + 1}　　HP: {player.CurrentHp}/{player.MaxHp}　ゴールド: {player.Gold}　エネルギー: {player.MaxEnergy}"
-                : $"Character: {characterEn} ({characterJa})  Ascension: {data.Ascension}  Act: {data.CurrentActIndex + 1}    HP: {player.CurrentHp}/{player.MaxHp}  Gold: {player.Gold}  Energy: {player.MaxEnergy}";
-
             DisplayDeck(player);
             DisplayRelics(player);
             RefreshHpHistory();

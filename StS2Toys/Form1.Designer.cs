@@ -22,8 +22,6 @@ namespace StS2Toys
             lblGroupCapture = new Label();
             btnCaptureSource = new Button();
             lblGroupSettings = new Label();
-            panelInfo = new Panel();
-            lblInfo = new Label();
             splitContainerOuter = new SplitContainer();
             panelSideButtons = new Panel();
             btnEncounterOverview = new Button();
@@ -54,7 +52,6 @@ namespace StS2Toys
             _previewHeaderPanel = new Panel();
             _capturePreview = new PictureBox();
             _previewHeaderLabel = new Label();
-            panelInfo.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainerOuter).BeginInit();
             splitContainerOuter.Panel1.SuspendLayout();
             splitContainerOuter.Panel2.SuspendLayout();
@@ -72,27 +69,6 @@ namespace StS2Toys
             _previewHeaderPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)_capturePreview).BeginInit();
             SuspendLayout();
-            //
-            // panelInfo
-            //
-            panelInfo.BackColor = SystemColors.ControlLight;
-            panelInfo.Controls.Add(lblInfo);
-            panelInfo.Dock = DockStyle.Top;
-            panelInfo.Location = new Point(0, 44);
-            panelInfo.Name = "panelInfo";
-            panelInfo.Padding = new Padding(10, 6, 8, 4);
-            panelInfo.Size = new Size(800, 52);
-            panelInfo.TabIndex = 1;
-            //
-            // lblInfo
-            //
-            lblInfo.Dock = DockStyle.Fill;
-            lblInfo.Font = new Font("Segoe UI", 10F);
-            lblInfo.Location = new Point(10, 6);
-            lblInfo.Name = "lblInfo";
-            lblInfo.Size = new Size(782, 42);
-            lblInfo.TabIndex = 0;
-            lblInfo.Text = "ファイルを開くと、ランの情報を表示します。";
             //
             // splitContainerOuter
             //
@@ -521,10 +497,8 @@ namespace StS2Toys
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 520);
             Controls.Add(splitContainerOuter);
-            Controls.Add(panelInfo);
             Name = "Form1";
             Text = "StS2 Deck Viewer";
-            panelInfo.ResumeLayout(false);
             splitContainerOuter.Panel1.ResumeLayout(false);
             splitContainerOuter.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)splitContainerOuter).EndInit();
@@ -550,8 +524,6 @@ namespace StS2Toys
         private Label lblUpdateFlash;
         private Button btnOpen;
         private Label lblGroupFile;
-        private Panel panelInfo;
-        private Label lblInfo;
         private SplitContainer splitContainerOuter;
         private Panel panelSideButtons;
         private Button btnCombinedOverview;
