@@ -85,6 +85,35 @@ public sealed class CardNameIndex
         return best;
     }
 
+    /// <summary>
+    /// text に近いカードを距離昇順で列挙する（各 CardId は最良距離のみ、maxDist 以内）。
+    /// エンシェント選択の「同一プレフィックス・末尾漢字が OCR で不安定」なレリック群を、
+    /// バンド間で一意割当して曖昧性を解消するために使う（<see cref="FindBest"/> は単一最良のまま温存）。
+    /// </summary>
+    public IReadOnlyList<Match> FindRanked(string text, int maxDist)
+    {
+        var norm = Normalize(text);
+        if (norm.Length < 3 || maxDist < 0) return Array.Empty<Match>();
+
+        var best = new Dictionary<string, Match>(StringComparer.Ordinal);
+        void Consider(string cand, string cardId, int d)
+        {
+            if (d > maxDist) return;
+            double conf = 1.0 - (double)d / Math.Max(norm.Length, cand.Length);
+            if (!best.TryGetValue(cardId, out var ex) || d < ex.Distance)
+                best[cardId] = new Match(cardId, cand, d, conf);
+        }
+
+        if (_exact.TryGetValue(norm, out var exactId)) Consider(norm, exactId, 0);
+        for (int len = Math.Max(3, norm.Length - maxDist); len <= norm.Length + maxDist; len++)
+        {
+            if (!_byLen.TryGetValue(len, out var list)) continue;
+            foreach (var (cand, cardId) in list)
+                Consider(cand, cardId, Levenshtein(norm, cand, maxDist));
+        }
+        return best.Values.OrderBy(m => m.Distance).ThenByDescending(m => m.Confidence).ToList();
+    }
+
     /// <summary>小文字化し、英数字・かな・漢字以外（空白・記号）を除去する。</summary>
     static string Normalize(string s)
     {

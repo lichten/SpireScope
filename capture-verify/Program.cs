@@ -18,6 +18,7 @@ if (!File.Exists(pngPath)) { Console.WriteLine($"file not found: {pngPath}"); re
 Rectangle? clientOverride = null;
 string? cropsDir = null;
 double? dy = null, bandH = null, bandW = null, cx = null;
+double? iconDx = null, iconSize = null, iconMax = null;
 int? scale = null;
 for (int i = 1; i < args.Length; i++)
 {
@@ -34,6 +35,9 @@ for (int i = 1; i < args.Length; i++)
         case "--bandw" when i + 1 < args.Length: bandW = double.Parse(args[++i]); break;
         case "--cx" when i + 1 < args.Length: cx = double.Parse(args[++i]); break;
         case "--scale" when i + 1 < args.Length: scale = int.Parse(args[++i]); break;
+        case "--icondx" when i + 1 < args.Length: iconDx = double.Parse(args[++i]); break;
+        case "--iconsize" when i + 1 < args.Length: iconSize = double.Parse(args[++i]); break;
+        case "--iconmax" when i + 1 < args.Length: iconMax = double.Parse(args[++i]); break;
     }
 }
 
@@ -47,6 +51,9 @@ Console.WriteLine($"client: {client.X},{client.Y},{client.Width},{client.Height}
 var ancient = new AncientRelicRecognizer();
 if (cropsDir is not null) ancient.SaveCropsDir = cropsDir;
 if (scale is int sc) ancient.TitleScale = sc;
+if (iconDx is double idx) ancient.IconDxFrac = idx;
+if (iconSize is double isz) ancient.IconSizeFrac = isz;
+if (iconMax is double imx) ancient.IconMaxDistance = imx;
 if (dy is not null || bandH is not null || bandW is not null || cx is not null)
     ancient.NameBands = ancient.NameBands
         .Select(b => new AncientRelicRecognizer.NameBand(
@@ -55,16 +62,18 @@ if (dy is not null || bandH is not null || bandW is not null || cx is not null)
 Console.WriteLine($"OCR engine available: {ancient.IsAvailable}");
 Console.WriteLine();
 
-// 1) 各名前バンドの OCR 生テキストと最良一致レリック。
+// 1) 各バンドの OCR 生テキスト・名前 family・アイコンで選んだレリック。
 var diag = ancient.Diagnose(bmp, client);
 for (int s = 0; s < diag.Count; s++)
 {
-    var (rect, ocr, match) = diag[s];
-    Console.WriteLine($"[band {s}] rect={rect.X},{rect.Y},{rect.Width},{rect.Height}");
-    Console.WriteLine($"    OCR : \"{ocr}\"");
-    Console.WriteLine(match is { } m
-        ? $"    match: {m.Id} ({m.Name})  editDist={m.Distance:F0}"
-        : "    match: (none)");
+    var d = diag[s];
+    Console.WriteLine($"[band {s}] name={d.NameRect.X},{d.NameRect.Y},{d.NameRect.Width},{d.NameRect.Height}"
+        + $"  icon={d.IconRect.X},{d.IconRect.Y},{d.IconRect.Width},{d.IconRect.Height}");
+    Console.WriteLine($"    OCR   : \"{d.Ocr}\"");
+    Console.WriteLine($"    family: {(d.Family.Count > 0 ? string.Join(", ", d.Family) : "(none)")}");
+    Console.WriteLine(d.ChosenId is not null
+        ? $"    chosen: {d.ChosenId} ({d.ChosenName})  nameDist={(d.NameDist == int.MaxValue ? "-" : d.NameDist.ToString())}  iconChi={d.IconChi:F3}  accepted={d.Accepted}"
+        : "    chosen: (none)");
 }
 Console.WriteLine();
 
