@@ -107,8 +107,8 @@ namespace StS2Toys
             panelSideButtons.Controls.Add(btnToggleAuto);
             panelSideButtons.Controls.Add(btnOpen);
             panelSideButtons.Controls.Add(lblGroupFile);
-            panelSideButtons.Controls.Add(_btnCapture);
             panelSideButtons.Controls.Add(_cbAuto);
+            panelSideButtons.Controls.Add(_btnCapture);
             panelSideButtons.Controls.Add(btnCaptureSource);
             panelSideButtons.Controls.Add(lblGroupCapture);
             panelSideButtons.Dock = DockStyle.Fill;
@@ -293,7 +293,7 @@ namespace StS2Toys
             //
             _cbAuto.AutoSize = false;
             _cbAuto.Dock = DockStyle.Top;
-            _cbAuto.Location = new Point(0, 48);
+            _cbAuto.Location = new Point(0, 78);
             _cbAuto.Name = "_cbAuto";
             _cbAuto.Padding = new Padding(8, 0, 0, 0);
             _cbAuto.Size = new Size(150, 30);
@@ -304,7 +304,7 @@ namespace StS2Toys
             //
             _btnCapture.AutoSize = false;
             _btnCapture.Dock = DockStyle.Top;
-            _btnCapture.Location = new Point(0, 78);
+            _btnCapture.Location = new Point(0, 48);
             _btnCapture.Name = "_btnCapture";
             _btnCapture.Size = new Size(150, 30);
             _btnCapture.TabIndex = 24;
