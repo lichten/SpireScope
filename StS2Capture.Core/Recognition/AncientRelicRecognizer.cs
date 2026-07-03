@@ -136,7 +136,8 @@ public sealed class AncientRelicRecognizer
 
     /// <summary>
     /// 採否。名前 family に入っていれば（＝名前 OCR がそのレリックを距離内で読めていれば）採用。
-    /// 名前が全く読めずアイコン全 DB フォールバックの時のみ、アイコン距離が十分近ければ採用する。
+    /// OCR は文字を返したが名前照合に失敗した時のみ、アイコン距離が十分近ければ採用する
+    /// （OCR が空＝背景のバンドは <see cref="RankBand"/> で候補が空になり、ここには来ない）。
     /// </summary>
     bool IsAccepted(BandCand c) => c.NameDist <= MaxNameDist || c.IconChi <= IconMaxDistance;
 
@@ -178,9 +179,14 @@ public sealed class AncientRelicRecognizer
             TrySaveRegion(frame, iconRect, "icon");
         }
 
-        // 3) 候補集合＝family（読めなければアイコン全 DB フォールバック）。アイコン距離で順位付け。
+        // 3) 候補集合＝family。名前が読めなければアイコン全 DB フォールバック。
+        //    ただし OCR が1文字も返さないバンド（＝レリック名が無い背景。カード選択画面の
+        //    カード下の暗い帯など）は空にする。ここで全 DB にフォールバックすると、暗い背景の
+        //    HSV が暗色レリックアイコンに近く誤一致し、カード選択画面をエンシェント選択と
+        //    誤判定する（実測: band1=KUNAI/band2=SAI が iconChi<0.7 で誤採用）。
+        bool ocrHasText = !string.IsNullOrWhiteSpace(ocrText);
         IEnumerable<string> ids = nameDist.Count > 0 ? nameDist.Keys
-            : (qIcon is not null ? (IEnumerable<string>)db.Keys : Array.Empty<string>());
+            : (ocrHasText && qIcon is not null ? (IEnumerable<string>)db.Keys : Array.Empty<string>());
 
         var list = new List<BandCand>();
         foreach (var id in ids)
