@@ -5,6 +5,7 @@ using StS2Capture.Recognition;
 using StS2Shared.Models;
 using StS2Toys.Services;
 using StS2Shared.Services;
+using StS2Shared.Assets;
 
 namespace StS2Toys
 {
@@ -59,6 +60,7 @@ namespace StS2Toys
         void Form1_Load(object? sender, EventArgs e)
         {
             RestoreWindowSettings();
+            MaybeRunAssetSetup();
             var defaultPath = SaveDataService.GetDefaultSavePath();
             if (File.Exists(defaultPath))
             {
@@ -69,6 +71,72 @@ namespace StS2Toys
             // キャプチャ内容ペインの初期分割（実サイズ確定後に設定）。
             SetSplitterDistance(_outer, (int)(_outer.Width * 0.55));
             SetSplitterDistance(_left, (int)(_left.Height * 0.5));
+        }
+
+        /// <summary>
+        /// 配布モードで、アセット未セットアップ（初回）またはゲーム更新を検出したら
+        /// セットアップウィザードを表示する。開発環境（tools/extracted あり）では何もしない。
+        /// </summary>
+        void MaybeRunAssetSetup()
+        {
+            // 開発環境ではウォークアップで tools/extracted がヒットするため、ウィザードは出さない。
+            if (AssetLocator.HasDevExtracted()) return;
+
+            string? gameVer;
+            try { gameVer = SteamLocator.Locate()?.Version; } catch { gameVer = null; }
+
+            var distVer = AssetLocator.InstalledDistributionVersion;      // 導入済み配布バージョン or null
+            var skipped = WindowSettingsService.Load().AssetsSkippedVersion;
+
+            bool firstTime = distVer is null;
+            bool updated = distVer is not null && gameVer is not null && gameVer != distVer;
+            bool suppressed = skipped is not null && skipped == (gameVer ?? DeclinedMarker);
+
+            if ((!firstTime && !updated) || suppressed) return;
+
+            using var wizard = new SetupWizardForm(updated ? distVer : null);
+            wizard.ShowDialog(this);
+
+            if (wizard.Outcome == SetupWizardForm.SetupOutcome.Completed)
+                SaveAssetState(installed: wizard.InstalledVersion, skipped: null);
+            else
+                SaveAssetState(installed: WindowSettingsService.Load().AssetsInstalledVersion,
+                               skipped: gameVer ?? DeclinedMarker);
+        }
+
+        const string DeclinedMarker = "declined";
+
+        /// <summary>「画像アセット設定」ボタン：いつでもウィザードを手動起動する（スキップした人・更新したい人向け）。</summary>
+        void BtnAssetSetup_Click(object? sender, EventArgs e)
+        {
+            if (AssetLocator.HasDevExtracted())
+            {
+                MessageBox.Show(this,
+                    "開発モード（tools/extracted）でアセットが解決されています。セットアップは不要です。",
+                    "画像アセット設定", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using var wizard = new SetupWizardForm(AssetLocator.InstalledDistributionVersion);
+            wizard.ShowDialog(this);
+
+            if (wizard.Outcome == SetupWizardForm.SetupOutcome.Completed)
+            {
+                SaveAssetState(installed: wizard.InstalledVersion, skipped: null);
+                MessageBox.Show(this,
+                    "抽出が完了しました。画像の表示を反映するにはアプリを再起動してください。",
+                    "画像アセット設定", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        static void SaveAssetState(string? installed, string? skipped)
+        {
+            var s = WindowSettingsService.Load() with
+            {
+                AssetsInstalledVersion = installed,
+                AssetsSkippedVersion = skipped,
+            };
+            WindowSettingsService.Save(s);
         }
 
         void Form1_FormClosing(object? sender, FormClosingEventArgs e)
@@ -124,7 +192,9 @@ namespace StS2Toys
             var state = WindowState == FormWindowState.Minimized ? FormWindowState.Normal : WindowState;
             var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
             var main = new WindowSettings(bounds.X, bounds.Y, bounds.Width, bounds.Height, state.ToString());
-            WindowSettingsService.Save(new AppSettings(main, _hpHistorySettings, _encounterOverviewSettings, splitContainerOuter.SplitterDistance, _characterOverviewSettings, _combinedOverviewSettings, AppLanguage.IsJapanese ? "ja" : "en"));
+            // アセットセットアップ状態は MaybeRunAssetSetup が即時保存するため、ここでは現在値を引き継ぐ。
+            var current = WindowSettingsService.Load();
+            WindowSettingsService.Save(new AppSettings(main, _hpHistorySettings, _encounterOverviewSettings, splitContainerOuter.SplitterDistance, _characterOverviewSettings, _combinedOverviewSettings, AppLanguage.IsJapanese ? "ja" : "en", current.AssetsInstalledVersion, current.AssetsSkippedVersion));
         }
 
         static SubWindowSettings WindowToSub(Form form) =>

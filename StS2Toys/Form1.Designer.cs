@@ -22,6 +22,7 @@ namespace StS2Toys
             lblGroupCapture = new Label();
             btnCaptureSource = new Button();
             lblGroupSettings = new Label();
+            btnAssetSetup = new Button();
             splitContainerOuter = new SplitContainer();
             panelSideButtons = new Panel();
             btnEncounterOverview = new Button();
@@ -93,6 +94,7 @@ namespace StS2Toys
             //
             // panelSideButtons
             //
+            panelSideButtons.Controls.Add(btnAssetSetup);
             panelSideButtons.Controls.Add(_btnLinks);
             panelSideButtons.Controls.Add(btnLang);
             panelSideButtons.Controls.Add(lblGroupSettings);
@@ -226,6 +228,15 @@ namespace StS2Toys
             lblGroupSettings.TabIndex = 26;
             lblGroupSettings.Text = "設定";
             lblGroupSettings.TextAlign = ContentAlignment.MiddleLeft;
+            //
+            // btnAssetSetup
+            //
+            btnAssetSetup.Dock = DockStyle.Top;
+            btnAssetSetup.Name = "btnAssetSetup";
+            btnAssetSetup.Size = new Size(150, 30);
+            btnAssetSetup.TabIndex = 27;
+            btnAssetSetup.Text = "画像アセット設定";
+            btnAssetSetup.Click += BtnAssetSetup_Click;
             //
             // btnCaptureSource
             //
@@ -535,6 +546,7 @@ namespace StS2Toys
         private Label lblGroupCapture;
         private Button btnCaptureSource;
         private Label lblGroupSettings;
+        private Button btnAssetSetup;
 
         private CheckBox _cbAuto;
         private Button _btnCapture;

@@ -74,6 +74,19 @@ public static class AssetLocator
     /// <summary>アセットが解決可能か（開発モードまたは配布モードのいずれかでルートが見つかるか）。</summary>
     public static bool IsConfigured => FindExtractedRoot() is not null;
 
+    /// <summary>
+    /// 開発モードのアセット（<c>tools/extracted</c> をウォークアップで発見）が使えるか。
+    /// 開発環境では配布モードの初回セットアップウィザードを出さないための判定に使う。
+    /// </summary>
+    public static bool HasDevExtracted(string? startDir = null) => FindByWalkUp(startDir) is not null;
+
+    /// <summary>
+    /// 配布モードで現在解決されるアセットのバージョン名（例 "v0.108.0"）。未抽出なら null。
+    /// フォルダ名をそのまま返す（再同期判定の版比較用）。
+    /// </summary>
+    public static string? InstalledDistributionVersion =>
+        LatestDistributionVersionDir is { } dir ? Path.GetFileName(dir) : null;
+
     static string? FindByWalkUp(string? startDir)
     {
         var dir = new DirectoryInfo(startDir ?? AppContext.BaseDirectory);
