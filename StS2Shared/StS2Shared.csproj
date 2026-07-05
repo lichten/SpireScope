@@ -8,14 +8,25 @@
     <RootNamespace>StS2Shared</RootNamespace>
   </PropertyGroup>
 
+  <!-- ゲームテキスト由来（ローカライズ生成物＝再配布不可）の派生ファイル一覧。
+       配布ビルド（-p:ExcludeGameText=true）では埋め込みから除外し、初回セットアップで抽出した
+       生ローカライズから StS2Shared.Assets.LocTextDeriver が実行時解決先を生成する。
+       *_resolved.json / potion_descriptions.json は実行時に読者がいないため生成もフォールバックも不要（除外のみ）。
+       keyword_dev_notes.json は sts2.xml 由来で外部入手経路が無く、配布では空 degrade（KeywordDatabaseService が許容）。 -->
+  <PropertyGroup>
+    <GameTextFiles>Resources\v*\card_database.json;Resources\v*\card_descriptions.json;Resources\v*\card_descriptions_resolved.json;Resources\v*\relic_descriptions_resolved.json;Resources\v*\potion_database.json;Resources\v*\potion_descriptions.json;Resources\v*\potion_descriptions_resolved.json;Resources\v*\monster_names.json;Resources\v*\keyword_dev_notes.json</GameTextFiles>
+  </PropertyGroup>
+
   <ItemGroup>
+    <!-- 自作テキスト（配布可）＝ monster_move_patterns.json は常に埋め込み維持。 -->
     <EmbeddedResource Include="Resources\*.json" />
-    <EmbeddedResource Include="Resources\v*\*.json" />
-    <!-- カード説明文・名称はバージョン管理の card_descriptions.json / card_database.json に移行済み（cards.json 埋め込みは廃止） -->
-    <!-- 生ローカライズ JSON（relics/card_keywords/afflictions/enchantments/encounters/acts/events/ancients）は
-         card-type-extractor が Resources\{version}\localization\{eng,jpn}\ へコピーし、ResourceResolver で最新版を解決する。
-         （自動生成マニフェスト名 …localization.{lang}.{file}.json が各サービスの suffix 一致を満たす） -->
-    <EmbeddedResource Include="Resources\v*\localization\**\*.json" />
+
+    <!-- メタデータ（IL/構造抽出＝数値・ID・事実データ、配布可）は常に埋め込み。テキスト派生を個別 Exclude。 -->
+    <EmbeddedResource Include="Resources\v*\*.json" Exclude="$(GameTextFiles)" />
+
+    <!-- テキスト由来（生ローカライズと派生）は開発ビルドのみ埋め込み。配布は ExcludeGameText で除外。 -->
+    <EmbeddedResource Condition="'$(ExcludeGameText)' != 'true'"
+                      Include="$(GameTextFiles);Resources\v*\localization\**\*.json" />
   </ItemGroup>
 
 </Project>

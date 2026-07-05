@@ -24,10 +24,9 @@ public static class AncientDatabaseService
     static IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> LoadAndGroup(string suffix)
     {
         var asm = Assembly.GetExecutingAssembly();
-        var name = ResourceResolver.ResolveVersioned(asm, $"localization.{suffix}.json");
-        if (name is null) return new Dictionary<string, IReadOnlyDictionary<string, string>>();
+        using var stream = ResourceResolver.OpenText(asm, $"localization.{suffix}.json");
+        if (stream is null) return new Dictionary<string, IReadOnlyDictionary<string, string>>();
 
-        using var stream = asm.GetManifestResourceStream(name)!;
         var doc = JsonDocument.Parse(stream);
 
         var grouped = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);

@@ -146,6 +146,7 @@ public partial class SetupWizardForm : Form
         "relic_atlas" => "レリックアトラス",
         "enchantments" => "エンチャント",
         "localization" => "テキスト",
+        "game_text" => "ゲームテキスト生成",
         _ => group,
     };
 }

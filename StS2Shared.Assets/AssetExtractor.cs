@@ -54,6 +54,10 @@ public sealed class AssetExtractor
         // ローカライズ JSON をそのままコピー（アプリが読むのは eng / jpn のみ）
         CopyGlob("localization/eng/", suffix: ".json", group: "localization", progress, ct);
         CopyGlob("localization/jpn/", suffix: ".json", group: "localization", progress, ct);
+
+        // 派生ゲームテキスト（card_database/card_descriptions/potion_database/monster_names）を
+        // 抽出ルート直下に生成。配布ビルドで埋め込みを除外した際の外部解決先になる。
+        LocTextDeriver.Derive(_pck, _outRoot, progress, ct);
     }
 
     // ── 抽出ストラテジ ────────────────────────────────────────────────────────

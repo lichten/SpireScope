@@ -111,9 +111,8 @@ public static class MonsterCombatService
     {
         var asm = Assembly.GetExecutingAssembly();
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var name = ResourceResolver.ResolveVersioned(asm, $"localization.{suffix}.json");
-        if (name is null) return result;
-        using var stream = asm.GetManifestResourceStream(name)!;
+        using var stream = ResourceResolver.OpenText(asm, $"localization.{suffix}.json");
+        if (stream is null) return result;
         var doc = JsonDocument.Parse(stream);
         foreach (var prop in doc.RootElement.EnumerateObject())
             result[prop.Name] = prop.Value.GetString() ?? "";

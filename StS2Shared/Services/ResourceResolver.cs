@@ -35,6 +35,32 @@ internal static class ResourceResolver
     public static Stream? OpenVersioned(Assembly asm, string fileName)
         => ResolveVersioned(asm, fileName) is { } name ? asm.GetManifestResourceStream(name) : null;
 
+    /// <summary>
+    /// ゲームテキスト系リソースを「埋め込み優先 → 外部（配布モードの抽出済みファイル）フォールバック」で開く。
+    /// 開発ビルドでは埋め込みが存在するため現状どおり埋め込みを読む。配布ビルドで埋め込みを除外した場合のみ
+    /// <see cref="AssetLocator.FindExtractedRoot"/> 配下の外部ファイルを読む。どちらも無ければ null。
+    /// </summary>
+    public static Stream? OpenText(Assembly asm, string fileName)
+    {
+        var embedded = OpenVersioned(asm, fileName);
+        if (embedded is not null) return embedded;
+
+        var root = AssetLocator.FindExtractedRoot();
+        if (root is null) return null;
+
+        var path = Path.Combine(root, ToExternalRelative(fileName));
+        return File.Exists(path) ? File.OpenRead(path) : null;
+    }
+
+    // 埋め込みファイル名 → 抽出ルートからの相対パス。
+    // "localization.eng.relics.json" → "localization/eng/relics.json"、"card_database.json" → "card_database.json"
+    // （最後のドット以外を区切りに変換。ルート直下ファイルは内部ドットを持たないためそのまま）。
+    static string ToExternalRelative(string fileName)
+    {
+        var parts = fileName.Split('.');
+        return string.Join(Path.DirectorySeparatorChar, parts[..^1]) + "." + parts[^1];
+    }
+
     // バージョン token（例 "v0._107._0"）内の整数列をゼロ埋め連結し、文字列比較で数値順になるキーを作る。
     // セグメント数に依存しない（"v0.107.0" → "00000000.00000107.00000000"）。
     static string VersionKey(string token) =>

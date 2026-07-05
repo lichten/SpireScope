@@ -39,10 +39,9 @@ public static class KeywordDatabaseService
     static IReadOnlyDictionary<string, string> LoadJson(string suffix)
     {
         var asm = Assembly.GetExecutingAssembly();
-        var name = ResourceResolver.ResolveVersioned(asm, $"localization.{suffix}.json");
-        if (name is null) return new Dictionary<string, string>();
+        using var stream = ResourceResolver.OpenText(asm, $"localization.{suffix}.json");
+        if (stream is null) return new Dictionary<string, string>();
 
-        using var stream = asm.GetManifestResourceStream(name)!;
         var doc = JsonDocument.Parse(stream);
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var prop in doc.RootElement.EnumerateObject())
@@ -94,10 +93,9 @@ public static class KeywordDatabaseService
     static IReadOnlyDictionary<string, string> LoadDevNotes()
     {
         var asm = Assembly.GetExecutingAssembly();
-        var name = ResourceResolver.ResolveVersioned(asm, "keyword_dev_notes.json");
-        if (name is null) return new Dictionary<string, string>();
+        using var stream = ResourceResolver.OpenText(asm, "keyword_dev_notes.json");
+        if (stream is null) return new Dictionary<string, string>();
 
-        using var stream = asm.GetManifestResourceStream(name)!;
         var doc = JsonDocument.Parse(stream);
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var prop in doc.RootElement.EnumerateObject())
