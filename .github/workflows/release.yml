@@ -1,0 +1,67 @@
+name: Release
+
+# v で始まるタグ（例 v1.0.0）を push すると、self-contained 単一 exe を発行して
+# GitHub Releases に zip を添付する。ゲームアセット/テキストは配布物に含めない
+# （ExcludeGameText=true でゲームテキスト埋め込みを除外。画像はユーザー環境で抽出）。
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # Release 作成に必要
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Compute version
+        id: ver
+        shell: pwsh
+        run: |
+          # タグ "v1.2.3" → アセンブリ Version "1.2.3"
+          $tag = "${{ github.ref_name }}"
+          $ver = $tag -replace '^v', ''
+          "tag=$tag"          >> $env:GITHUB_OUTPUT
+          "version=$ver"      >> $env:GITHUB_OUTPUT
+          "zip=StS2Toys-$tag-win-x64.zip" >> $env:GITHUB_OUTPUT
+
+      - name: Publish (self-contained single-file, ExcludeGameText)
+        shell: pwsh
+        run: |
+          dotnet publish StS2Toys/StS2Toys.csproj -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true -p:DebugType=none `
+            -p:ExcludeGameText=true -p:Version=${{ steps.ver.outputs.version }} `
+            -o publish
+
+      - name: Stage distribution files
+        shell: pwsh
+        run: |
+          Copy-Item packaging/README-dist.txt publish/README.txt
+          Copy-Item LICENSE publish/LICENSE
+          Copy-Item THIRD-PARTY-NOTICES.txt publish/THIRD-PARTY-NOTICES.txt
+          # publish 直下には StS2Toys.exe と上記ドキュメントのみが残る想定。
+          Get-ChildItem publish | Format-Table Name, Length
+
+      - name: Zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path publish/* -DestinationPath "${{ steps.ver.outputs.zip }}" -Force
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.ver.outputs.tag }}
+          files: ${{ steps.ver.outputs.zip }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true

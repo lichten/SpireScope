@@ -1,0 +1,63 @@
+StS2Toys — サードパーティ ライセンス表記 (THIRD-PARTY NOTICES)
+================================================================
+
+StS2Toys の配布バイナリ（self-contained 単一 exe）には、以下の第三者コンポーネントが
+同梱されています。各コンポーネントの著作権は各権利者に帰属します。
+
+StS2Toys 本体は MIT License です（同梱の LICENSE を参照）。
+
+----------------------------------------------------------------
+
+1. .NET Runtime / Windows Desktop Runtime
+   Copyright (c) .NET Foundation and Contributors
+   License: MIT License
+   https://github.com/dotnet/runtime/blob/main/LICENSE.TXT
+
+   self-contained 発行のため .NET ランタイム一式を同梱しています。
+
+----------------------------------------------------------------
+
+2. BCnEncoder.NET
+   Copyright (c) Nominom
+   License: MIT License
+   https://github.com/Nominom/BCnEncoder.NET/blob/master/LICENSE
+
+   Godot テクスチャ (.ctex) の BC7 / BC3 デコードに使用しています。
+
+   MIT License
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+
+----------------------------------------------------------------
+
+3. SixLabors.ImageSharp
+   Copyright (c) Six Labors
+   License: Six Labors Split License, Version 1.0
+   https://github.com/SixLabors/ImageSharp/blob/main/LICENSE
+
+   画像 (PNG / WebP) のデコード・エンコードに使用しています。
+   Six Labors Split License は、オープンソースプロジェクト等での利用を無償で許諾します。
+   StS2Toys は MIT ライセンスのオープンソースプロジェクトであり、この無償利用条件を満たします。
+   商用利用等の詳細な条件は上記ライセンス本文を参照してください。
+
+----------------------------------------------------------------
+
+参考: PCK フォーマットの解析にあたり、GodotPCKExplorer (MIT, Copyright (c) Dmitriy Salnikov)
+のソースを参照実装として参考にしました（コード・バイナリの同梱はありません）。
+https://github.com/DmitriySalnikov/GodotPCKExplorer
