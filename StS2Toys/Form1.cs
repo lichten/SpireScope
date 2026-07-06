@@ -332,8 +332,45 @@ namespace StS2Toys
 
             DisplayDeck(player);
             DisplayRelics(player);
+            DisplayPotionOdds(player);
             RefreshHpHistory();
             RefreshEncounterOverview();
+        }
+
+        /// <summary>
+        /// 次戦闘のポーション報酬ドロップ確率をサイドパネルに表示する（<see cref="PotionOddsService"/>）。
+        /// セーブの現在オッズをそのまま反映するため、自動リロードで戦闘後に更新される。
+        /// </summary>
+        void DisplayPotionOdds(PlayerData player)
+        {
+            bool ja = AppLanguage.IsJapanese;
+            var odds = PotionOddsService.Compute(player);
+
+            if (odds is null)
+            {
+                lblPotionOdds.Text = ja ? "ポーション: --" : "Potion: --";
+                return;
+            }
+
+            var o = odds.Value;
+            if (o.ForcedByRelic)
+            {
+                lblPotionOdds.Text = ja
+                    ? "ポーション報酬\n確定100%（白き獣の像）"
+                    : "Potion reward\n100% (White Beast Statue)";
+                return;
+            }
+
+            lblPotionOdds.Text = ja
+                ? $"ポーション報酬\n通常 {FormatPct(o.Normal)} / エリート {FormatPct(o.Elite)}"
+                : $"Potion reward\nNormal {FormatPct(o.Normal)} / Elite {FormatPct(o.Elite)}";
+        }
+
+        // ±10% 刻み＋エリート +12.5% なので最大小数第1位。整数なら小数点は付けない。
+        static string FormatPct(float v)
+        {
+            double p = Math.Round(v * 100.0, 1);
+            return p == Math.Floor(p) ? $"{p:0}%" : $"{p:0.0}%";
         }
 
         void DisplayDeck(PlayerData player)

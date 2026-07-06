@@ -15,6 +15,7 @@ namespace StS2Toys
         {
             lblUpdateFlash = new Label();
             lblLastUpdated = new Label();
+            lblPotionOdds = new Label();
             btnLang = new Button();
             btnToggleAuto = new Button();
             btnOpen = new Button();
@@ -106,6 +107,7 @@ namespace StS2Toys
             panelSideButtons.Controls.Add(lblGroupOverview);
             panelSideButtons.Controls.Add(lblUpdateFlash);
             panelSideButtons.Controls.Add(lblLastUpdated);
+            panelSideButtons.Controls.Add(lblPotionOdds);
             panelSideButtons.Controls.Add(btnToggleAuto);
             panelSideButtons.Controls.Add(btnOpen);
             panelSideButtons.Controls.Add(lblGroupFile);
@@ -288,6 +290,18 @@ namespace StS2Toys
             lblLastUpdated.TabIndex = 19;
             lblLastUpdated.Text = "最終更新: --:--:--";
             lblLastUpdated.TextAlign = ContentAlignment.MiddleLeft;
+            //
+            // lblPotionOdds
+            //
+            lblPotionOdds.AutoSize = false;
+            lblPotionOdds.Dock = DockStyle.Top;
+            lblPotionOdds.Location = new Point(0, 156);
+            lblPotionOdds.Name = "lblPotionOdds";
+            lblPotionOdds.Padding = new Padding(8, 2, 0, 2);
+            lblPotionOdds.Size = new Size(150, 50);
+            lblPotionOdds.TabIndex = 21;
+            lblPotionOdds.Text = "ポーション: --";
+            lblPotionOdds.TextAlign = ContentAlignment.TopLeft;
             //
             // lblUpdateFlash
             //
@@ -533,6 +547,7 @@ namespace StS2Toys
         private Button btnLang;
         private Label lblLastUpdated;
         private Label lblUpdateFlash;
+        private Label lblPotionOdds;
         private Button btnOpen;
         private Label lblGroupFile;
         private SplitContainer splitContainerOuter;

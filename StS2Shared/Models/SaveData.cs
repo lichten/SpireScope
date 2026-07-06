@@ -112,6 +112,19 @@ public class PlayerData
 
     [JsonPropertyName("relics")]
     public List<RelicData> Relics { get; init; } = [];
+
+    [JsonPropertyName("odds")]
+    public PlayerOddsData? Odds { get; init; }
+}
+
+public class PlayerOddsData
+{
+    // ポーション報酬ドロップの現在確率そのもの（ベースへの加算値ではない）。docs/potion-drop-odds.md 参照。
+    [JsonPropertyName("potion_reward_odds_value")]
+    public float PotionRewardOddsValue { get; init; }
+
+    [JsonPropertyName("card_rarity_odds_value")]
+    public float CardRarityOddsValue { get; init; }
 }
 
 public class EnchantmentData
