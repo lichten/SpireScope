@@ -17,10 +17,9 @@ public static class RestSiteOptionService
     static IReadOnlyDictionary<string, string> LoadJson(string lang)
     {
         var asm = Assembly.GetExecutingAssembly();
-        var name = ResourceResolver.ResolveVersioned(asm, $"localization.{lang}.rest_site_ui.json");
-        if (name is null) return new Dictionary<string, string>();
+        using var stream = ResourceResolver.OpenText(asm, $"localization.{lang}.rest_site_ui.json");
+        if (stream is null) return new Dictionary<string, string>();
 
-        using var stream = asm.GetManifestResourceStream(name)!;
         using var doc = JsonDocument.Parse(stream);
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var prop in doc.RootElement.EnumerateObject())

@@ -23,10 +23,9 @@ public static class CardDatabaseService
     {
         var asm = Assembly.GetExecutingAssembly();
         var result = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
-        var name = ResourceResolver.ResolveVersioned(asm, suffix);
-        if (name is null) return result;
+        using var stream = ResourceResolver.OpenText(asm, suffix);
+        if (stream is null) return result;
 
-        using var stream = asm.GetManifestResourceStream(name)!;
         var doc = JsonDocument.Parse(stream);
 
         foreach (var prop in doc.RootElement.EnumerateObject())
@@ -503,10 +502,9 @@ public static class CardDatabaseService
     {
         var asm = Assembly.GetExecutingAssembly();
         var result = new Dictionary<string, (string, string)>(StringComparer.OrdinalIgnoreCase);
-        var name = ResourceResolver.ResolveVersioned(asm, "card_descriptions.json");
-        if (name is null) return result;
+        using var stream = ResourceResolver.OpenText(asm, "card_descriptions.json");
+        if (stream is null) return result;
 
-        using var stream = asm.GetManifestResourceStream(name)!;
         var doc = JsonDocument.Parse(stream);
         foreach (var prop in doc.RootElement.EnumerateObject())
         {
@@ -529,10 +527,9 @@ public static class CardDatabaseService
     static IReadOnlyDictionary<string, string> LoadLocJson(string suffix)
     {
         var asm = Assembly.GetExecutingAssembly();
-        var name = ResourceResolver.ResolveVersioned(asm, $"localization.{suffix}.json");
-        if (name is null) return new Dictionary<string, string>();
+        using var stream = ResourceResolver.OpenText(asm, $"localization.{suffix}.json");
+        if (stream is null) return new Dictionary<string, string>();
 
-        using var stream = asm.GetManifestResourceStream(name)!;
         var doc = JsonDocument.Parse(stream);
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var prop in doc.RootElement.EnumerateObject())

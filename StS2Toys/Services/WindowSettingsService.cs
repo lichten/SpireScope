@@ -11,7 +11,10 @@ record AppSettings(
     int? SidePanelWidth = null,
     SubWindowSettings? CharacterOverview = null,
     SubWindowSettings? CombinedOverview = null,
-    string? Language = null);
+    string? Language = null,
+    // 配布モードのアセットセットアップ状態（再プロンプト制御用。実体判定は AssetLocator を正とする）。
+    string? AssetsInstalledVersion = null,
+    string? AssetsSkippedVersion = null);
 
 static class WindowSettingsService
 {

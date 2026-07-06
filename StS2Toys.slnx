@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="StS2Shared/StS2Shared.csproj" />
+  <Project Path="StS2Shared.Assets/StS2Shared.Assets.csproj" />
   <Project Path="StS2Toys/StS2Toys.csproj" />
   <Project Path="StS2Capture.Core/StS2Capture.Core.csproj" />
   <Project Path="StS2Capture/StS2Capture.csproj" />
@@ -7,4 +8,5 @@
   <Project Path="ctex-to-png/ctex-to-png.csproj" />
   <Project Path="StS2SiteBuilder/StS2SiteBuilder.csproj" />
   <Project Path="SpineRuntime/SpineRuntime.csproj" />
+  <Project Path="StS2Shared.Spine/StS2Shared.Spine.csproj" />
 </Solution>

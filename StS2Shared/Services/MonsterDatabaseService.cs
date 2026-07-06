@@ -14,9 +14,8 @@ public static class MonsterDatabaseService
     {
         var asm  = Assembly.GetExecutingAssembly();
         var result = new Dictionary<string, MonsterDef>(StringComparer.OrdinalIgnoreCase);
-        var name = ResourceResolver.ResolveVersioned(asm, "monster_names.json");
-        if (name is null) return result;
-        using var stream = asm.GetManifestResourceStream(name)!;
+        using var stream = ResourceResolver.OpenText(asm, "monster_names.json");
+        if (stream is null) return result;
         var arr = JsonDocument.Parse(stream).RootElement;
 
         foreach (var el in arr.EnumerateArray())
