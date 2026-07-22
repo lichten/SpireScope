@@ -3,11 +3,11 @@ using StS2Capture;
 using StS2Capture.Capture;
 using StS2Capture.Recognition;
 using StS2Shared.Models;
-using StS2Toys.Services;
+using SpireScope.Services;
 using StS2Shared.Services;
 using StS2Shared.Assets;
 
-namespace StS2Toys
+namespace SpireScope
 {
     public partial class Form1 : Form
     {

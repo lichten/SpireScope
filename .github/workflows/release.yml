@@ -33,12 +33,12 @@ jobs:
           $ver = $tag -replace '^v', ''
           "tag=$tag"          >> $env:GITHUB_OUTPUT
           "version=$ver"      >> $env:GITHUB_OUTPUT
-          "zip=StS2Toys-$tag-win-x64.zip" >> $env:GITHUB_OUTPUT
+          "zip=SpireScope-$tag-win-x64.zip" >> $env:GITHUB_OUTPUT
 
       - name: Publish (self-contained single-file, ExcludeGameText)
         shell: pwsh
         run: |
-          dotnet publish StS2Toys/StS2Toys.csproj -c Release -r win-x64 --self-contained true `
+          dotnet publish SpireScope/SpireScope.csproj -c Release -r win-x64 --self-contained true `
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
             -p:EnableCompressionInSingleFile=true -p:DebugType=none `
             -p:ExcludeGameText=true -p:Version=${{ steps.ver.outputs.version }} `
@@ -50,7 +50,7 @@ jobs:
           Copy-Item packaging/README-dist.txt publish/README.txt
           Copy-Item LICENSE publish/LICENSE
           Copy-Item THIRD-PARTY-NOTICES.txt publish/THIRD-PARTY-NOTICES.txt
-          # publish 直下には StS2Toys.exe と上記ドキュメントのみが残る想定。
+          # publish 直下には SpireScope.exe と上記ドキュメントのみが残る想定。
           Get-ChildItem publish | Format-Table Name, Length
 
       - name: Zip

@@ -1,4 +1,4 @@
-namespace StS2Toys.Services;
+namespace SpireScope.Services;
 
 static class AppLanguage
 {

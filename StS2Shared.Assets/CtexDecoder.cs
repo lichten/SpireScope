@@ -12,7 +12,7 @@ namespace StS2Shared.Assets;
 /// <summary>
 /// Godot のインポート済みテクスチャ（<c>.ctex</c> = GST2 コンテナ）を RGBA 画素にデコードする単一実装。
 ///
-/// 以前は同一フォーマットのデコーダが 3 箇所に重複していた（ctex-to-png・StS2Toys の RelicImageService・
+/// 以前は同一フォーマットのデコーダが 3 箇所に重複していた（ctex-to-png・SpireScope の RelicImageService・
 /// StS2SiteBuilder の SpineLoader）。本クラスに集約し、各利用側は出力型（PNG 保存 / System.Drawing.Bitmap /
 /// SkiaSharp）への薄い変換だけを持つ。
 ///

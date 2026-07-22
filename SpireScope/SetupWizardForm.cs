@@ -1,11 +1,11 @@
 using StS2Shared.Assets;
 using StS2Shared.Services;
 
-namespace StS2Toys;
+namespace SpireScope;
 
 /// <summary>
 /// 初回セットアップ／再同期ウィザード。ユーザーの Slay the Spire 2 インストールから画像アセットを
-/// 抽出して配布ディレクトリ（<c>%LocalAppData%\StS2Toys\assets\v{version}</c>）へ配置する。
+/// 抽出して配布ディレクトリ（<c>%LocalAppData%\SpireScope\assets\v{version}</c>）へ配置する。
 /// ゲームデータの再配布は行わず、抽出はユーザーの手元で完結する。抽出処理の実体は
 /// <see cref="AssetSetup.RunSetup"/>（UI 非依存・トランザクショナル）。
 /// </summary>

@@ -1,4 +1,4 @@
-# StS2Toys
+# SpireScope
 
 Slay the Spire 2 のセーブデータを読み込み、デッキの状態などを確認できるウィンドウを表示します。Modではありません。
 
@@ -23,9 +23,9 @@ Slay the Spire 2 のセーブデータを読み込み、デッキの状態など
 
 ### 入手とセットアップ
 
-1. [Releases](https://github.com/lichten/StS2Toys/releases) から最新の
-   `StS2Toys-vX.Y.Z-win-x64.zip` をダウンロードして展開します。
-2. `StS2Toys.exe` を起動します（SmartScreen が出たら「詳細情報 → 実行」）。
+1. [Releases](https://github.com/lichten/SpireScope/releases) から最新の
+   `SpireScope-vX.Y.Z-win-x64.zip` をダウンロードして展開します。
+2. `SpireScope.exe` を起動します（SmartScreen が出たら「詳細情報 → 実行」）。
 3. 初回のみセットアップウィザードが表示され、Steam の Slay the Spire 2 から
    画像・テキストを自動で取り込みます（数分）。以降は進行中ランのセーブを自動表示します。
 
@@ -50,8 +50,8 @@ Slay the Spire 2 のセーブデータを読み込み、デッキの状態など
 ### 1. リポジトリのクローンとブランチ作成
 
 ```powershell
-git clone https://github.com/lichten/StS2Toys.git
-cd StS2Toys
+git clone https://github.com/lichten/SpireScope.git
+cd SpireScope
 git checkout -b feature/your-branch-name
 ```
 
@@ -115,7 +115,7 @@ dotnet build
 
 | アプリ | コマンド | 説明 |
 |--------|----------|------|
-| セーブデータビューア | `dotnet run --project StS2Toys` | デッキ・レリックの閲覧 |
+| セーブデータビューア | `dotnet run --project SpireScope` | デッキ・レリックの閲覧 |
 | 静的サイトジェネレータ | `dotnet run --project StS2SiteBuilder` | ゲーム情報サイトの生成 |
 
 ---

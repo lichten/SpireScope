@@ -1,6 +1,6 @@
 using StS2Shared.Models;
 
-namespace StS2Toys;
+namespace SpireScope;
 
 record FloorPoint(int ActIndex, int ActFloor, int GlobalFloor, string FloorType,
     int CurrentHp, int MaxHp, int DamageTaken, int HpHealed, int MaxHpGained, int MaxHpLost);

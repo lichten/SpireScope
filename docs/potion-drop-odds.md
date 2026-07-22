@@ -1,6 +1,6 @@
 # 次の戦闘のポーションドロップ確率 — 算出方法の調査
 
-StS2Toys に「次の戦闘でポーションがドロップする確率」を表示する機能を追加するための調査記録。
+SpireScope に「次の戦闘でポーションがドロップする確率」を表示する機能を追加するための調査記録。
 **結論：セーブデータ（`current_run.save`）に現在の実確率がそのまま保存されているため、
 Mod も手入力も不要で、セーブ読み込みだけで正確に算出できる。**
 
@@ -85,7 +85,7 @@ v0.108.0 で `ShouldForcePotionReward` を実装するのは `WhiteBeastStatue` 
 ## 2. セーブデータの所在とフィールド
 
 `%AppData%\SlayTheSpire2\steam\{steamId}\profile1\saves\current_run.save`
-（**平文の pretty-print JSON**。暗号化・圧縮なし。StS2Toys の `SaveDataService` が既に読んでいるファイル）
+（**平文の pretty-print JSON**。暗号化・圧縮なし。SpireScope の `SaveDataService` が既に読んでいるファイル）
 
 ### 2.1 本命フィールド
 

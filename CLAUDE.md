@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```powershell
 dotnet build                                  # ソリューション全体
-dotnet run --project StS2Toys                 # セーブデータビューア
+dotnet run --project SpireScope               # セーブデータビューア
 dotnet run --project card-type-extractor      # カードメタデータ再生成（要ゲームDLL）
 ```
 
@@ -52,7 +52,7 @@ dotnet run --project StS2SiteBuilder -- --build --dist-dir .\StS2SiteBuilder\dis
   出力先が `tools/extracted/images/monsters/` ＝ 展開先の中なので、**クリーン展開で必ず消える**。
 - `--dist-dir` をリポジトリ外（例 `C:\work\develop\StS2Site`）にしたまま実行すると、
   `AssetLocator.FindExtractedRoot` が dist の親から `tools/extracted` を上へ辿って見つけられず、
-  **配布用アセットキャッシュ（`%LocalAppData%\StS2Toys\assets\v*`）へ黙ってフォールバックする**。
+  **配布用アセットキャッシュ（`%LocalAppData%\SpireScope\assets\v*`）へ黙ってフォールバックする**。
   ビルドは成功し「モンスター画像: PNG 131 件」とまで出るのに、`tools/extracted` 側には
   1 枚も生成されない。実際に v0.109.0 でこれを踏み、site3 のモンスター画像が全欠落した。
   ログの `Generated ... -> <パス>` が本リポジトリ配下かで判別できる。
@@ -71,7 +71,7 @@ dotnet run --project StS2SiteBuilder -- --build --dist-dir .\StS2SiteBuilder\dis
 | `StS2Shared` | 全アプリが参照する共有ライブラリ（サービス・メカニクス定義） |
 | `StS2Shared.Assets` | `.pck` 読み取り（`PckReader`/`CtexDecoder`）と配布セットアップの抽出エンジン（`AssetExtractor`/`AssetSetup`/`SteamLocator`/`LocTextDeriver`） |
 | `StS2Shared.Spine` | Spine 描画の共有ライブラリ（`SpineLoader`/`SpineRenderer`/`CreatureVisual`。`IAssetSource` でディスク/pck 両対応、`MonsterPngRenderer`）。SiteBuilder と配布セットアップが共用 |
-| `StS2Toys` | セーブデータビューア（デッキ・レリック・敵情報・HP変動・ポーション確率・ライブキャプチャ） |
+| `SpireScope` | セーブデータビューア（デッキ・レリック・敵情報・HP変動・ポーション確率・ライブキャプチャ） |
 | `StS2Capture.Core` | ライブ画面キャプチャ（WGC）と画面認識（カード選択/ショップ/エンシェント。固定矩形＋HSV 照合、OCR はエンシェントのみ） |
 | `StS2Capture` | キャプチャ検証用の単体アプリ（試験用） |
 | `StS2SiteBuilder` | 静的サイトジェネレータ |
@@ -196,7 +196,7 @@ dotnet run --project StS2SiteBuilder -- --build --dist-dir .\StS2SiteBuilder\dis
 
 - **アセット解決の 2 段構え**（`StS2Shared/Services/AssetLocator.cs`）:
   開発モード＝exe から親を遡って `tools/extracted` を探す → 配布モード＝
-  `%LocalAppData%\StS2Toys\assets\v{version}`（最新バージョン）を使う。どちらも無ければ未セットアップ。
+  `%LocalAppData%\SpireScope\assets\v{version}`（最新バージョン）を使う。どちらも無ければ未セットアップ。
 - **初回セットアップ**: `SetupWizardForm` → `AssetSetup.RunSetup`（`_staging` へ抽出し成功時のみ
   `v{version}` へ原子 Move）→ `AssetExtractor.ExtractViewerAssets`（カード/レリック/エンチャント/
   ローカライズ/派生テキストの抽出＋**モンスター画像は pck 直読みで Spine レンダリング**して
@@ -211,13 +211,13 @@ dotnet run --project StS2SiteBuilder -- --build --dist-dir .\StS2SiteBuilder\dis
   - 認識器などのアセットディレクトリ参照は**遅延解決**にする（構築時に一度だけ解決すると、
     初回セットアップ完了後もプロセス中は未設定のままになり再起動が必要になる）。
 
-### StS2Toys — セーブデータビューア
+### SpireScope — セーブデータビューア
 
 進行中ランのセーブを読み、デッキ・レリックを表示する。サイドのボタンで複数のサブ概観ウィンドウを開く
 （いずれも `DeckOverviewForm` を再利用。カード/レリックは Bitmap に動的描画し、クリックで外部リンクを開く）。
 ほかに敵情報（`EncounterOverviewForm`。遭遇済み・次のボスの先読みハイライト＋モンスター画像）、HP変動グラフ、
 ポーション報酬ドロップ確率（`PotionOddsService`。サイドパネル常時表示、`docs/potion-drop-odds.md`）、
-ライブ画面キャプチャ（StS2Capture.Core、`docs/StS2Toys-LiveCapture.md`）、初回セットアップウィザードを持つ。
+ライブ画面キャプチャ（StS2Capture.Core、`docs/SpireScope-LiveCapture.md`）、初回セットアップウィザードを持つ。
 ファイル監視の自動リロードにより、セーブ更新でこれらの表示は自動更新される。
 
 **キャラクター概観（`btnCharacterOverview` → `EnableCharacterMode()`）**

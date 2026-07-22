@@ -1,4 +1,4 @@
-namespace StS2Toys.Services;
+namespace SpireScope.Services;
 
 /// <summary>
 /// モンスター dir 名（例 "two_tailed_rat"）→ <c>tools/extracted/images/monsters/{dir}.png</c> を読み込む。

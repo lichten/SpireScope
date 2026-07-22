@@ -1,8 +1,8 @@
 using System.ComponentModel;
 using StS2Shared.Services;
-using StS2Toys.Services;
+using SpireScope.Services;
 
-namespace StS2Toys;
+namespace SpireScope;
 
 /// <summary>
 /// URL テンプレートの追加／編集／削除を行う簡易グリッド。OK で url_templates.json に保存する。

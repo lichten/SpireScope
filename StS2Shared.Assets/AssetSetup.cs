@@ -20,7 +20,7 @@ public static class AssetSetup
 
     /// <summary>
     /// <paramref name="install"/> の <c>.pck</c> からビューア用アセットを抽出し、
-    /// <c>%LocalAppData%\StS2Toys\assets\v{version}</c> に配置する。生成した最終ディレクトリのパスを返す。
+    /// <c>%LocalAppData%\SpireScope\assets\v{version}</c> に配置する。生成した最終ディレクトリのパスを返す。
     /// 途中でキャンセル・失敗した場合はステージングを片付けて例外を送出する（最終ディレクトリは変更しない）。
     /// </summary>
     public static string RunSetup(Sts2Install install,

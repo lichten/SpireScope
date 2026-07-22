@@ -3894,7 +3894,7 @@ static string? FindArticlesDir(string distDir)
     [
         Path.Combine(Path.GetDirectoryName(distParent)!, "articles"),  // dist の祖父親
         Path.Combine(distParent, "articles"),                           // dist の親
-        Path.Combine(projectDir, "..", "articles"),                     // exe プロジェクトの親（StS2Toys/）
+        Path.Combine(projectDir, "..", "articles"),                     // exe プロジェクトの親（SpireScope/）
         Path.Combine(projectDir, "articles"),                           // exe プロジェクト直下
     ];
     return candidates.FirstOrDefault(Directory.Exists);

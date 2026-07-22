@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <!-- Windows.Media.Ocr / Windows.Graphics.Capture（WinRT 投影）を使うため SDK バージョン付き TFM。
-         StS2Capture(exe) と StS2Toys の双方から参照する共有ライブラリ。 -->
+         StS2Capture(exe) と SpireScope の双方から参照する共有ライブラリ。 -->
     <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <SupportedOSPlatformVersion>10.0.18362.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>

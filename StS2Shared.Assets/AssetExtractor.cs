@@ -6,7 +6,7 @@ namespace StS2Shared.Assets;
 public sealed record ExtractProgress(string Group, int Done, int Total);
 
 /// <summary>
-/// <see cref="PckReader"/> と <see cref="CtexDecoder"/> を用い、StS2Toys が実行時に参照するアセットだけを
+/// <see cref="PckReader"/> と <see cref="CtexDecoder"/> を用い、SpireScope が実行時に参照するアセットだけを
 /// ユーザーの <c>.pck</c> から抽出し、出力ルート配下に <c>tools/extracted</c> と同一レイアウトで書き出す。
 ///
 /// 出力先を <see cref="StS2Shared.Services.AssetLocator.DistributionAssetsRoot"/> 配下のバージョンフォルダに
@@ -28,7 +28,7 @@ public sealed class AssetExtractor
         _outRoot = outputRoot;
     }
 
-    /// <summary>StS2Toys ビューア用のアセット一式を抽出する。</summary>
+    /// <summary>SpireScope ビューア用のアセット一式を抽出する。</summary>
     public void ExtractViewerAssets(IProgress<ExtractProgress>? progress = null, CancellationToken ct = default)
     {
         // カードポートレート: images/packed/card_portraits/{char}/{id}.png.import → card_portraits_png/{char}/{id}.png
