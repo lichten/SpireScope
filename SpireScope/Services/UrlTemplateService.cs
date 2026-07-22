@@ -1,7 +1,7 @@
 using System.Text.Json;
 using StS2Shared.Services;
 
-namespace StS2Toys.Services;
+namespace SpireScope.Services;
 
 /// <summary>
 /// 情報ページ URL テンプレートの永続化（ライブキャプチャの検出結果リンク用）。
@@ -11,7 +11,7 @@ static class UrlTemplateService
 {
     static readonly string Path_ = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "StS2Toys", "url_templates.json");
+        "SpireScope", "url_templates.json");
 
     static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
 

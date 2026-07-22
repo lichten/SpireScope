@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using System.Drawing.Imaging;
-using StS2Toys.Services;
+using SpireScope.Services;
 using StS2Shared.Services;
 
-namespace StS2Toys;
+namespace SpireScope;
 
 public record DeckCard(string Id, string NameEn, string NameJa, string Cost, string Type, int Count, bool IsUpgraded = false, string EnchantmentId = "", int EnchantmentAmount = 0);
 public record RelicEntry(string Id, string NameEn, string NameJa);
@@ -628,7 +628,7 @@ public partial class DeckOverviewForm : Form
 
         const int ImgPad = 2;
         // 個別 PNG（relic_images.json → relics_png/）を表示。atlas 切り出しは使わない。
-        var img = StS2Toys.Services.RelicImageService.GetRelicPng(relic.Id);
+        var img = SpireScope.Services.RelicImageService.GetRelicPng(relic.Id);
         if (img is not null)
         {
             // アスペクト比を保持してタイル内に内接・中央寄せ。

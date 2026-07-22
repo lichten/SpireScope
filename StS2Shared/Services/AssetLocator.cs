@@ -6,11 +6,11 @@ namespace StS2Shared.Services;
 /// ゲームアセット（<c>tools/extracted</c> 相当のレイアウト）を格納したルートディレクトリを解決する。
 ///
 /// 従来は各サービスが個別に「exe の親を遡って <c>tools/extracted</c> を探す」ウォークアップを実装していた
-/// （StS2Toys / StS2Capture.Core / StS2SiteBuilder / ctex-to-png に計 12 箇所分散）。本クラスはその解決を一元化し、
+/// （SpireScope / StS2Capture.Core / StS2SiteBuilder / ctex-to-png に計 12 箇所分散）。本クラスはその解決を一元化し、
 /// 2 つのモードを順に試す：
 /// <list type="number">
 ///   <item><b>開発モード</b>: 起点（既定 <see cref="AppContext.BaseDirectory"/>）から親を遡って <c>tools/extracted</c> を探す。</item>
-///   <item><b>配布モード</b>: <c>%LocalAppData%\StS2Toys\assets\v{version}</c> のうち最新バージョンを使う
+///   <item><b>配布モード</b>: <c>%LocalAppData%\SpireScope\assets\v{version}</c> のうち最新バージョンを使う
 ///     （初回セットアップウィザードが抽出物を配置する先。レイアウトは <c>tools/extracted</c> と一致）。</item>
 /// </list>
 /// どちらも見つからない場合は「未セットアップ」を表す null を返す。
@@ -23,10 +23,10 @@ public static class AssetLocator
     const string ImagesFolderName = "images";
     const string GodotImportedRelative = ".godot/imported";
 
-    /// <summary>配布モードのアセット格納ベース（<c>%LocalAppData%\StS2Toys\assets</c>）。バージョン別サブフォルダを持つ。</summary>
+    /// <summary>配布モードのアセット格納ベース（<c>%LocalAppData%\SpireScope\assets</c>）。バージョン別サブフォルダを持つ。</summary>
     public static string DistributionAssetsRoot { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "StS2Toys", "assets");
+        LegacyDataMigration.AppFolderName, "assets");
 
     /// <summary>
     /// 抽出アセットのルート（<c>tools/extracted</c> 相当）を返す。開発モード → 配布モードの順に解決し、
@@ -59,7 +59,7 @@ public static class AssetLocator
             : Path.Combine(root, GodotImportedRelative.Replace('/', Path.DirectorySeparatorChar));
     }
 
-    /// <summary>配布モードの最新バージョンディレクトリ（<c>%LocalAppData%\StS2Toys\assets\v{最大}</c>）。無ければ null。</summary>
+    /// <summary>配布モードの最新バージョンディレクトリ（<c>%LocalAppData%\SpireScope\assets\v{最大}</c>）。無ければ null。</summary>
     public static string? LatestDistributionVersionDir
     {
         get

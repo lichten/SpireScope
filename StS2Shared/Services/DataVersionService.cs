@@ -2,7 +2,7 @@ namespace StS2Shared.Services;
 
 /// <summary>
 /// 表示用の「データバージョン」＝ 参照しているゲームデータがどのゲーム版由来かを返す（例 "v0.109.0"）。
-/// アプリ自身のバージョンとは別物であることに注意（そちらは StS2Toys 側の AppVersion）。
+/// アプリ自身のバージョンとは別物であることに注意（そちらは SpireScope 側の AppVersion）。
 ///
 /// 開発モードと配布モードで実データの出所が違うため、判定を分ける：
 /// <list type="bullet">
@@ -10,7 +10,7 @@ namespace StS2Shared.Services;
 ///     <c>%LocalAppData%</c> 側に古い抽出物が残っていることがあり、それを出すと実態とずれるため
 ///     埋め込みリソースの最大バージョンを採る。</item>
 ///   <item><b>配布モード</b>: 初回セットアップが配置した
-///     <c>%LocalAppData%\StS2Toys\assets\v{version}</c> が実データ。</item>
+///     <c>%LocalAppData%\SpireScope\assets\v{version}</c> が実データ。</item>
 /// </list>
 /// </summary>
 public static class DataVersionService

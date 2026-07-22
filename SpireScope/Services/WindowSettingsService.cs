@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace StS2Toys.Services;
+namespace SpireScope.Services;
 
 record WindowSettings(int X, int Y, int Width, int Height, string State);
 record SubWindowSettings(int X, int Y, int Width, int Height, bool Visible = false);
@@ -20,7 +20,7 @@ static class WindowSettingsService
 {
     static readonly string SettingsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "StS2Toys", "settings.json");
+        "SpireScope", "settings.json");
 
     static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
 

@@ -1,9 +1,9 @@
 using System.Reflection;
 
-namespace StS2Toys.Services;
+namespace SpireScope.Services;
 
 /// <summary>
-/// 自身（StS2Toys）のバージョン表示文字列。csproj の <c>&lt;Version&gt;</c>、
+/// 自身（SpireScope）のバージョン表示文字列。csproj の <c>&lt;Version&gt;</c>、
 /// リリースビルドでは release.yml の <c>-p:Version=</c>（git タグ由来）が元になる。
 /// </summary>
 static class AppVersion

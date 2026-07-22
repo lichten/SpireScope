@@ -2,9 +2,9 @@ using System.Diagnostics;
 using System.Text;
 using StS2Shared.Models;
 using StS2Shared.Services;
-using StS2Toys.Services;
+using SpireScope.Services;
 
-namespace StS2Toys;
+namespace SpireScope;
 
 public partial class EncounterOverviewForm : Form
 {

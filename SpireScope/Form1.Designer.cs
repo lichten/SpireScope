@@ -1,4 +1,4 @@
-namespace StS2Toys
+namespace SpireScope
 {
     partial class Form1
     {
@@ -523,7 +523,7 @@ namespace StS2Toys
             ClientSize = new Size(800, 520);
             Controls.Add(splitContainerOuter);
             Name = "Form1";
-            Text = "StS2 Deck Viewer";
+            Text = "SpireScope";
             splitContainerOuter.Panel1.ResumeLayout(false);
             splitContainerOuter.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)splitContainerOuter).EndInit();

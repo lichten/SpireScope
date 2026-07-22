@@ -1,7 +1,7 @@
 using System.Drawing.Imaging;
 using System.Text.RegularExpressions;
 
-namespace StS2Toys.Services;
+namespace SpireScope.Services;
 
 static class CardAtlasService
 {

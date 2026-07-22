@@ -1,4 +1,4 @@
-namespace StS2Toys
+namespace SpireScope
 {
     partial class SetupWizardForm
     {
@@ -137,7 +137,7 @@ namespace StS2Toys
             MinimumSize = new Size(460, 320);
             Name = "SetupWizardForm";
             StartPosition = FormStartPosition.CenterParent;
-            Text = "StS2Toys セットアップ";
+            Text = "SpireScope セットアップ";
             _root.ResumeLayout(false);
             _root.PerformLayout();
             _bottom.ResumeLayout(false);

@@ -7,7 +7,7 @@ namespace StS2Shared.Services;
 /// カード ID → カード画像のソース相対パス（<c>card_portraits_png/</c> 基準、例 "silent/abrasive.png"）。
 /// card-type-extractor が実ファイルをスキャンして生成した card_images.json（バージョンフォルダ）を参照する。
 /// 「どのサブディレクトリにどのファイル名で存在するか」の対応をここに一元化し、
-/// StS2SiteBuilder / StS2Toys 双方が利用する。
+/// StS2SiteBuilder / SpireScope 双方が利用する。
 /// </summary>
 public static class CardImageService
 {

@@ -2,7 +2,7 @@ namespace StS2Shared.Spine;
 
 /// <summary>
 /// モンスター 1 体の先頭フレームを PNG にレンダリングする（配布セットアップ用の軽量 API）。
-/// GIF は生成しない＝StS2Toys の表示（.png のみ参照）に必要十分で高速。
+/// GIF は生成しない＝SpireScope の表示（.png のみ参照）に必要十分で高速。
 /// </summary>
 public static class MonsterPngRenderer
 {

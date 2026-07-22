@@ -2,7 +2,7 @@ using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
-namespace StS2Toys.Services;
+namespace SpireScope.Services;
 
 static class RelicImageService
 {

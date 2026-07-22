@@ -1,4 +1,4 @@
-namespace StS2Toys
+namespace SpireScope
 {
     partial class HpHistoryForm
     {

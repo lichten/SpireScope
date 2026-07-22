@@ -11,7 +11,7 @@ namespace StS2Shared.Services;
 /// 「どのサブディレクトリにどのファイル名で存在するか」の対応をここに一元化する。
 /// <see cref="CardImageService"/> のレリック版。
 ///
-/// 注: <c>StS2Toys.Services.RelicImageService</c>（atlas 描画）とは別物（名前空間が異なる）。
+/// 注: <c>SpireScope.Services.RelicImageService</c>（atlas 描画）とは別物（名前空間が異なる）。
 /// </summary>
 public static class RelicImageService
 {
