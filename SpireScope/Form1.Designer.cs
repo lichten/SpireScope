@@ -44,12 +44,14 @@ namespace SpireScope
             _colJp = new ColumnHeader();
             _colConf = new ColumnHeader();
             _colRecog = new ColumnHeader();
+            _colTier = new ColumnHeader();
             _ocrHeaderPanel = new Panel();
             _ocrList = new ListView();
             _colOcrText = new ColumnHeader();
             _colOcrKind = new ColumnHeader();
             _colOcrMatch = new ColumnHeader();
             _colOcrDist = new ColumnHeader();
+            _colOcrTier = new ColumnHeader();
             _ocrHeaderLabel = new Label();
             _previewHeaderPanel = new Panel();
             _capturePreview = new PictureBox();
@@ -392,7 +394,7 @@ namespace SpireScope
             //
             // _list
             //
-            _list.Columns.AddRange(new ColumnHeader[] { _colCardId, _colEn, _colJp, _colConf, _colRecog });
+            _list.Columns.AddRange(new ColumnHeader[] { _colCardId, _colEn, _colJp, _colConf, _colRecog, _colTier });
             _list.Dock = DockStyle.Fill;
             _list.FullRowSelect = true;
             _list.Location = new Point(0, 0);
@@ -427,6 +429,11 @@ namespace SpireScope
             _colRecog.Text = "認識器";
             _colRecog.Width = 70;
             //
+            // _colTier
+            //
+            _colTier.Text = "Tier";
+            _colTier.Width = 60;
+            //
             // _ocrHeaderPanel
             //
             _ocrHeaderPanel.Controls.Add(_ocrList);
@@ -439,7 +446,7 @@ namespace SpireScope
             //
             // _ocrList
             //
-            _ocrList.Columns.AddRange(new ColumnHeader[] { _colOcrText, _colOcrKind, _colOcrMatch, _colOcrDist });
+            _ocrList.Columns.AddRange(new ColumnHeader[] { _colOcrText, _colOcrKind, _colOcrMatch, _colOcrDist, _colOcrTier });
             _ocrList.Dock = DockStyle.Fill;
             _ocrList.FullRowSelect = true;
             _ocrList.Location = new Point(0, 18);
@@ -468,6 +475,11 @@ namespace SpireScope
             //
             _colOcrDist.Text = "距離";
             _colOcrDist.Width = 90;
+            //
+            // _colOcrTier
+            //
+            _colOcrTier.Text = "Tier";
+            _colOcrTier.Width = 90;
             //
             // _ocrHeaderLabel
             //
@@ -575,12 +587,14 @@ namespace SpireScope
         private ColumnHeader _colJp;
         private ColumnHeader _colConf;
         private ColumnHeader _colRecog;
+        private ColumnHeader _colTier;
         private Panel _ocrHeaderPanel;
         private ListView _ocrList;
         private ColumnHeader _colOcrText;
         private ColumnHeader _colOcrKind;
         private ColumnHeader _colOcrMatch;
         private ColumnHeader _colOcrDist;
+        private ColumnHeader _colOcrTier;
         private Label _ocrHeaderLabel;
         private Panel _previewHeaderPanel;
         private PictureBox _capturePreview;

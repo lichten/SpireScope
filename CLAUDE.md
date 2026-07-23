@@ -218,6 +218,8 @@ dotnet run --project StS2SiteBuilder -- --build --dist-dir .\StS2SiteBuilder\dis
 ほかに敵情報（`EncounterOverviewForm`。遭遇済み・次のボスの先読みハイライト＋モンスター画像）、HP変動グラフ、
 ポーション報酬ドロップ確率（`PotionOddsService`。サイドパネル常時表示、`docs/potion-drop-odds.md`）、
 ライブ画面キャプチャ（StS2Capture.Core、`docs/SpireScope-LiveCapture.md`）、初回セットアップウィザードを持つ。
+ライブキャプチャの検出結果には spire-codex.com のティアスコアを Tier 列で併記する
+（`TierScoreService`。公開 API＋キャッシュ＋埋め込みスナップショットの3段、`docs/SpireScope-TierScores.md`）。
 ファイル監視の自動リロードにより、セーブ更新でこれらの表示は自動更新される。
 
 **キャラクター概観（`btnCharacterOverview` → `EnableCharacterMode()`）**

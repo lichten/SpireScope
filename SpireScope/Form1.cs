@@ -32,6 +32,7 @@ namespace SpireScope
         private readonly ShopItemRecognizer _shop = new();
         private readonly ScreenRecognizer _screen;
         private string _lastSignature = "";
+        private CaptureLoop.Result? _lastResult;   // ティアスコア更新時の再描画用
         private bool _useGdi;   // false=WGC（既定）、true=GDI。左パネルの取得方式トグルで切替。
         private readonly ContextMenuStrip _linkMenu = new();
         private List<UrlTemplate> _templates = UrlTemplateService.Load();
@@ -67,6 +68,10 @@ namespace SpireScope
         {
             RestoreWindowSettings();
             MaybeRunAssetSetup();
+            // 検出結果の Tier 列用スコア（spire-codex.com）。同期部は埋め込みスナップショットの
+            // ロードのみで軽量、API 再取得は裏で走り Updated で再描画される。
+            TierScoreService.Updated += OnTierScoresUpdated;
+            TierScoreService.Initialize();
             // ウィザードでデータバージョンが変わりうるため、MaybeRunAssetSetup の後に組み立てる。
             UpdateTitle();
             var defaultPath = SaveDataService.GetDefaultSavePath();
@@ -185,6 +190,7 @@ namespace SpireScope
             _encounterOverview?.Close();
             _hpHistory?.Close();
             _characterOverview?.Close();
+            TierScoreService.Updated -= OnTierScoresUpdated;
             _loop.Dispose();
         }
 
@@ -363,6 +369,8 @@ namespace SpireScope
         void DisplayData(RunSaveData data)
         {
             _lastRunData = data;
+            TierScoreService.RequestCharacterScores(
+                SaveDataService.NormalizeCharacterId(data.Players.FirstOrDefault()?.CharacterId));
             if (data.Players.Count == 0) return;
             var player = data.Players[0];
 
@@ -784,13 +792,30 @@ namespace SpireScope
             catch { /* フォーム破棄中 */ }
         }
 
+        /// <summary>ティアスコア取得完了時、最後の検出結果を再適用して Tier 列を埋め直す。</summary>
+        void OnTierScoresUpdated()
+        {
+            if (IsDisposed) return;
+            try
+            {
+                BeginInvoke(() =>
+                {
+                    _lastSignature = "";
+                    if (_lastResult is not null) ApplyResult(_lastResult);
+                });
+            }
+            catch { /* フォーム破棄中 */ }
+        }
+
         void ApplyResult(CaptureLoop.Result result)
         {
+            _lastResult = result;
             _status.Text = result.Status;
 
             var oldPreview = _capturePreview.Image;
             _capturePreview.Image = result.Preview;
-            oldPreview?.Dispose();
+            // ティア更新による同一 Result の再適用では旧==新のため、Dispose すると表示中の画像が壊れる
+            if (!ReferenceEquals(oldPreview, result.Preview)) oldPreview?.Dispose();
 
             // ショップ・エンシェントレリック選択はどちらもレリック/ポーション行（result.Shop.Items）を持つ。
             bool hasShopItems = result.Shop is { Items.Count: > 0 };
@@ -813,6 +838,7 @@ namespace SpireScope
                 item.SubItems.Add(CardDatabaseService.GetName(c.CardId, japanese: true));
                 item.SubItems.Add(c.Confidence.ToString("F2"));
                 item.SubItems.Add(c.Recognizer);
+                item.SubItems.Add(TierScoreService.FormatCardTier(c.CardId));
                 item.Tag = new LinkTarget("card", c.CardId);
                 _list.Items.Add(item);
             }
@@ -839,6 +865,7 @@ namespace SpireScope
                 item.SubItems.Add(s.Source == "title" ? "帯" : "全");
                 item.SubItems.Add(s.MatchedCardId ?? "(none)");
                 item.SubItems.Add(s.Distance?.ToString() ?? "-");
+                item.SubItems.Add(s.MatchedCardId is null ? "" : TierScoreService.FormatCardTier(s.MatchedCardId));
                 if (s.MatchedCardId is not null) item.Tag = new LinkTarget("card", s.MatchedCardId);
                 if (s.MatchedCardId is not null)
                     item.BackColor = s.Source == "title"
@@ -864,6 +891,10 @@ namespace SpireScope
                 lvi.SubItems.Add(it.Kind == ShopItemRecognizer.Kind.Relic ? "R" : "P");
                 lvi.SubItems.Add(it.Accepted ? (it.Candidates.Count > 1 ? $"OK×{it.Candidates.Count}" : "OK") : "-");
                 lvi.SubItems.Add(dist);
+                lvi.SubItems.Add(it.Candidates.Count == 0 ? "" : string.Join(" / ",
+                    it.Candidates.Select(c => it.Kind == ShopItemRecognizer.Kind.Relic
+                        ? TierScoreService.FormatRelicTier(c.Id)
+                        : TierScoreService.FormatPotionTier(c.Id))));
                 if (it.Candidates.Count > 0)
                     lvi.Tag = new LinkTarget(
                         it.Kind == ShopItemRecognizer.Kind.Relic ? "relic" : "potion",

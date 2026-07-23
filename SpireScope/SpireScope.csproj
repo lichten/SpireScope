@@ -27,4 +27,10 @@
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.116.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- spire-codex.com ティアスコアのオフライン初回起動用スナップショット（外部サイト由来・非ゲームテキスト）。
+         更新手順は docs/SpireScope-TierScores.md 参照。 -->
+    <EmbeddedResource Include="Resources\*.json" />
+  </ItemGroup>
+
 </Project>
