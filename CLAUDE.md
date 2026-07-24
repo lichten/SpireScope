@@ -216,9 +216,19 @@ dotnet run --project ctex-to-png -- monsters
 ほかに敵情報（`EncounterOverviewForm`。遭遇済み・次のボスの先読みハイライト＋モンスター画像）、HP変動グラフ、
 ポーション報酬ドロップ確率（`PotionOddsService`。サイドパネル常時表示、`docs/potion-drop-odds.md`）、
 ライブ画面キャプチャ（StS2Capture.Core、`docs/SpireScope-LiveCapture.md`）、初回セットアップウィザードを持つ。
-ライブキャプチャの検出結果には spire-codex.com のティアスコアを Tier 列で併記する
+ライブキャプチャの検出結果には spire-codex.com のティアスコアを併記する
 （`TierScoreService`。公開 API＋キャッシュ＋埋め込みスナップショットの3段、`docs/SpireScope-TierScores.md`）。
 ファイル監視の自動リロードにより、セーブ更新でこれらの表示は自動更新される。
+
+**ライブキャプチャ表示の 2 系統**
+- メイン画面右側は `CaptureResultView`（コードオンリー UserControl）。検出したカード/レリック/ポーションを
+  画像タイル＋名前＋Tier バッジで表示し、クリックで URL テンプレートのリンクを開く。検出対象外の画面に
+  切り替わっても最後の検出を保持し「（前回の検出）」注記を付ける。
+- 生の検出リスト（確信度・認識器・距離列）とキャプチャ画像プレビューは `CaptureDiagnosticsForm`
+  （サイドボタン「キャプチャ診断」）に分離。性能確認用の診断 UI。
+- `CaptureLoop` と Preview Bitmap の所有権は `Form1`。`ApplyResult` が両ビューへ fan-out する
+  （診断フォームには非表示中も Preview 参照を毎回差し替える＝破棄済み Bitmap の描画防止）。
+  signature 差分抑制・ティア更新/言語切替時の再適用も `Form1` に一本化。
 
 **キャラクター概観（`btnCharacterOverview` → `EnableCharacterMode()`）**
 - 1つの `DeckOverviewForm` で5キャラ分を扱う統合フォーム。上部のドロップダウンで「自動（セーブ）」＋5キャラを選択

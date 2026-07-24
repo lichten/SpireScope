@@ -551,7 +551,7 @@ public partial class DeckOverviewForm : Form
         }
     }
 
-    static void DrawPlaceholder(Graphics g, string name, Rectangle rect)
+    internal static void DrawPlaceholder(Graphics g, string name, Rectangle rect)
     {
         using var bg = new SolidBrush(Color.FromArgb(200, 200, 200));
         g.FillRectangle(bg, rect);
@@ -601,7 +601,7 @@ public partial class DeckOverviewForm : Form
             new PointF(rect.X, rect.Y + (rect.Height - textH) / 2f));
     }
 
-    static void DrawRelicTile(Graphics g, RelicEntry relic, Rectangle rect)
+    internal static void DrawRelicTile(Graphics g, RelicEntry relic, Rectangle rect)
     {
         var rarity = CardDatabaseService.GetRelicRarity(relic.Id);
         Color bgColor = rarity switch {

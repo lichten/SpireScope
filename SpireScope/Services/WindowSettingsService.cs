@@ -14,7 +14,8 @@ record AppSettings(
     string? Language = null,
     // 配布モードのアセットセットアップ状態（再プロンプト制御用。実体判定は AssetLocator を正とする）。
     string? AssetsInstalledVersion = null,
-    string? AssetsSkippedVersion = null);
+    string? AssetsSkippedVersion = null,
+    SubWindowSettings? CaptureDiagnostics = null);
 
 static class WindowSettingsService
 {

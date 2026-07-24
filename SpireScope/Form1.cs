@@ -19,10 +19,12 @@ namespace SpireScope
         private DeckOverviewForm? _characterOverview;
         private EncounterOverviewForm? _encounterOverview;
         private HpHistoryForm? _hpHistory;
+        private CaptureDiagnosticsForm? _captureDiagnostics;
         private SubWindowSettings? _combinedOverviewSettings;
         private SubWindowSettings? _encounterOverviewSettings;
         private SubWindowSettings? _hpHistorySettings;
         private SubWindowSettings? _characterOverviewSettings;
+        private SubWindowSettings? _captureDiagnosticsSettings;
         private IReadOnlyList<DeckCard>? _lastDeckCards;
         private IReadOnlyList<RelicEntry>? _lastRelics;
         private RunSaveData? _lastRunData;
@@ -34,11 +36,6 @@ namespace SpireScope
         private string _lastSignature = "";
         private CaptureLoop.Result? _lastResult;   // ティアスコア更新時の再描画用
         private bool _useGdi;   // false=WGC（既定）、true=GDI。左パネルの取得方式トグルで切替。
-        private readonly ContextMenuStrip _linkMenu = new();
-        private List<UrlTemplate> _templates = UrlTemplateService.Load();
-
-        /// <summary>検出結果リスト行に付与する、リンク生成用の種別＋ID。</summary>
-        sealed record LinkTarget(string Kind, string Id);
 
         /// <summary>デザイナ既定のウィンドウタイトル（バージョン付与前）。</summary>
         readonly string _baseTitle;
@@ -80,10 +77,6 @@ namespace SpireScope
                 OpenFile(defaultPath);
                 RestoreSubWindowVisibility();
             }
-
-            // キャプチャ内容ペインの初期分割（実サイズ確定後に設定）。
-            SetSplitterDistance(_outer, (int)(_outer.Width * 0.55));
-            SetSplitterDistance(_left, (int)(_left.Height * 0.5));
 
             // 画面認識の照合 DB（数百枚の画像→HSV ヒストグラム、cold で十数秒）を背景で事前構築し、
             // 初回「手動キャプチャ」の待ちを不可視化する。長時間 CPU を使うため、スレッドプール
@@ -190,6 +183,7 @@ namespace SpireScope
             _encounterOverview?.Close();
             _hpHistory?.Close();
             _characterOverview?.Close();
+            _captureDiagnostics?.Close();
             TierScoreService.Updated -= OnTierScoresUpdated;
             _loop.Dispose();
         }
@@ -203,6 +197,7 @@ namespace SpireScope
             _encounterOverviewSettings = app.EncounterOverview;
             _hpHistorySettings = app.HpHistory;
             _characterOverviewSettings = app.CharacterOverview;
+            _captureDiagnosticsSettings = app.CaptureDiagnostics;
 
             if (app.SidePanelWidth is int w)
                 splitContainerOuter.SplitterDistance = w;
@@ -230,13 +225,15 @@ namespace SpireScope
                 _encounterOverviewSettings = WindowToSub(_encounterOverview);
             if (_hpHistory is { IsDisposed: false })
                 _hpHistorySettings = WindowToSub(_hpHistory);
+            if (_captureDiagnostics is { IsDisposed: false })
+                _captureDiagnosticsSettings = WindowToSub(_captureDiagnostics);
 
             var state = WindowState == FormWindowState.Minimized ? FormWindowState.Normal : WindowState;
             var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
             var main = new WindowSettings(bounds.X, bounds.Y, bounds.Width, bounds.Height, state.ToString());
             // アセットセットアップ状態は MaybeRunAssetSetup が即時保存するため、ここでは現在値を引き継ぐ。
             var current = WindowSettingsService.Load();
-            WindowSettingsService.Save(new AppSettings(main, _hpHistorySettings, _encounterOverviewSettings, splitContainerOuter.SplitterDistance, _characterOverviewSettings, _combinedOverviewSettings, AppLanguage.IsJapanese ? "ja" : "en", current.AssetsInstalledVersion, current.AssetsSkippedVersion));
+            WindowSettingsService.Save(new AppSettings(main, _hpHistorySettings, _encounterOverviewSettings, splitContainerOuter.SplitterDistance, _characterOverviewSettings, _combinedOverviewSettings, AppLanguage.IsJapanese ? "ja" : "en", current.AssetsInstalledVersion, current.AssetsSkippedVersion, _captureDiagnosticsSettings));
         }
 
         static SubWindowSettings WindowToSub(Form form) =>
@@ -248,6 +245,7 @@ namespace SpireScope
             if (_encounterOverviewSettings?.Visible == true)  BtnEncounterOverview_Click(null, EventArgs.Empty);
             if (_hpHistorySettings?.Visible == true)          BtnHpHistory_Click(null, EventArgs.Empty);
             if (_characterOverviewSettings?.Visible == true)  BtnCharacterOverview_Click(null, EventArgs.Empty);
+            if (_captureDiagnosticsSettings?.Visible == true) BtnCaptureDiagnostics_Click(null, EventArgs.Empty);
         }
 
         static SubWindowSettings BoundsToSub(Rectangle r) => new(r.X, r.Y, r.Width, r.Height);
@@ -294,6 +292,10 @@ namespace SpireScope
             AppLanguage.IsJapanese = !AppLanguage.IsJapanese;
             UpdateLangButton();
             if (_lastRunData is not null) DisplayData(_lastRunData);
+            // 検出タイル表示は表示時言語で片方のみ描くため、同じ結果を再適用して名前を追従させる
+            // （旧リスト表示は EN/JP 両列だったので不要だった）。
+            _lastSignature = "";
+            if (_lastResult is not null) ApplyResult(_lastResult);
         }
 
         void UpdateLangButton() => btnLang.Text = AppLanguage.IsJapanese ? "JP" : "EN";
@@ -714,10 +716,6 @@ namespace SpireScope
                 finally { _btnCapture.Text = prev; _btnCapture.Enabled = true; }
             };
             _btnLinks.Click += (_, _) => EditLinkTemplates();
-
-            // 検出結果リスト（カード／ショップ）左クリックで情報ページリンクを開く。
-            _list.MouseClick += OnListItemClick;
-            _ocrList.MouseClick += OnListItemClick;
         }
 
         void BtnCaptureSource_Click(object? sender, EventArgs e)
@@ -730,48 +728,11 @@ namespace SpireScope
         void UpdateCaptureSourceButton() =>
             btnCaptureSource.Text = _useGdi ? "取得: GDI" : "取得: WGC";
 
-        static void SetSplitterDistance(SplitContainer sc, int distance)
-        {
-            int extent = sc.Orientation == Orientation.Vertical ? sc.Width : sc.Height;
-            int min = sc.Panel1MinSize;
-            int max = extent - sc.Panel2MinSize - sc.SplitterWidth;
-            if (max < min) return;
-            try { sc.SplitterDistance = Math.Clamp(distance, min, max); } catch { }
-        }
-
         void EditLinkTemplates()
         {
+            // リンクは各ビューがクリック時に UrlTemplateService.Load() で読むため、保存だけで反映される。
             using var dlg = new UrlTemplateSettingsForm();
-            if (dlg.ShowDialog(this) == DialogResult.OK)
-                _templates = UrlTemplateService.Load();
-        }
-
-        void OnListItemClick(object? sender, MouseEventArgs e)
-        {
-            if (e.Button != MouseButtons.Left) return;
-            if (sender is not ListView lv) return;
-            if (lv.HitTest(e.Location).Item is not { Tag: LinkTarget target }) return;
-
-            var links = SiteLinkService.BuildLinks(_templates, target.Kind, target.Id);
-            if (links.Count == 0) return;
-            if (links.Count == 1) { OpenUrl(links[0].Url); return; }
-
-            // 複数テンプレートはクリック位置のメニューで選択。
-            _linkMenu.Items.Clear();
-            foreach (var link in links)
-            {
-                var url = link.Url;
-                var item = new ToolStripMenuItem($"{link.Label}: {url}");
-                item.Click += (_, _) => OpenUrl(url);
-                _linkMenu.Items.Add(item);
-            }
-            _linkMenu.Show(lv, e.Location);
-        }
-
-        void OpenUrl(string url)
-        {
-            try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
-            catch (Exception ex) { _status.Text = $"リンク起動エラー：{ex.Message}"; }
+            dlg.ShowDialog(this);
         }
 
         void UpdateStartupStatus()
@@ -807,13 +768,20 @@ namespace SpireScope
             catch { /* フォーム破棄中 */ }
         }
 
+        /// <summary>
+        /// キャプチャ結果をメインのタイル表示と診断フォームへ fan-out する（更新経路はここ1本）。
+        /// Preview Bitmap の所有権は本フォーム（_lastResult.Preview）にあり、診断フォームは参照するだけ。
+        /// </summary>
         void ApplyResult(CaptureLoop.Result result)
         {
+            var oldPreview = _lastResult?.Preview;
             _lastResult = result;
             _status.Text = result.Status;
 
-            var oldPreview = _capturePreview.Image;
-            _capturePreview.Image = result.Preview;
+            // 診断フォームへは非表示（Hide）中も毎回参照を渡す。渡さないと旧 Preview の Dispose 後、
+            // 再表示時に破棄済み Bitmap を描画してしまう。X で閉じた（Disposed）場合はガードで外れる。
+            var diag = _captureDiagnostics is { IsDisposed: false } ? _captureDiagnostics : null;
+            diag?.UpdatePreview(result);
             // ティア更新による同一 Result の再適用では旧==新のため、Dispose すると表示中の画像が壊れる
             if (!ReferenceEquals(oldPreview, result.Preview)) oldPreview?.Dispose();
 
@@ -829,81 +797,44 @@ namespace SpireScope
             if (signature == _lastSignature) return;
             _lastSignature = signature;
 
-            _list.BeginUpdate();
-            _list.Items.Clear();
-            foreach (var c in result.Cards)
-            {
-                var item = new ListViewItem(c.CardId);
-                item.SubItems.Add(CardDatabaseService.GetName(c.CardId, japanese: false));
-                item.SubItems.Add(CardDatabaseService.GetName(c.CardId, japanese: true));
-                item.SubItems.Add(c.Confidence.ToString("F2"));
-                item.SubItems.Add(c.Recognizer);
-                item.SubItems.Add(TierScoreService.FormatCardTier(c.CardId));
-                item.Tag = new LinkTarget("card", c.CardId);
-                _list.Items.Add(item);
-            }
-            _list.EndUpdate();
+            _captureResultView.ShowResult(result);
+            diag?.UpdateLists(result);   // 行数は高々十数件のため、非表示中も更新してよい
+        }
 
-            // ショップ／エンシェントレリック選択ならレリック行、そうでなければ OCR テキスト行を描画（更新経路は1本）。
-            _ocrHeaderLabel.Text = result.Screen == ScreenRecognizer.ScreenType.AncientSelect
-                ? "エンシェントレリック候補"
-                : "ショップ候補（レリック／ポーション）";
-            _ocrList.BeginUpdate();
-            _ocrList.Items.Clear();
-            if (hasShopItems)
-                foreach (var lvi in BuildShopRows(result.Shop!)) _ocrList.Items.Add(lvi);
+        void BtnCaptureDiagnostics_Click(object? sender, EventArgs e)
+        {
+            if (_captureDiagnostics is null || _captureDiagnostics.IsDisposed || !_captureDiagnostics.Visible)
+            {
+                if (_captureDiagnostics is null || _captureDiagnostics.IsDisposed)
+                {
+                    _captureDiagnostics = new CaptureDiagnosticsForm();
+                    ApplySubWindowSettings(_captureDiagnostics, _captureDiagnosticsSettings, new Point(Right + 4, Top));
+                    _captureDiagnostics.FormClosed += (_, _) =>
+                    {
+                        _captureDiagnosticsSettings = BoundsToSub(_captureDiagnostics.Bounds);
+                        UpdateCaptureDiagnosticsButton(false);
+                    };
+                }
+                _captureDiagnostics.Show(this);
+                UpdateCaptureDiagnosticsButton(true);
+                // 開いた直後は次のキャプチャまで空になるため、最後の結果を即時反映する。
+                if (_lastResult is not null)
+                {
+                    _captureDiagnostics.UpdatePreview(_lastResult);
+                    _captureDiagnostics.UpdateLists(_lastResult);
+                }
+            }
             else
-                foreach (var lvi in BuildOcrRows(result.TextSpans)) _ocrList.Items.Add(lvi);
-            _ocrList.EndUpdate();
-        }
-
-        static IEnumerable<ListViewItem> BuildOcrRows(IReadOnlyList<OcrTextSpan> spans)
-        {
-            foreach (var s in spans)
             {
-                var item = new ListViewItem(s.Text);
-                item.SubItems.Add(s.Source == "title" ? "帯" : "全");
-                item.SubItems.Add(s.MatchedCardId ?? "(none)");
-                item.SubItems.Add(s.Distance?.ToString() ?? "-");
-                item.SubItems.Add(s.MatchedCardId is null ? "" : TierScoreService.FormatCardTier(s.MatchedCardId));
-                if (s.MatchedCardId is not null) item.Tag = new LinkTarget("card", s.MatchedCardId);
-                if (s.MatchedCardId is not null)
-                    item.BackColor = s.Source == "title"
-                        ? Color.FromArgb(255, 235, 200)
-                        : Color.FromArgb(220, 245, 220);
-                else if (s.Source == "title")
-                    item.BackColor = Color.FromArgb(245, 245, 245);
-                yield return item;
+                _captureDiagnostics.Hide();
+                UpdateCaptureDiagnosticsButton(false);
             }
         }
 
-        static IEnumerable<ListViewItem> BuildShopRows(ShopItemRecognizer.Result res)
+        void UpdateCaptureDiagnosticsButton(bool visible)
         {
-            foreach (var it in res.Items)
-            {
-                var label = it.Candidates.Count == 0
-                    ? "(no match)"
-                    : string.Join(" / ", it.Candidates.Select(c => $"{c.Name} [{c.Id}]"));
-                var dist = it.Candidates.Count == 0
-                    ? "-"
-                    : string.Join(" / ", it.Candidates.Select(c => c.Distance.ToString("F2")));
-                var lvi = new ListViewItem(label);
-                lvi.SubItems.Add(it.Kind == ShopItemRecognizer.Kind.Relic ? "R" : "P");
-                lvi.SubItems.Add(it.Accepted ? (it.Candidates.Count > 1 ? $"OK×{it.Candidates.Count}" : "OK") : "-");
-                lvi.SubItems.Add(dist);
-                lvi.SubItems.Add(it.Candidates.Count == 0 ? "" : string.Join(" / ",
-                    it.Candidates.Select(c => it.Kind == ShopItemRecognizer.Kind.Relic
-                        ? TierScoreService.FormatRelicTier(c.Id)
-                        : TierScoreService.FormatPotionTier(c.Id))));
-                if (it.Candidates.Count > 0)
-                    lvi.Tag = new LinkTarget(
-                        it.Kind == ShopItemRecognizer.Kind.Relic ? "relic" : "potion",
-                        it.Candidates[0].Id);
-                if (it.Accepted)
-                    lvi.BackColor = it.Kind == ShopItemRecognizer.Kind.Relic
-                        ? Color.FromArgb(220, 245, 220) : Color.FromArgb(255, 235, 200);
-                yield return lvi;
-            }
+            btnCaptureDiagnostics.Text      = visible ? "● キャプチャ診断" : "○ キャプチャ診断";
+            btnCaptureDiagnostics.ForeColor = visible ? Color.DarkSlateBlue : SystemColors.ControlText;
         }
     }
 }

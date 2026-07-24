@@ -1,6 +1,23 @@
 # SpireScope ライブキャプチャ表示機能 仕様書
 
-最終更新: 2026-06-23 / 対象バージョン: ゲーム v0.107.1 / ステータス: 設計確定（実装は別タスク）
+最終更新: 2026-07-24 / 対象バージョン: ゲーム v0.109.0 / ステータス: 実装済み（下記「現状の実装」参照。以降の章は当初設計の記録）
+
+## 0. 現状の実装（2026-07-24 時点）
+
+当初案の「単一の `LiveCaptureForm`」は実装過程で一度メインフォーム `Form1` へ統合されたのち、
+**メイン表示と診断表示の 2 系統に分離**された。
+
+- **`CaptureResultView`（メイン画面右側、`SpireScope/CaptureResultView.cs`）** — ユーザー向けの画像タイル表示。
+  検出したカードはサムネイル（`CardImageService`/`CardAtlasService`）、レリック/ポーションは PNG タイル
+  （`DeckOverviewForm.DrawRelicTile` / `SpireScope.Services.PotionImageService.GetPotionPng`）で描画し、
+  名前（EN/JP 切替追従）と spire-codex.com の Tier バッジを併記。クリックで URL テンプレートのリンクを開く。
+  検出対象外の画面に切り替わっても**最後の検出を保持**し、ヘッダに「（前回の検出）」注記＋薄いベールで示す。
+- **`CaptureDiagnosticsForm`（サイドボタン「キャプチャ診断」、`SpireScope/CaptureDiagnosticsForm.cs`）** —
+  キャプチャ性能確認用の診断ウィンドウ。従来の生リスト（CardId・確信度・認識器・距離・Tier 列）と
+  キャプチャ画像プレビューを表示。他のサブ概観と同じ定石（単一インスタンス・位置永続化・トグル開閉）。
+- **所有権と更新経路**: `CaptureLoop` と Preview Bitmap の所有権は `Form1`。`Form1.ApplyResult` が
+  ステータス行→診断フォーム（非表示中も Preview 参照を毎回差し替え）→ signature 差分時のみ両ビューへ fan-out、
+  の順に一本の経路で配信する。ティアスコア更新・言語切替は signature をリセットして同じ Result を再適用する。
 
 ## 1. 目的・背景
 
