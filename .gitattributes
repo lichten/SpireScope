@@ -11,3 +11,6 @@
 *.json text eol=crlf
 *.gitignore text eol=crlf
 *.gitattributes text eol=crlf
+
+# ゲームからの生コピー（LF のまま版固定する）は CRLF 変換の対象外
+StS2Shared/Resources/v*/localization/**/*.json text eol=lf
