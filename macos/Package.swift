@@ -13,7 +13,8 @@ let package = Package(
         ),
         .executableTarget(
             name: "SpireScopeApp",
-            dependencies: ["SpireScopeCore"]
+            dependencies: ["SpireScopeCore"],
+            resources: [.copy("Resources/AppIcon.icns")]
         ),
         .testTarget(
             name: "SpireScopeCoreTests",

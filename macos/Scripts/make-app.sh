@@ -18,6 +18,8 @@ cp "$BIN" "$OUT/Contents/MacOS/SpireScopeApp"
 # リソース（data/）は Contents/Resources へ直接コピーする。
 # ResourceStore が Bundle.main → Bundle.module の順で解決する前提。
 cp -R "$BUNDLE/data" "$OUT/Contents/Resources/data"
+# アプリアイコン（原本は SpireScopeApp ターゲットのリソース。Scripts/make-icon.sh で再生成）
+cp Sources/SpireScopeApp/Resources/AppIcon.icns "$OUT/Contents/Resources/AppIcon.icns"
 
 codesign --force --sign - "$OUT"
 

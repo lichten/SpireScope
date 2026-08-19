@@ -47,3 +47,4 @@ StS2SiteBuilder/out/
 # Mac 版（SwiftPM）
 macos/.build/
 macos/out/
+macos/.swiftpm/
