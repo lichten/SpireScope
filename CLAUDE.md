@@ -10,7 +10,40 @@ dotnet run --project SpireScope               # セーブデータビューア
 dotnet run --project card-type-extractor      # カードメタデータ再生成（要ゲームDLL）
 ```
 
-テスト・lint コマンドは設定されていない。
+テスト・lint コマンドは設定されていない（Mac 版のみ `swift test` あり、下記）。
+
+### Mac 版（macos/ — SwiftUI アプリ）
+
+Windows 版とは別に、純 Swift の macOS ビューアが `macos/` にある（SwiftPM のみ、Xcode プロジェクトなし）。
+データ層（`SpireScopeCore`）は StS2Shared の C# サービス群を Swift へ移植したもので、
+リソース JSON は `macos/Scripts/sync-resources.sh` が `StS2Shared/Resources` の最新 `v*` を
+`Sources/SpireScopeCore/Resources/data/` へコピーして git 管理・アプリ同梱する。
+
+```bash
+cd macos
+swift build                 # ビルド
+swift test                  # テスト（C# 実装とのゴールデンテスト含む）
+swift run SpireScopeApp     # 起動（開発用）
+Scripts/make-app.sh         # out/SpireScope.app を生成（ad-hoc 署名）
+```
+
+- **初回アセット抽出**（画像・ローカライズ）: `dotnet run --project ctex-to-png -- setup`。
+  Steam の Mac 版 STS2（pck は `SlayTheSpire2.app/Contents/Resources/Slay the Spire 2.pck`、
+  ファイル名にスペースあり）を SteamLocator が自動検出し、
+  `~/Library/Application Support/SpireScope/assets/v{version}/` へ Windows 配布モードと同一レイアウトで抽出する
+  （`AssetLocator.DistributionAssetsRoot` の macOS 分岐）。アプリの `AssetStore` がここを読む。
+- **セーブ**: `~/Library/Application Support/SlayTheSpire2/steam/{steamId}/profile1/saves/current_run.save`
+  （Windows と同一構造の平文 JSON）。`SaveWatcher` が親ディレクトリを kqueue 監視して自動リロード。
+- **ゲーム更新時**: Windows 側で card-type-extractor を回して `Resources/v{new}/` をコミット後、
+  Mac で `Scripts/sync-resources.sh` を再実行してコミット。アセットは `-- setup` を再実行。
+- **ゴールデンテスト**: `Tests/SpireScopeCoreTests/Fixtures/golden.json` は C# 実装
+  （CardDatabaseService / DescriptionFormatter）の全 ID ダンプ。C# 側の判定ロジックや
+  リソースのバージョンを変えたら、StS2Shared を参照する一時コンソールで再生成して差し替えること。
+- **移植対応表**: `CardDatabase.swift` ← CardDatabaseService、`OverviewBuilder.swift` ←
+  Form1.RefreshCombinedOverview ＋ DeckOverviewForm.BuildKeywordGroups/IsDisposable、
+  `CharacterMechanics.swift` / `DescriptionFormatter.swift` / `PotionOddsService` ← 同名 C#。
+  **C# 側の分類ロジックを変更したら Swift 側も追従させる**（二重メンテ）。
+- ライブキャプチャ（StS2Capture.Core）は Mac 版に存在しない（対象外）。
 
 ## Tools Setup / ゲーム更新時のクリーン展開チェックリスト（git 管理外）
 
