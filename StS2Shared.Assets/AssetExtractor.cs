@@ -53,6 +53,10 @@ public sealed class AssetExtractor
         // エンチャントアイコン: .png.import と参照先 ctex を生のままコピー（EnchantmentIconService が実行時デコード）
         CopyImportsWithCtex("images/enchantments/", group: "enchantments", progress, ct);
 
+        // 同アイコンの PNG 事前変換版。BC7 デコーダを持たないクライアント（Mac 版 SwiftUI アプリ）が読む
+        ConvertPortraits("images/enchantments/", "images/enchantments_png/",
+            skipBetaSubdir: false, group: "enchantments_png", progress, ct);
+
         // ローカライズ JSON をそのままコピー（アプリが読むのは eng / jpn のみ）
         CopyGlob("localization/eng/", suffix: ".json", group: "localization", progress, ct);
         CopyGlob("localization/jpn/", suffix: ".json", group: "localization", progress, ct);

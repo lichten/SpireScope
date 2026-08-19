@@ -23,10 +23,17 @@ public static class AssetLocator
     const string ImagesFolderName = "images";
     const string GodotImportedRelative = ".godot/imported";
 
-    /// <summary>配布モードのアセット格納ベース（<c>%LocalAppData%\SpireScope\assets</c>）。バージョン別サブフォルダを持つ。</summary>
-    public static string DistributionAssetsRoot { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        LegacyDataMigration.AppFolderName, "assets");
+    /// <summary>配布モードのアセット格納ベース（Windows: <c>%LocalAppData%\SpireScope\assets</c>、
+    /// macOS: <c>~/Library/Application Support/SpireScope/assets</c>）。バージョン別サブフォルダを持つ。
+    /// macOS の <see cref="Environment.SpecialFolder.LocalApplicationData"/> は <c>~/.local/share</c> に
+    /// 解決されるため、Mac 慣例のパスへ明示的に分岐する（Mac 版 SwiftUI アプリが読む場所と一致させる）。</summary>
+    public static string DistributionAssetsRoot { get; } = OperatingSystem.IsMacOS()
+        ? Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            "Library", "Application Support", LegacyDataMigration.AppFolderName, "assets")
+        : Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            LegacyDataMigration.AppFolderName, "assets");
 
     /// <summary>
     /// 抽出アセットのルート（<c>tools/extracted</c> 相当）を返す。開発モード → 配布モードの順に解決し、

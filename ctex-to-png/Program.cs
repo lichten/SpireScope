@@ -14,6 +14,17 @@ if (args.Length >= 1 && args[0] == "extract-pck")
     return;
 }
 
+// setup: 配布アセットセットアップ。SetupWizardForm と同じ AssetSetup.RunSetup（_staging → v{version}
+// 原子 Move）を CLI から回す。Mac 版 SwiftUI アプリの初回セットアップはこれを実行する。
+//   dotnet run --project ctex-to-png -- setup [<pck または ゲームフォルダ>]
+// 出力先は AssetLocator.DistributionAssetsRoot（Windows: %LocalAppData%\SpireScope\assets、
+// macOS: ~/Library/Application Support/SpireScope/assets）。tools/extracted に依存しない。
+if (args.Length >= 1 && args[0] == "setup")
+{
+    RunAssetSetup(args[1..]);
+    return;
+}
+
 var toolsRoot       = FindToolsRoot();
 var portraitPngRoot = Path.Combine(toolsRoot, "images", "card_portraits_png");
 var jpegOutRoot     = Path.GetFullPath(Path.Combine(toolsRoot, "..", "..", "card-images"));
@@ -327,6 +338,60 @@ static void ExtractPck(string[] a)
 
     extractor.ExtractViewerAssets(progress);
     Console.WriteLine("\n完了。");
+}
+
+// setup サブコマンド本体。
+//   setup                              … Steam から .pck を自動検出
+//   setup <pck または ゲームフォルダ>
+static void RunAssetSetup(string[] a)
+{
+    Sts2Install? install;
+    if (a.Length == 0)
+    {
+        install = SteamLocator.Locate();
+        if (install is null)
+        {
+            Console.Error.WriteLine("Slay the Spire 2 を Steam から自動検出できませんでした。" +
+                ".pck かゲームフォルダのパスを第1引数で指定してください。");
+            Environment.Exit(1);
+            return;
+        }
+    }
+    else if (a.Length == 1)
+    {
+        install = SteamLocator.FromPath(a[0]);
+        if (install is null)
+        {
+            Console.Error.WriteLine($"指定パスから .pck が見つかりません: {a[0]}");
+            Environment.Exit(1);
+            return;
+        }
+    }
+    else
+    {
+        Console.Error.WriteLine("使い方: setup [<pck または ゲームフォルダ>]");
+        Environment.Exit(2);
+        return;
+    }
+
+    Console.WriteLine($"検出: {install.PckPath}");
+    Console.WriteLine($"バージョン: {install.Version ?? "(不明)"}");
+
+    var lastGroup = "";
+    var progress = new SyncProgress<ExtractProgress>(p =>
+    {
+        if (p.Group != lastGroup)
+        {
+            if (lastGroup.Length > 0) Console.WriteLine();
+            Console.Write($"  {p.Group}: ");
+            lastGroup = p.Group;
+        }
+        if (p.Done == p.Total || p.Done % 50 == 0)
+            Console.Write($"{p.Done}/{p.Total} ");
+    });
+
+    var final = AssetSetup.RunSetup(install, progress);
+    Console.WriteLine($"\n完了: {final}");
 }
 
 // GST2 (.ctex) のデコードは StS2Shared.Assets.CtexDecoder に一元化。以下は従来の呼び出し名を保つ薄いラッパー。
