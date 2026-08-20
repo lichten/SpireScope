@@ -40,6 +40,12 @@ public sealed class AssetExtractor
         ConvertPortraits("images/relics/", "images/relics_png/",
             skipBetaSubdir: false, group: "relics", progress, ct);
 
+        // 個別ポーション画像: images/potions/{rel}.png.import → potions_png/{rel}.png
+        // （potion_images.json の相対パスは "large/fire_potion.png" 形式でサブフォルダを含む。
+        //  Mac 版ライブキャプチャのショップ・ポーション認識と表示が読む）
+        ConvertPortraits("images/potions/", "images/potions_png/",
+            skipBetaSubdir: false, group: "potions", progress, ct);
+
         // カードアトラスのスプライト定義（.tres）をそのままコピー（CardAtlasService がリージョンを読む）
         CopyGlob("images/atlases/card_atlas.sprites/", suffix: null, group: "card_atlas_sprites", progress, ct);
 

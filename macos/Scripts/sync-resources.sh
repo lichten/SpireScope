@@ -30,5 +30,8 @@ for f in "$SRC"/*.json; do
   cp "$f" "$DST/"
 done
 
+# ティアスコアの埋め込みスナップショット（Windows 版と共用。リリース前に再生成される）
+cp "../SpireScope/Resources/tier_scores_snapshot.json" "$DST/"
+
 echo "完了:"
 du -sh "$DST"

@@ -218,3 +218,40 @@ SpireScope（セーブデータビューア）に、**プレイ中のゲーム�
   ※ サイト生成コードは撤去済み（git 履歴参照）。URL 規則の現行実装は `SiteLinkService` / `UrlTemplateService`
 - SpireScope：`Form1.cs`（子フォーム定石・`DisplayData`）/ `Services/AppLanguage.cs` / `Services/WindowSettingsService.cs`
 - 画像資産：`tools/extracted/images/`（`relics_png` 295・`potions_png` 64・`events_png` 55・`monsters` 121＋GIF）
+
+## 12. Mac 版（macos/ SwiftUI アプリ）への移植（2026-08-20）
+
+Windows 版と同一の認識アルゴリズムを `macos/Sources/SpireScopeCapture/`（SwiftPM ターゲット）へ移植した。
+UI は `SpireScopeApp` の「ライブキャプチャ」タブ（`CaptureView` ＝ CaptureResultView ＋ CaptureDiagnosticsForm の統合）。
+
+### プラットフォーム置き換え
+
+| Windows | Mac | 備考 |
+|---|---|---|
+| Windows.Graphics.Capture（`WgcFrameSource`） | ScreenCaptureKit `SCScreenshotManager.captureImage`（macOS 14+） | 800ms ポーリングはワンショット API で足りる（常設 SCStream 不使用） |
+| GDI フォールバック | なし | SCK が GPU 描画ウィンドウを扱えるため不要 |
+| `GameWindowLocator`（プロセス名/HWND） | `SCShareableContent` → `SCWindow` を appName/title/bundleID の "slaythespire" 部分一致で照合 | 診断ビューに全ウィンドウ候補を表示（照合ルールの較正用） |
+| `WindowClientArea.Resolve`（Win32 + DPI） | `ClientAreaResolver`（黒帯トリム） | SCK はウィンドウ内容がそのまま来る。フルスクリーンのレターボックス（16:10 モニタ等）だけ純黒帯を検出して切り詰める |
+| Windows.Media.Ocr | Vision `VNRecognizeTextRequest`（ja/en、言語補正オフ、二値化入力） | エンシェント画面のみ。Vision `.accurate` は重いので、まず 3 バンドの中央のみ OCR し全バンド無テキストなら即棄却する 2 段プローブ（意味論は不変） |
+| System.Drawing（LockBits/縮小） | CoreGraphics（`RGBAImage`＝RGBA8 premultiplied バッファ） | premul 値＋背景×(1-α) は非乗算合成式と等価。スロット矩形の `(int)` 切り捨ては C# と一致させ `GeometryTests` で固定 |
+
+### 構成（C# → Swift 対応）
+
+- `ScreenRecognizer` / `ShopItemRecognizer` / `AncientRelicRecognizer` / `HsvHistogram` /
+  `FrameColorProfile`・`FrameColorClassifier` / `CardNameIndex` / `ImageOps` → 同名 Swift ファイル。
+  しきい値・スロット座標は `RecognitionConstants`（`SlotLayout.swift`）へ集約（**C# 側を再較正したらここも追従**）。
+- `CaptureLoop` ＋ Form1 のキャプチャ部 → `CaptureController`（`@MainActor`、`RecognitionEngine` actor が照合 DB を所有）。
+  検出のあったフレームだけ表示を差し替え、Unknown では「（前回の検出）」を保持（シグネチャで無変化を抑制）。
+- `TierScoreService` → `SpireScopeCore/TierScores.swift`（データ層）＋ `TierScoreModel.swift`（TTL/フォールバック）。
+  キャッシュ・スナップショットの JSON は Windows 版と同一形式。
+- `capture-verify`（C# CLI）→ `swift run capture-verify <png> [--client x,y,w,h] [--crops dir]`（TCC 不要）。
+
+### Mac 固有の注意
+
+- **TCC**: 画面収録の権限は署名済みバンドルに付く。検証は `Scripts/make-app.sh` → `out/SpireScope.app` で行う
+  （`swift run` はターミナルに権限が付く）。リセットは `tccutil reset ScreenCapture com.lichtenlab.spirescope`。
+  ad-hoc 署名はリビルドごとに再許可になり得る（`CODESIGN_IDENTITY` で自己署名証明書を指定可能）。
+- **ポーション画像**: `AssetExtractor.ExtractViewerAssets` に `images/potions_png/` の抽出を追加済み。
+  旧セットアップ環境は `-- setup` 再実行が必要（未抽出の間は UI に警告を出しレリックのみで判定）。
+- **座標系**: SCK はポイント（`SCWindow.frame`）とピクセル（キャプチャ結果）が Retina で 2 倍差。
+  スロット座標はクライアント相対比率なのでピクセル基準のクライアント矩形に対してそのまま適用できる。

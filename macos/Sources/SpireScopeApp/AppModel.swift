@@ -17,6 +17,10 @@ final class AppModel {
     /// 初回セットアップ完了を再起動なしで拾えるよう、reload のたびに再解決する
     /// （CLAUDE.md「アセットディレクトリ参照は遅延解決にする」の教訓）。
     private(set) var assets: AssetStore
+    /// ライブキャプチャ（内部の RecognitionEngine はアセットを遅延解決するため再構築不要）。
+    @ObservationIgnored let capture: CaptureController
+    /// spire-codex ティアスコア。
+    @ObservationIgnored let tiers: TierScoreModel
     @ObservationIgnored private var watcher: SaveWatcher?
 
     // ---- 状態 ----
@@ -64,10 +68,14 @@ final class AppModel {
         } catch {
             fatalError("リソース初期化に失敗: \(error)")
         }
+        capture = CaptureController(store: store, db: db)
+        tiers = TierScoreModel()
         urlTemplates = UrlTemplateStore.load()
         let settings = AppSettings.load()
         japanese = settings.japanese
         savePathOverride = settings.savePathOverride.map { URL(filePath: $0) }
+        capture.characterProvider = { [weak self] in self?.currentCharacterId }
+        tiers.initialize(store: store)
         reload()
         startWatching()
     }
@@ -110,9 +118,11 @@ final class AppModel {
             combinedSections = []
             potionOdds = nil
             currentCharacterId = nil
+            tiers.requestCharacterScores(nil)
             return
         }
         currentCharacterId = SaveLocator.normalizeCharacterId(player.characterId)
+        tiers.requestCharacterScores(currentCharacterId)
         deckCards = builder.buildDeckCards(player, japanese: japanese)
         relics = builder.buildRelics(player)
         combinedSections = builder.combinedSections(

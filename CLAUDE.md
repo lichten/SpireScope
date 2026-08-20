@@ -42,8 +42,26 @@ Scripts/make-app.sh         # out/SpireScope.app を生成（ad-hoc 署名）
 - **移植対応表**: `CardDatabase.swift` ← CardDatabaseService、`OverviewBuilder.swift` ←
   Form1.RefreshCombinedOverview ＋ DeckOverviewForm.BuildKeywordGroups/IsDisposable、
   `CharacterMechanics.swift` / `DescriptionFormatter.swift` / `PotionOddsService` ← 同名 C#。
+  `SpireScopeCapture`（下記）← StS2Capture.Core、`TierScores.swift`＋`TierScoreModel.swift` ← TierScoreService。
   **C# 側の分類ロジックを変更したら Swift 側も追従させる**（二重メンテ）。
-- ライブキャプチャ（StS2Capture.Core）は Mac 版に存在しない（対象外）。
+- **ライブキャプチャ（`Sources/SpireScopeCapture/`）**: StS2Capture.Core の移植。WGC → ScreenCaptureKit
+  （`SCScreenshotManager`、macOS 14+）、Windows.Media.Ocr → Vision に置き換え、認識アルゴリズム
+  （固定スロット＋HSV ヒストグラム＋枠色分類＋エンシェント OCR）は同一。要点:
+  - **較正定数は `SlotLayout.swift` の `RecognitionConstants` に集約**（Windows 版 16:9 実測値と同値。
+    C# 側のスロット座標・しきい値を変えたらここも追従させる）。スロット矩形の切り捨て演算は
+    C# `(int)` と一致させてあり、`GeometryTests` が固定値で回帰検証する。
+  - **TCC（画面収録）は署名済み `.app` に付与される**。キャプチャの動作検証は `swift run` ではなく
+    `Scripts/make-app.sh` → `out/SpireScope.app` で行う（`swift run` だとターミナルに権限が付く）。
+    再許可が要るときは `tccutil reset ScreenCapture com.lichtenlab.spirescope`。
+    ad-hoc 署名はリビルドで要再許可になり得る（`CODESIGN_IDENTITY` で自己署名証明書を指定可）。
+  - **ヘッドレス較正 CLI**: `swift run capture-verify <frame.png> [--client x,y,w,h] [--crops dir]`。
+    アプリの「フレームを保存」か Windows 版 `STS2_DUMP_DIR` のダンプ PNG に対して TCC 権限なしで
+    認識を検証できる。ゴールデンテストは `Tests/SpireScopeCaptureTests/Fixtures/`（README 参照）。
+  - **ポーション画像**: `AssetExtractor.ExtractViewerAssets` が `images/potions_png/` を抽出する
+    （Mac のショップ・ポーション認識と表示が読む）。旧セットアップ済み環境は `-- setup` 再実行が必要
+    （未抽出だと UI に警告を出しレリックのみで動作する）。
+  - ティアスコアのキャッシュ（`~/Library/Application Support/SpireScope/tier_scores_cache.json`）と
+    埋め込みスナップショットは Windows 版と同一 JSON 形式（`sync-resources.sh` がスナップショットをコピー）。
 
 ## Tools Setup / ゲーム更新時のクリーン展開チェックリスト（git 管理外）
 

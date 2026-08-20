@@ -17,6 +17,8 @@ public struct AssetStore: Sendable {
     let cardImagePaths: [String: String]
     /// レリック raw ID → 相対パス（relic_images.json、"AKABEKO" → "akabeko.png"）。
     let relicImagePaths: [String: String]
+    /// ポーション ID → 相対パス（potion_images.json、"FIRE_POTION" → "large/fire_potion.png"）。
+    let potionImagePaths: [String: String]
 
     public init(store: ResourceStore, assetsRoot: URL? = nil) {
         let root = assetsRoot ?? Self.distributionAssetsRoot
@@ -28,6 +30,7 @@ public struct AssetStore: Sendable {
         }
         cardImagePaths = CardDatabase.loadStringDict(store, "card_images.json")
         relicImagePaths = CardDatabase.loadStringDict(store, "relic_images.json")
+        potionImagePaths = CardDatabase.loadStringDict(store, "potion_images.json")
     }
 
     /// アセットが解決可能か（初回セットアップ済みか）。
@@ -67,5 +70,27 @@ public struct AssetStore: Sendable {
         let url = versionDir.appending(components: "images", "monsters")
             .appending(path: monsterId + ".png")
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+
+    /// ポーション画像の絶対パス（images/potions_png/{rel}）。POTION. 接頭辞の有無どちらでも引ける。
+    /// potions_png はセットアップの新しい版で抽出される（旧版で抽出済みの環境には無い）。
+    public func potionImageURL(_ potionId: String) -> URL? {
+        guard let versionDir else { return nil }
+        guard let rel = potionImagePaths[CardDatabase.rawId(potionId)] else { return nil }
+        return versionDir.appending(components: "images", "potions_png").appending(path: rel)
+    }
+
+    /// 画像インデックスに載っている全 ID（ライブキャプチャの照合 DB 構築用）。
+    public var allCardImageIds: [String] { Array(cardImagePaths.keys) }
+    public var allRelicImageIds: [String] { Array(relicImagePaths.keys) }
+    public var allPotionImageIds: [String] { Array(potionImagePaths.keys) }
+
+    /// images/{dirName} が存在すればその URL（キャプチャ認識 DB の遅延構築ガード用）。
+    public func imagesDirURL(_ dirName: String) -> URL? {
+        guard let versionDir else { return nil }
+        let url = versionDir.appending(components: "images", dirName)
+        var isDir: ObjCBool = false
+        return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) && isDir.boolValue
+            ? url : nil
     }
 }

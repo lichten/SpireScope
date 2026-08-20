@@ -6,6 +6,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
     case character
     case encounters
     case hpHistory
+    case capture
     case settings
 
     var id: String { rawValue }
@@ -16,6 +17,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .character: return japanese ? "キャラクター概観" : "Character Overview"
         case .encounters: return japanese ? "敵情報" : "Encounters"
         case .hpHistory: return japanese ? "HP推移" : "HP History"
+        case .capture: return japanese ? "ライブキャプチャ" : "Live Capture"
         case .settings: return japanese ? "設定" : "Settings"
         }
     }
@@ -26,6 +28,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .character: return "person.crop.rectangle.stack"
         case .encounters: return "shield.lefthalf.filled"
         case .hpHistory: return "chart.line.uptrend.xyaxis"
+        case .capture: return "camera.viewfinder"
         case .settings: return "gearshape"
         }
     }
@@ -61,7 +64,8 @@ struct ContentView: View {
     }
 
     @ViewBuilder private var detailView: some View {
-        if model.save == nil {
+        // ライブキャプチャはセーブが無くても動く（ゲーム画面さえあればよい）。
+        if model.save == nil && selection != .settings && selection != .capture {
             ContentUnavailableView(
                 model.loadError ?? (model.japanese ? "セーブデータなし" : "No save data"),
                 systemImage: "doc.questionmark")
@@ -73,6 +77,7 @@ struct ContentView: View {
             case .character: CharacterOverviewView()
             case .encounters: EncounterOverviewView()
             case .hpHistory: HpHistoryView()
+            case .capture: CaptureView()
             case .settings: SettingsView()
             }
         }
