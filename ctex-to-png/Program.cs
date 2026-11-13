@@ -14,6 +14,15 @@ if (args.Length >= 1 && args[0] == "extract-pck")
     return;
 }
 
+// dump-pck: .pck の全エントリを res:// 相対のレイアウトでそのまま書き出す（GodotPCKExplorer の代替。
+// Windows 専用 exe を使えない macOS で tools/extracted を作るためのもの）。
+//   dotnet run --project ctex-to-png -- dump-pck [<pck または ゲームフォルダ>] <出力ディレクトリ>
+if (args.Length >= 1 && args[0] == "dump-pck")
+{
+    DumpPck(args[1..]);
+    return;
+}
+
 // setup: 配布アセットセットアップ。SetupWizardForm と同じ AssetSetup.RunSetup（_staging → v{version}
 // 原子 Move）を CLI から回す。Mac 版 SwiftUI アプリの初回セットアップはこれを実行する。
 //   dotnet run --project ctex-to-png -- setup [<pck または ゲームフォルダ>]
@@ -241,7 +250,8 @@ var portraitOutRoot = Path.Combine(toolsRoot, "images", "card_portraits_png");
 Directory.CreateDirectory(portraitOutRoot);
 
 var importFiles = Directory.GetFiles(portraitsRoot, "*.png.import", SearchOption.AllDirectories)
-    .Where(f => !f.Contains(@"\beta\", StringComparison.OrdinalIgnoreCase))
+    .Where(f => !Path.GetRelativePath(portraitsRoot, f)
+        .Split('/', '\\').Contains("beta", StringComparer.OrdinalIgnoreCase))
     .OrderBy(f => f)
     .ToList();
 
@@ -338,6 +348,55 @@ static void ExtractPck(string[] a)
 
     extractor.ExtractViewerAssets(progress);
     Console.WriteLine("\n完了。");
+}
+
+// dump-pck サブコマンド本体。引数の解決は extract-pck と同じ。
+static void DumpPck(string[] a)
+{
+    Sts2Install? install = a.Length switch
+    {
+        1 => SteamLocator.Locate(),
+        2 => SteamLocator.FromPath(a[0]),
+        _ => null,
+    };
+    if (a.Length is not (1 or 2))
+    {
+        Console.Error.WriteLine("使い方: dump-pck [<pck または ゲームフォルダ>] <出力ディレクトリ>");
+        Environment.Exit(2);
+        return;
+    }
+    if (install is null)
+    {
+        Console.Error.WriteLine("Slay the Spire 2 の .pck が見つかりません。.pck かゲームフォルダのパスを第1引数で指定してください。");
+        Environment.Exit(1);
+        return;
+    }
+    var outDir = Path.GetFullPath(a[^1]);
+    Console.WriteLine($"検出: {install.PckPath}");
+    Console.WriteLine($"バージョン: {install.Version ?? "(不明)"}");
+    Console.WriteLine($"出力先: {outDir}");
+
+    using var pck = new PckReader(install.PckPath);
+    var entries = pck.Index.OrderBy(e => e.ResPath, StringComparer.Ordinal).ToList();
+    Console.WriteLine($"PCK: format=v{pck.FormatVersion} engine={pck.EngineVersion} files={entries.Count}");
+
+    int written = 0, encrypted = 0, unsafePath = 0;
+    long bytes = 0;
+    foreach (var e in entries)
+    {
+        if (e.Encrypted) { encrypted++; continue; }
+        var dest = Path.GetFullPath(Path.Combine(outDir, e.ResPath.Replace('/', Path.DirectorySeparatorChar)));
+        // パス走査（"../" 等）で出力先の外へ書かないようにする
+        if (!dest.StartsWith(outDir + Path.DirectorySeparatorChar, StringComparison.Ordinal)) { unsafePath++; continue; }
+        Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+        var data = pck.Read(e.ResPath);
+        File.WriteAllBytes(dest, data);
+        written++;
+        bytes += data.Length;
+        if (written % 2000 == 0) Console.WriteLine($"  {written}/{entries.Count}");
+    }
+    Console.WriteLine($"完了: written={written} ({bytes / 1048576} MB) encrypted(skip)={encrypted} unsafePath(skip)={unsafePath}");
+    if (encrypted > 0) Console.Error.WriteLine("警告: 暗号化エントリをスキップしました。");
 }
 
 // setup サブコマンド本体。

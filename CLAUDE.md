@@ -90,6 +90,27 @@ dotnet run --project card-type-extractor
 dotnet run --project ctex-to-png -- monsters
 ```
 
+### Mac で回す場合（Windows 不要）
+
+PCKExplorer の代わりに `ctex-to-png -- dump-pck`（`PckReader` で全エントリを `res://` 相対で書き出す）を使う。
+extractor は macOS では既定で `~/Library/Application Support/Steam/.../SlayTheSpire2.app/Contents/Resources/data_sts2_macos_arm64/sts2.dll`
+を読む（マネージド IL は Windows 版と同一。`release_info.json` は DLL の一つ上にある）。`dotnet` は `~/.dotnet` にある。
+
+```bash
+export PATH="$HOME/.dotnet:$PATH"
+dotnet run --project ctex-to-png -- dump-pck tools/extracted     # 1. 全展開（約 2 GB）
+dotnet run --project card-type-extractor                         # 2.
+dotnet run --project ctex-to-png                                 # 3.
+for m in relics events ancients potions; do dotnet run --project ctex-to-png -- $m; done
+dotnet run --project card-type-extractor                         # 4.
+dotnet run --project ctex-to-png -- monsters                     # 5.（site3 用。任意）
+```
+
+続けて Mac 版へ反映する: `macos/Scripts/sync-resources.sh` → `golden.json` 再生成 → `swift test` →
+`dotnet run --project ctex-to-png -- setup`（下記「Mac 版」節を参照）。
+新キャラクターが追加されたときは、card-type-extractor の `characterPoolMap` / `potionPoolMap` / `charClasses`
+（キャラ名のハードコード 3 か所）に追記すること（v0.113.0 の Fool で実施）。
+
 展開後は `tools/extracted/` に以下が生成される：
 
 - `localization/{eng,jpn,deu,...}/*.json` — ゲーム全テキスト
@@ -127,7 +148,7 @@ dotnet run --project ctex-to-png -- monsters
 | `StS2Capture` | キャプチャ検証用の単体アプリ（試験用） |
 | `StS2SiteBuilder` | 成果物インベントリ CLI（ソリューション生成物を実スキャンして `out/artifacts.html` を出力） |
 | `card-type-extractor` | ゲーム DLL の IL を解析してカードメタデータ JSON を生成するCLIツール |
-| `ctex-to-png` | `.ctex`→PNG 変換 CLI（relics/events/ancients/potions/monsters ほか、extract-pck サブコマンドあり） |
+| `ctex-to-png` | `.ctex`→PNG 変換 CLI（relics/events/ancients/potions/monsters ほか、extract-pck / dump-pck / setup サブコマンドあり） |
 | `SpineRuntime` | spine-csharp の pure C# ランタイム（データ構造のみ、描画なし） |
 
 ### StS2Shared — 共有ライブラリ
