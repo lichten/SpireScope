@@ -1582,6 +1582,116 @@ Console.WriteLine(upgKwOutPath);
     Console.WriteLine(relOutPath);
 }
 
+// card_tags.json 出力（カード ID → タグ名の配列。タグの無いカードは載せない）
+// 現状のタグは "Tarot" のみ。根拠は静的クラス Entities.Cards.TarotCards の get_All
+// （ModelDb.Card<T>() の総称引数の列挙）で、神話化（MythicFormPower.BeforeHandDraw）が
+// ランダム生成に使う集合そのもの。カード個別の CardTag enum に Tarot は無い
+// （`Tarot` は HoverTips.StaticHoverTip のツールチップ定数）ため、集合の定義はここだけ。
+{
+    var outDir = Path.GetDirectoryName(outPath)!;
+    const string tarotNs = "MegaCrit.Sts2.Core.Entities.Cards";
+    var cardTags = new SortedDictionary<string, SortedSet<string>>(StringComparer.Ordinal);
+    void AddTag(string cardId, string tag)
+    {
+        if (!cardTags.TryGetValue(cardId, out var set))
+            cardTags[cardId] = set = new SortedSet<string>(StringComparer.Ordinal);
+        set.Add(tag);
+    }
+
+    TypeDefinition? tarotTd = null;
+    foreach (var th in mr.TypeDefinitions)
+    {
+        var td = mr.GetTypeDefinition(th);
+        if (mr.GetString(td.Namespace) == tarotNs && mr.GetString(td.Name) == "TarotCards")
+        {
+            tarotTd = td;
+            break;
+        }
+    }
+
+    if (tarotTd is null)
+    {
+        Console.Error.WriteLine("card_tags.json: TarotCards 型が見つからないためスキップします（タロット未実装の DLL）。");
+    }
+    else
+    {
+        // ModelDb.Card<T>() の呼び出しだけを拾う（同じ getter 内の CollectionsMarshal.SetCount<CardModel> 等は除外）
+        var tarotRefs = new List<string>();
+        foreach (var mh in tarotTd.Value.GetMethods())
+        {
+            var md = mr.GetMethodDefinition(mh);
+            if (mr.GetString(md.Name) != "get_All" || md.RelativeVirtualAddress == 0) continue;
+            var il = peReader.GetMethodBody(md.RelativeVirtualAddress)?.GetILBytes();
+            if (il == null) continue;
+            for (int i = 0; i + 4 < il.Length; i++)
+            {
+                if (il[i] is not (0x28 or 0x6F)) continue; // call / callvirt
+                int tok = il[i + 1] | (il[i + 2] << 8) | (il[i + 3] << 16) | (il[i + 4] << 24);
+                try
+                {
+                    var h = MetadataTokens.EntityHandle(tok);
+                    if (h.Kind != HandleKind.MethodSpecification) continue;
+                    var spec = mr.GetMethodSpecification((MethodSpecificationHandle)h);
+                    if (ResolveMethodName(mr, MetadataTokens.GetToken(spec.Method)) != "Card") continue;
+                    var tn = ResolveMethodSpecFirstArg(mr, tok);
+                    if (!string.IsNullOrEmpty(tn)) tarotRefs.Add(tn);
+                    i += 4;
+                }
+                catch { }
+            }
+        }
+        foreach (var cls in tarotRefs.Where(r => cardClasses.Contains(r)))
+            AddTag("CARD." + CamelToUpperSnake(cls), "Tarot");
+        var unknown = tarotRefs.Where(r => !cardClasses.Contains(r)).Distinct().ToList();
+        if (unknown.Count > 0)
+            Console.Error.WriteLine($"[warn] card_tags.json: TarotCards.All にカード以外の参照があります: {string.Join(", ", unknown)}");
+
+        // 整合チェック: 神話化（MythicFormPower とそのネスト型＝async ステートマシン）が
+        // TarotCards::get_All を呼んでいること。崩れたら「神話化の参照集合」という前提を見直す。
+        bool mythicUsesTarot = false;
+        foreach (var th in mr.TypeDefinitions)
+        {
+            var td = mr.GetTypeDefinition(th);
+            var owner = td.GetDeclaringType().IsNil ? td : mr.GetTypeDefinition(td.GetDeclaringType());
+            if (mr.GetString(owner.Name) != "MythicFormPower") continue;
+            foreach (var mh in td.GetMethods())
+            {
+                var md = mr.GetMethodDefinition(mh);
+                if (md.RelativeVirtualAddress == 0) continue;
+                var il = peReader.GetMethodBody(md.RelativeVirtualAddress)?.GetILBytes();
+                if (il == null) continue;
+                for (int i = 0; i + 4 < il.Length; i++)
+                {
+                    if (il[i] is not (0x28 or 0x6F)) continue; // call / callvirt
+                    int tok = il[i + 1] | (il[i + 2] << 8) | (il[i + 3] << 16) | (il[i + 4] << 24);
+                    try
+                    {
+                        var h = MetadataTokens.EntityHandle(tok);
+                        if (h.Kind != HandleKind.MethodDefinition) continue;
+                        var callee = mr.GetMethodDefinition((MethodDefinitionHandle)h);
+                        var calleeTd = mr.GetTypeDefinition(callee.GetDeclaringType());
+                        if (mr.GetString(callee.Name) == "get_All" && mr.GetString(calleeTd.Name) == "TarotCards")
+                            mythicUsesTarot = true;
+                    }
+                    catch { }
+                }
+            }
+        }
+        if (!mythicUsesTarot)
+            Console.Error.WriteLine("[warn] card_tags.json: MythicFormPower が TarotCards.All を参照していません（神話化の参照集合と一致する前提が崩れています）。");
+
+        var tagLines = cardTags.Select(kv =>
+            $"  \"{kv.Key}\": [{string.Join(", ", kv.Value.Select(v => $"\"{v}\""))}]");
+        var tagOutPath = Path.Combine(outDir, "card_tags.json");
+        WriteJson(tagOutPath, "{\n" + string.Join(",\n", tagLines) + "\n}\n");
+        Console.Error.WriteLine(
+            $"Extracted {cardTags.Count} card tag mappings (Tarot). " +
+            $"MythicFormPower uses TarotCards.All: {mythicUsesTarot}. " +
+            $"CARD.JOY: {cardTags.ContainsKey("CARD.JOY")}, CARD.THE_SHOT: {cardTags.ContainsKey("CARD.THE_SHOT")}.");
+        Console.WriteLine(tagOutPath);
+    }
+}
+
 // monster_names.json / encounter_monsters.json / event_acts.json 出力
 // monster_names: アニメーション dir × ローカライズ名（loc に無い表示名は既存ファイルを引き継ぐ）
 // encounter_monsters / event_acts: DLL のモデルクラス（Encounters / Acts）から IL 抽出

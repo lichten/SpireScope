@@ -188,6 +188,12 @@ dotnet run --project ctex-to-png -- monsters                     # 5.（Web サ�
   extractor が `tools/extracted/images/ancients/` の `*_placeholder.png.import` をスキャンして生成（汎用フォールバックの `under_construction` は除外、画像未提供の `NEOW`/`TEZCATARA` は未収録）。`Services/AncientImageService.cs` で参照。
   PNG 実体は `dotnet run --project ctex-to-png -- ancients` で `.ctex` を変換し `tools/extracted/images/ancients_png/` に生成する
 - `card_related.json` — カードがホバー表示する関連カード（DLL の `get_ExtraHoverTips`、カードのみにフィルタ）。例: `CARD.ACCURACY` → `[CARD.SHIV]`。`GetRelatedCards` / `GetCreatedByCards`（逆引き）で参照
+- `card_tags.json` — カード ID → タグ名の配列（タグの無いカードは未収録）。現状のタグは `Tarot` のみ（22 枚＝大アルカナ）。
+  根拠は静的クラス `Entities.Cards.TarotCards` の `get_All`（`ModelDb.Card<T>()` の総称引数）で、
+  神話化（`MythicFormPower.BeforeHandDraw`）がランダム生成に使う集合そのもの（extractor が呼び出しの有無を検証し、崩れたら警告）。
+  `Tarot` は `CardTag` enum ではなく `HoverTips.StaticHoverTip` のツールチップ定数なので、カード個別のタグからは引けない。
+  「喜び」（`CARD.JOY`）と「ザ・ショット」（`CARD.THE_SHOT`）は `TarotCards.All` に無く**非該当**。
+  StS2Shared に読むサービスは無く、Web サイト（MemomemoSts2）の取り込みが参照する
 - `keyword_dev_notes.json` — DLL 隣の `sts2.xml`（v0.107.1 から公開される .NET XML ドキュメント）の `<summary>` を抽出した開発者ノート。
   `{接頭辞}.{ID}` → 英語 summary（`<see cref>` は短縮クラス名に解決）。接頭辞は `AFFLICTION`/`ENCHANTMENT`（→ `CamelToUpperSnake` した ID、ローカライズ ID と一致）、
   `POWER`（同上）、`ENUM.{EnumType}.{Field}`（`Core.Entities.Cards.*` のフィールドのみ。`Mock*`/`Deprecated*`・ネスト型は除外）。
