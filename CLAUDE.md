@@ -103,7 +103,7 @@ dotnet run --project card-type-extractor                         # 2.
 dotnet run --project ctex-to-png                                 # 3.
 for m in relics events ancients potions; do dotnet run --project ctex-to-png -- $m; done
 dotnet run --project card-type-extractor                         # 4.
-dotnet run --project ctex-to-png -- monsters                     # 5.（site3 用。任意）
+dotnet run --project ctex-to-png -- monsters                     # 5.（Web サイト MemomemoSts2 用。任意）
 ```
 
 続けて Mac 版へ反映する: `macos/Scripts/sync-resources.sh` → `golden.json` 再生成 → `swift test` →
@@ -124,13 +124,19 @@ dotnet run --project ctex-to-png -- monsters                     # 5.（site3 �
   旧 StS2SiteBuilder の `GenerateMonsterGifs` を移設）。出力先が `tools/extracted/images/monsters/`
   ＝ 展開先の中なので、**クリーン展開で必ず消える**。展開後は必ず再実行すること。
 - `AssetLocator` は `tools/extracted` が見つからないと**配布用アセットキャッシュ
-  （`%LocalAppData%\SpireScope\assets\v*`）へ黙ってフォールバックする**（v0.109.0 で site3 の
+  （`%LocalAppData%\SpireScope\assets\v*`）へ黙ってフォールバックする**（v0.109.0 で Web サイトの
   モンスター画像が全欠落した事故の原因）。対策として `monsters` サブコマンドは
   `AssetLocator.HasDevExtracted()`（walk-up のみ）でガードし、リポジトリの `tools/extracted` が
   無ければ hard fail する。ログ末尾の `Generated monsters ... -> <パス>` が本リポジトリ配下かで検証できる。
-- 生成された PNG は **site3（`slaythespire2.lichtenlab.com`）が read-only マウントで直接参照**
-  している（`site3/docker-compose.yml` の `images/monsters:/var/www/html/img/monsters:ro`）。
-  site3 側の `scripts/import.php` が取り込み時に欠落を検出して警告する。
+- 生成された PNG は **Web サイト（別リポジトリ `MemomemoSts2`＝`slaythespire2.lichtenlab.com`。旧 site3）が
+  直接参照**している。Docker マウントは廃止済みで、普通のファイルアクセスで読む:
+  MemomemoSts2 の `scripts/link-images.sh` が `web/img/{cards,relics,events,ancients,potions,monsters}` を
+  本リポジトリの `tools/extracted/images/{card_portraits_png,relics_png,events_png,ancients_png,potions_png,monsters}`
+  へシンボリックリンクし、本番へは `deploy.sh --images` が同じ対応で rsync する。
+  JSON は `StS2Shared/Resources/<ver>/` を `php craft sts2/import` が直接読む（本番はサーバーが本リポジトリを sparse clone）。
+  本リポジトリの場所は MemomemoSts2 の `.env` の `SPIRESCOPE_DIR`（省略時は隣の `../SpireScope`）。
+  **これらのディレクトリ名・レイアウトを変えたら MemomemoSts2 側（`link-images.sh` / `deploy.sh` / `Importer`）も追従させる。**
+  取り込み時に `web/img/monsters` の欠落を検出して警告する。
 
 ## Architecture
 
