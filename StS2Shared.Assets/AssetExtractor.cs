@@ -32,9 +32,10 @@ public sealed class AssetExtractor
     public void ExtractViewerAssets(IProgress<ExtractProgress>? progress = null, CancellationToken ct = default)
     {
         // カードポートレート: images/packed/card_portraits/{char}/{id}.png.import → card_portraits_png/{char}/{id}.png
-        // （ctex-to-png に倣い beta サブフォルダは除外）
+        // beta/ サブフォルダは「同名の本画像が親フォルダに無いもの」だけ採る（ctex-to-png と同規則）。
+        // v0.113.0 の Fool のように、開発中キャラの絵は beta/ にしか無いため。
         ConvertPortraits("images/packed/card_portraits/", "images/card_portraits_png/",
-            skipBetaSubdir: true, group: "card_portraits", progress, ct);
+            skipBetaSubdir: false, group: "card_portraits", progress, ct, betaFallbackOnly: true);
 
         // 個別レリック画像: images/relics/{rel}.png.import → relics_png/{rel}.png
         ConvertPortraits("images/relics/", "images/relics_png/",
@@ -133,12 +134,19 @@ public sealed class AssetExtractor
     // ── 抽出ストラテジ ────────────────────────────────────────────────────────
 
     /// <summary>接頭辞配下の <c>.png.import</c> ごとに ctex を解決・デコードして PNG を書き出す。</summary>
+    /// <param name="betaFallbackOnly">
+    /// true なら <c>{dir}/beta/{name}</c> は同名の <c>{dir}/{name}</c> が無いときだけ採る（本画像優先のフォールバック）。</param>
     void ConvertPortraits(string pckPrefix, string outPrefix, bool skipBetaSubdir, string group,
-        IProgress<ExtractProgress>? progress, CancellationToken ct)
+        IProgress<ExtractProgress>? progress, CancellationToken ct, bool betaFallbackOnly = false)
     {
-        var imports = _pck.EnumerateUnder(pckPrefix)
+        var all = _pck.EnumerateUnder(pckPrefix)
             .Where(e => e.ResPath.EndsWith(".png.import", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var paths = new HashSet<string>(all.Select(e => e.ResPath), StringComparer.OrdinalIgnoreCase);
+        var imports = all
             .Where(e => !skipBetaSubdir || !e.ResPath.Contains("/beta/", StringComparison.OrdinalIgnoreCase))
+            .Where(e => !betaFallbackOnly || !e.ResPath.Contains("/beta/", StringComparison.OrdinalIgnoreCase)
+                        || !paths.Contains(e.ResPath.Replace("/beta/", "/", StringComparison.OrdinalIgnoreCase)))
             .OrderBy(e => e.ResPath, StringComparer.Ordinal)
             .ToList();
 

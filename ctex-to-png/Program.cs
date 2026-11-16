@@ -249,9 +249,15 @@ var portraitsRoot   = Path.Combine(toolsRoot, "images", "packed", "card_portrait
 var portraitOutRoot = Path.Combine(toolsRoot, "images", "card_portraits_png");
 Directory.CreateDirectory(portraitOutRoot);
 
+// beta/ は同名の本画像が親フォルダに無いときだけ採る（開発中キャラ＝v0.113.0 の Fool 等は beta/ にしか絵が無い）。
+// AssetExtractor.ConvertPortraits(betaFallbackOnly) と同規則。
+static bool IsBetaDir(string dir) => string.Equals(Path.GetFileName(dir), "beta", StringComparison.OrdinalIgnoreCase);
 var importFiles = Directory.GetFiles(portraitsRoot, "*.png.import", SearchOption.AllDirectories)
-    .Where(f => !Path.GetRelativePath(portraitsRoot, f)
-        .Split('/', '\\').Contains("beta", StringComparer.OrdinalIgnoreCase))
+    .Where(f =>
+    {
+        var dir = Path.GetDirectoryName(f)!;
+        return !IsBetaDir(dir) || !File.Exists(Path.Combine(Path.GetDirectoryName(dir)!, Path.GetFileName(f)));
+    })
     .OrderBy(f => f)
     .ToList();
 

@@ -168,6 +168,8 @@ dotnet run --project ctex-to-png -- monsters                     # 5.（site3 �
 - `card_stats.json` — カードのキャノニカル変数（ダメージ・ブロック値など）
 - `card_images.json` — カード ID → 画像のソース相対パス（`card_portraits_png/` 基準、例 `silent/abrasive.png`）。
   extractor が実ファイルをスキャンして生成。`Services/CardImageService.cs` で参照し、画像解決を一元化。
+  `{char}/beta/` の絵は**同名の本画像が無いときだけ**フォールバックで採る（開発中キャラ＝v0.113.0 の Fool は
+  全カードの絵が `fool/beta/` にしか無い）。ctex-to-png（無引数）・`AssetExtractor`（配布セットアップ）も同規則で変換する
   注: スキャン元の `card_portraits_png/` は `ctex-to-png`（無引数）が生成するため、`tools/extracted` をクリーン展開した直後は
   まだ存在せず本ファイルがスキップされる。**クリーン展開時は extractor → `ctex-to-png`（無引数）→ extractor 再実行**の順で回す
 - `relic_images.json` — レリック ID（接頭辞なし大文字、例 `AKABEKO`）→ 画像のソース相対パス（`relics_png/` 基準、例 `akabeko.png`・`beta/belt_buckle.png`）。

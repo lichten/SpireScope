@@ -1903,11 +1903,16 @@ Console.WriteLine(upgKwOutPath);
             .Append(("", portraitsDir))
             .ToList();
 
+        // 本画像を全 dir で探し、無ければ各 dir の beta/ にフォールバックする
+        // （開発中キャラ＝v0.113.0 の Fool 等は {char}/beta/ にしか絵が無い）。
         string? Find(string fileName)
         {
             foreach (var (name, full) in searchDirs)
                 if (File.Exists(Path.Combine(full, fileName)))
                     return name.Length == 0 ? fileName : name + "/" + fileName;
+            foreach (var (name, full) in searchDirs)
+                if (name.Length > 0 && File.Exists(Path.Combine(full, "beta", fileName)))
+                    return name + "/beta/" + fileName;
             return null;
         }
 
