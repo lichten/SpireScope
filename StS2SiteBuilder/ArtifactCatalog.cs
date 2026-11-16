@@ -24,7 +24,7 @@ static class ArtifactCatalog
             Consumers:
             [
                 "StS2Shared 埋め込みリソース（ResourceResolver が最新版を解決）→ SpireScope / StS2Capture",
-                "site3 の scripts/import.php（取り込み時に参照）",
+                "Web サイト MemomemoSts2 の php craft sts2/import（取り込み時に参照。card_tags.json はサイト専用）",
             ],
             Notes: "ゲーム DLL の IL 解析＋ローカライズ抽出。localization/{eng,jpn} は生コピーで版固定。"),
         new(

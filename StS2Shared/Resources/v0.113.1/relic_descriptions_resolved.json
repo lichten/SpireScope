@@ -164,7 +164,7 @@
   "RELIC.MEMBERSHIP_CARD": { "en": "[blue][Discount]%[/blue] discount on all products!", "ja": "全商品、[blue][Discount]%[/blue]オフ！" },
   "RELIC.MERCURY_HOURGLASS": { "en": "At the start of your turn, deal [blue]4[/blue] damage to ALL enemies.", "ja": "ターン開始時、すべての敵に[blue]4[/blue]ダメージを与える。" },
   "RELIC.METRONOME": { "en": "The first time you [gold]Channel[/gold] [blue][OrbCount][/blue] [gold]Orbs[/gold] each combat, deal [blue]4[/blue] damage to ALL enemies.", "ja": "各戦闘で初めて[gold]オーブ[/gold]を[blue][OrbCount][/blue]個[gold]生成[/gold]した時、すべての敵に[blue]4[/blue]ダメージを与える。" },
-  "RELIC.MIGHTY_WINGS": { "en": "Whenever you deal [blue][DamageThreshold][/blue] or more attack damage in a single hit, gain [blue]2[/blue] [gold]Strength[/gold].", "ja": "1回あたり[blue][DamageThreshold][/blue]以上のアタックダメージを与える場合、[blue]2[/blue][gold]筋力[/gold]を得る。" },
+  "RELIC.MIGHTY_WINGS": { "en": "Whenever you deal [blue][DamageThreshold][/blue] or more attack damage in a single hit, gain [blue]2[/blue] [gold]Strength[/gold].", "ja": "1回あたり[blue][DamageThreshold][/blue]以上のアタックダメージを与える場合、[gold]筋力[/gold][blue]2[/blue]を得る。" },
   "RELIC.MINIATURE_CANNON": { "en": "[gold]Upgraded[/gold] Attacks deal [blue][ExtraDamage][/blue] additional damage.", "ja": "[gold]アップグレード[/gold]されたアタックは、ダメージが[blue][ExtraDamage][/blue]増加する。" },
   "RELIC.MINIATURE_TENT": { "en": "You may choose any number of options at [gold]Rest Sites[/gold].", "ja": "[gold]休憩所[/gold]で好きな数の選択肢を実行できる。" },
   "RELIC.MINI_REGENT": { "en": "The first time you spend [singleStarIcon] each turn, gain [blue][StrengthPower][/blue] [gold]Strength[/gold].", "ja": "毎ターン、初めて[singleStarIcon]を消費した時、[gold]筋力[/gold][blue][StrengthPower][/blue]を得る。" },
