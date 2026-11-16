@@ -273,7 +273,6 @@
   "CARD.BULLY": {
     "CalculatedDamage": 8,
     "CalculationBase": 4,
-    "DynamicVar": 1,
     "ExtraDamage": 2
   },
   "CARD.BULWARK": {
@@ -915,7 +914,7 @@
   "CARD.GANG_UP": {
     "CalculatedDamage": 8,
     "CalculationBase": 5,
-    "CardModel": 2,
+    "DynamicVar": 1,
     "ExtraDamage": 5,
     "UpgradedExtraDamage": 7
   },
@@ -1223,7 +1222,7 @@
   "CARD.KNIFE_TRAP": {
     "CalculationBase": 0,
     "CalculationExtra": 1,
-    "CardModel": 2
+    "CardModel": -1
   },
   "CARD.KNOCKDOWN": {
     "Damage": 8,
@@ -1279,8 +1278,8 @@
   "CARD.LUNAR_BLAST": {
     "CalculationBase": 1,
     "CalculationExtra": 2,
-    "Damage": 8,
-    "DynamicVar": 1
+    "CardModel": 3,
+    "Damage": 8
   },
   "CARD.MACHINE_LEARNING": {
     "Cards": 1
@@ -1583,6 +1582,7 @@
   "CARD.PERFECTED_STRIKE": {
     "CalculatedDamage": 8,
     "CalculationBase": 6,
+    "CardModel": 4,
     "ExtraDamage": 2
   },
   "CARD.PHANTOM_BLADES": {
@@ -1633,6 +1633,7 @@
   "CARD.PRECISE_CUT": {
     "CalculatedDamage": 8,
     "CalculationBase": 13,
+    "DynamicVar": 1,
     "ExtraDamage": 2,
     "UpgradedCalculationBase": 16
   },
@@ -2278,6 +2279,7 @@
   "CARD.THE_TOWER": {
     "CalculatedDamage": 8,
     "CalculationBase": 0,
+    "DynamicVar": 1,
     "ExtraDamage": 2
   },
   "CARD.THE_WORLD": {
@@ -2362,7 +2364,6 @@
   "CARD.UNLEASH": {
     "CalculatedDamage": 8,
     "CalculationBase": 6,
-    "DynamicVar": 1,
     "ExtraDamage": 1,
     "UpgradedCalculationBase": 9
   },

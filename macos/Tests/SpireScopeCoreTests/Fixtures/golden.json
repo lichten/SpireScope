@@ -706,7 +706,7 @@
     },
     "CARD.ANGUISH": {
       "nameEn": "Anguish",
-      "nameJa": "苦悶の一撃",
+      "nameJa": "苦悶",
       "cost": "1",
       "upgradedCost": "",
       "type": "Attack",
@@ -4881,7 +4881,7 @@
       "foolSadness": false,
       "foolStretch": false,
       "descResolvedEn": "Gain 8(10) Block twice.\nCosts 2 less Energy if you have a Wah Melody or Ki Melody.",
-      "descResolvedJa": "8(10)ブロックを2回得る。\nワーの旋律かキの旋律がある場合、コストが2 エナジー 減少する。",
+      "descResolvedJa": "8(10)ブロックを2回得る。\nワーの旋律かキの旋律を奏でていた場合、コストが2 エナジー 減少する。",
       "descResolvedEnUpgraded": "Gain 10 Block twice.\nCosts 2 less Energy if you have a Wah Melody or Ki Melody."
     },
     "CARD.CHO_READY": {
@@ -5277,7 +5277,7 @@
       "foolSadness": false,
       "foolStretch": false,
       "descResolvedEn": "Deal 8(23) damage.\nCosts 2 less Energy for each Melody you have.",
-      "descResolvedJa": "8(23)ダメージを与える。\n所持している旋律1つにつき、コストが2 エナジー 減少する。",
+      "descResolvedJa": "8(23)ダメージを与える。\n奏でた旋律1つにつき、コストが2 エナジー 減少する。",
       "descResolvedEnUpgraded": "Deal 23 damage.\nCosts 2 less Energy for each Melody you have."
     },
     "CARD.COLD_SNAP": {
@@ -8406,7 +8406,7 @@
     },
     "CARD.DIVINE_SHOT": {
       "nameEn": "Divine Shot",
-      "nameJa": "ディヴァインショット",
+      "nameJa": "ディバインショット",
       "cost": "0",
       "upgradedCost": "",
       "type": "Attack",
@@ -9418,7 +9418,7 @@
     },
     "CARD.ENRAPTURE": {
       "nameEn": "Enrapture",
-      "nameJa": "陶酔",
+      "nameJa": "夢中",
       "cost": "1",
       "upgradedCost": "",
       "type": "Skill",
@@ -10029,7 +10029,7 @@
       "foolSadness": false,
       "foolStretch": false,
       "descResolvedEn": "Draw 2 cards.\nRetain your Hand this turn.",
-      "descResolvedJa": "カードを2枚引く。\nこのターン、あなたの手札を保留する。",
+      "descResolvedJa": "カードを2枚引く。\nこのターン、手札をすべて保留する。",
       "descResolvedEnUpgraded": "Draw 2 cards.\nRetain your Hand this turn."
     },
     "CARD.EXPLOSIVE_ARROWS": {
@@ -11178,7 +11178,7 @@
     },
     "CARD.FLORESCENCE": {
       "nameEn": "Florescence",
-      "nameJa": "花盛り",
+      "nameJa": "百花繚乱",
       "cost": "0",
       "upgradedCost": "",
       "type": "Skill",
@@ -12669,7 +12669,7 @@
       "foolSadness": true,
       "foolStretch": true,
       "descResolvedEn": "Exhaust ALL Sadness in your Hand.\nGain 4(6) Stretch for each card Exhausted.",
-      "descResolvedJa": "手札にある悲しみをすべて廃棄する。\n廃棄したカード1枚につき、4(6)ストレッチを得る。",
+      "descResolvedJa": "手札にある悲しみをすべて廃棄する。\n廃棄したカード1枚につき、ストレッチ4(6)を得る。",
       "descResolvedEnUpgraded": "Exhaust ALL Sadness in your Hand.\nGain 6 Stretch for each card Exhausted."
     },
     "CARD.GUARDS": {
@@ -13109,7 +13109,7 @@
       "foolSadness": false,
       "foolStretch": false,
       "descResolvedEn": "Gain 5(7) Block for each Melody you have.",
-      "descResolvedJa": "所持している旋律1つにつき、5(7)ブロックを得る。",
+      "descResolvedJa": "奏でた旋律1つにつき、5(7)ブロックを得る。",
       "descResolvedEnUpgraded": "Gain 7 Block for each Melody you have."
     },
     "CARD.HAUNT": {
@@ -15485,7 +15485,7 @@
       "foolSadness": false,
       "foolStretch": false,
       "descResolvedEn": "Next turn, gain 5.\nIf you have a Wah Melody or Cho Melody, Retain your Hand this turn.",
-      "descResolvedJa": "次のターン、5を得る。\nワーの旋律かチョの旋律がある場合、このターン、\n手札を保留する。",
+      "descResolvedJa": "次のターン、5を得る。\nワーの旋律かチョの旋律を奏でていた場合、このターン、\n手札をすべて保留する。",
       "descResolvedEnUpgraded": "Next turn, gain 5.\nIf you have a Wah Melody or Cho Melody, Retain your Hand this turn."
     },
     "CARD.KI_VERSE": {
@@ -16277,7 +16277,7 @@
       "foolSadness": false,
       "foolStretch": false,
       "descResolvedEn": "Whenever you gain a Melody, play the top card of your Draw Pile.",
-      "descResolvedJa": "旋律を得るたび、山札の一番上のカードをプレイする。",
+      "descResolvedJa": "旋律を奏でるたび、山札の一番上のカードをプレイする。",
       "descResolvedEnUpgraded": "Whenever you gain a Melody, play the top card of your Draw Pile."
     },
     "CARD.LULLABY": {
@@ -16321,7 +16321,7 @@
       "foolSadness": false,
       "foolStretch": false,
       "descResolvedEn": "When you gain every Melody, gain 20 Block.",
-      "descResolvedJa": "すべての旋律を得ると、20ブロックを得る。",
+      "descResolvedJa": "すべての旋律を奏でると、20ブロックを得る。",
       "descResolvedEnUpgraded": "When you gain every Melody, gain 20 Block."
     },
     "CARD.LUMINESCE": {
@@ -16937,7 +16937,7 @@
       "foolSadness": false,
       "foolStretch": false,
       "descResolvedEn": "Shoot an Arrow to deal 40 damage.\nHits an additional time for each Melody you have.",
-      "descResolvedJa": "矢を放ち、40ダメージを与える。\n所持している旋律1つにつき、追加で1回攻撃する。",
+      "descResolvedJa": "矢を放ち、40ダメージを与える。\n奏でた旋律1つにつき、追加で1回攻撃する。",
       "descResolvedEnUpgraded": "Shoot an Arrow to deal 40 damage.\nHits an additional time for each Melody you have."
     },
     "CARD.MEMENTO_MORI": {
@@ -17949,7 +17949,7 @@
       "foolSadness": false,
       "foolStretch": false,
       "descResolvedEn": "Whenever you gain a Melody, draw [MotifPower] card.",
-      "descResolvedJa": "旋律を得るたび、カードを[MotifPower]枚引く。",
+      "descResolvedJa": "旋律を奏でるたび、カードを[MotifPower]枚引く。",
       "descResolvedEnUpgraded": "Whenever you gain a Melody, draw [MotifPower] card."
     },
     "CARD.MOURNING_BLOW": {
@@ -22349,7 +22349,7 @@
       "foolSadness": false,
       "foolStretch": false,
       "descResolvedEn": "Deal 8 damage.\nHits an additional time for each Melody you have.",
-      "descResolvedJa": "8ダメージを与える。\n所持している旋律1つにつき、追加で1回攻撃する。",
+      "descResolvedJa": "8ダメージを与える。\n奏でた旋律1つにつき、追加で1回攻撃する。",
       "descResolvedEnUpgraded": "Deal 8 damage.\nHits an additional time for each Melody you have."
     },
     "CARD.RICOCHET": {
@@ -24945,7 +24945,7 @@
       "foolSadness": false,
       "foolStretch": false,
       "descResolvedEn": "Whenever you gain a Cho Melody, gain 5 Block.",
-      "descResolvedJa": "チョの旋律を得るたび、5ブロックを得る。",
+      "descResolvedJa": "チョの旋律を奏でるたび、5ブロックを得る。",
       "descResolvedEnUpgraded": "Whenever you gain a Cho Melody, gain 5 Block."
     },
     "CARD.SOOT": {
@@ -25913,7 +25913,7 @@
       "foolSadness": false,
       "foolStretch": false,
       "descResolvedEn": "Deal 8(11) damage.\nDraw 1 card for each Melody you have.",
-      "descResolvedJa": "8(11)ダメージを与える。\n所持している旋律1つにつき、カードを1枚引く。",
+      "descResolvedJa": "8(11)ダメージを与える。\n奏でた旋律1つにつき、カードを1枚引く。",
       "descResolvedEnUpgraded": "Deal 11 damage.\nDraw 1 card for each Melody you have."
     },
     "CARD.STOKE": {
@@ -28377,7 +28377,7 @@
       "foolSadness": false,
       "foolStretch": false,
       "descResolvedEn": "Shoot an Arrow to deal 10(13) damage for each card Exhausted by Florescence.",
-      "descResolvedJa": "矢を放ち、花盛りによって廃棄されたカード1枚につき10(13)ダメージを与える。",
+      "descResolvedJa": "矢を放ち、百花繚乱によって廃棄されたカード1枚につき10(13)ダメージを与える。",
       "descResolvedEnUpgraded": "Shoot an Arrow to deal 13 damage for each card Exhausted by Florescence."
     },
     "CARD.THE_SMITH": {
@@ -29345,7 +29345,7 @@
       "foolSadness": false,
       "foolStretch": false,
       "descResolvedEn": "At the end of your turn, if you have a Ki Melody, the next card you play costs 0 Energy .",
-      "descResolvedJa": "ターン終了時、キの旋律を持っている場合、次にプレイするカードのコストが0 エナジー になる。",
+      "descResolvedJa": "ターン終了時、キの旋律を奏でていた場合、次にプレイするカードのコストが0 エナジー になる。",
       "descResolvedEnUpgraded": "At the end of your turn, if you have a Ki Melody, the next card you play costs 0 Energy ."
     },
     "CARD.TURBO": {
@@ -30225,7 +30225,7 @@
       "foolSadness": false,
       "foolStretch": false,
       "descResolvedEn": "Whenever you gain a Wah Melody, deal 9 damage to ALL enemies.",
-      "descResolvedJa": "ワーの旋律を得るたび、すべての敵に9ダメージを与える。",
+      "descResolvedJa": "ワーの旋律を奏でるたび、すべての敵に9ダメージを与える。",
       "descResolvedEnUpgraded": "Whenever you gain a Wah Melody, deal 9 damage to ALL enemies."
     },
     "CARD.VITRIOL": {
@@ -30489,7 +30489,7 @@
       "foolSadness": false,
       "foolStretch": false,
       "descResolvedEn": "Deal 8(12) damage to ALL enemies.\nIf you have a Cho Melody or Ki Melody, hits twice.",
-      "descResolvedJa": "すべての敵に\n8(12)ダメージを与える。\nチョの旋律かキの旋律を持っている場合、2回攻撃する。",
+      "descResolvedJa": "すべての敵に\n8(12)ダメージを与える。\nチョの旋律かキの旋律を奏でていた場合、2回攻撃する。",
       "descResolvedEnUpgraded": "Deal 12 damage to ALL enemies.\nIf you have a Cho Melody or Ki Melody, hits twice."
     },
     "CARD.WAH_CHO": {
@@ -34580,7 +34580,7 @@
       "foolSadness": false,
       "foolStretch": false,
       "descResolvedEn": "Whenever you deal [DamageThreshold] or more attack damage in a single hit, gain 2 Strength.",
-      "descResolvedJa": "1回あたり[DamageThreshold]以上のアタックダメージを与える場合、2筋力を得る。"
+      "descResolvedJa": "1回あたり[DamageThreshold]以上のアタックダメージを与える場合、筋力2を得る。"
     },
     "MINIATURE_CANNON": {
       "nameEn": "Miniature Cannon",
