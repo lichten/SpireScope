@@ -10,7 +10,12 @@ using StS2Shared.Services;
 
 // 引数: [sts2.dll のパス] [出力 JSON のパス]
 // 省略時はデフォルトパスを使用
-const string defaultDll = @"C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\data_sts2_windows_x86_64\sts2.dll";
+// macOS は Steam の既定ライブラリ配下のアプリバンドル内（data_sts2_macos_arm64。マネージド IL は Windows 版と同一）
+var defaultDll = OperatingSystem.IsMacOS()
+    ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        "Library", "Application Support", "Steam", "steamapps", "common", "Slay the Spire 2",
+        "SlayTheSpire2.app", "Contents", "Resources", "data_sts2_macos_arm64", "sts2.dll")
+    : @"C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\data_sts2_windows_x86_64\sts2.dll";
 var dllPath = (args.Length > 0 && !args[0].StartsWith("--")) ? args[0] : defaultDll;
 
 // バージョン文字列を release_info.json から取得（sts2.dll の一つ上のフォルダ）
@@ -25,7 +30,7 @@ var gameVersion = File.Exists(releaseInfoPath)
 // AppContext.BaseDirectory = .../card-type-extractor/bin/Debug/net10.0/
 // 4階層上がるとリポジトリルート
 var defaultOut = Path.GetFullPath(
-    Path.Combine(AppContext.BaseDirectory, $@"..\..\..\..\StS2Shared\Resources\{gameVersion}\card_types.json"));
+    Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "StS2Shared", "Resources", gameVersion, "card_types.json"));
 // 特殊調査モード（--dump-* / --list-* など）は outPath 不要なので、args[1] をそのまま使わない
 bool isDebugMode = args.Length > 0 && args[0].StartsWith("--");
 var outPath = isDebugMode
@@ -687,6 +692,7 @@ var characterPoolMap = new Dictionary<string, string>(StringComparer.Ordinal)
     ["DefectCardPool"]     = "Defect",
     ["NecrobinderCardPool"] = "Necrobinder",
     ["RegentCardPool"]     = "Regent",
+    ["FoolCardPool"]       = "Fool",   // v0.113.0 で追加された 6 人目のキャラクター
 };
 
 // カードクラス名の Set を CardPool.GenerateAllCards IL から取得
@@ -1897,11 +1903,16 @@ Console.WriteLine(upgKwOutPath);
             .Append(("", portraitsDir))
             .ToList();
 
+        // 本画像を全 dir で探し、無ければ各 dir の beta/ にフォールバックする
+        // （開発中キャラ＝v0.113.0 の Fool 等は {char}/beta/ にしか絵が無い）。
         string? Find(string fileName)
         {
             foreach (var (name, full) in searchDirs)
                 if (File.Exists(Path.Combine(full, fileName)))
                     return name.Length == 0 ? fileName : name + "/" + fileName;
+            foreach (var (name, full) in searchDirs)
+                if (name.Length > 0 && File.Exists(Path.Combine(full, "beta", fileName)))
+                    return name + "/beta/" + fileName;
             return null;
         }
 
@@ -2015,6 +2026,7 @@ Console.WriteLine(upgKwOutPath);
         ("DefectPotionPool",      "Defect"),
         ("NecrobinderPotionPool", "Necrobinder"),
         ("RegentPotionPool",      "Regent"),
+        ("FoolPotionPool",        "Fool"),
     };
 
     List<string> CollectPoolPotions(string poolName)
@@ -2444,7 +2456,7 @@ Console.WriteLine(upgKwOutPath);
 {
     var outDirC = Path.GetDirectoryName(outPath)!;
     const string charNs = "MegaCrit.Sts2.Core.Models.Characters";
-    var charClasses = new[] { "Ironclad", "Silent", "Defect", "Necrobinder", "Regent" };
+    var charClasses = new[] { "Ironclad", "Silent", "Defect", "Necrobinder", "Regent", "Fool" };
 
     string? ReadUserString(int tok)
     {

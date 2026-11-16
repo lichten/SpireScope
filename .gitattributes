@@ -14,3 +14,10 @@
 
 # ゲームからの生コピー（LF のまま版固定する）は CRLF 変換の対象外
 StS2Shared/Resources/v*/localization/**/*.json text eol=lf
+
+# Mac 版（macos/）は Swift ツールチェーン前提のため全て LF
+macos/** text eol=lf
+macos/Tests/SpireScopeCoreTests/Fixtures/current_run.save text eol=lf
+# macos/ 配下のバイナリは改行変換の対象外（text eol=lf の全体規則より優先）
+macos/**/*.png binary
+macos/**/*.icns binary

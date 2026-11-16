@@ -23,6 +23,8 @@ public static class SteamLocator
 {
     const string GameFolderName = "Slay the Spire 2";
     const string PckFileName = "SlayTheSpire2.pck";
+    // macOS 版はアプリバンドル内に別名で格納される（実機確認済み）。
+    const string MacPckRelPath = "SlayTheSpire2.app/Contents/Resources/Slay the Spire 2.pck";
 
     /// <summary>Slay the Spire 2 を自動検出する。見つからなければ null。</summary>
     public static Sts2Install? Locate()
@@ -32,12 +34,21 @@ public static class SteamLocator
             foreach (var library in EnumerateLibraries(steamRoot))
             {
                 var gameDir = Path.Combine(library, "steamapps", "common", GameFolderName);
-                var pck = Path.Combine(gameDir, PckFileName);
-                if (File.Exists(pck))
+                if (FindPck(gameDir) is string pck)
                     return new Sts2Install(gameDir, pck, ReadVersion(gameDir));
             }
         }
         return null;
+    }
+
+    /// <summary>ゲームフォルダ内の .pck を探す（Windows 直下 → macOS の .app 内）。無ければ null。</summary>
+    static string? FindPck(string gameDir)
+    {
+        var winPck = Path.Combine(gameDir, PckFileName);
+        if (File.Exists(winPck)) return winPck;
+        var macPck = Path.Combine(gameDir,
+            MacPckRelPath.Replace('/', Path.DirectorySeparatorChar));
+        return File.Exists(macPck) ? macPck : null;
     }
 
     /// <summary>
@@ -47,31 +58,39 @@ public static class SteamLocator
     public static Sts2Install? FromPath(string pckOrGameDir)
     {
         if (File.Exists(pckOrGameDir) &&
-            Path.GetFileName(pckOrGameDir).Equals(PckFileName, StringComparison.OrdinalIgnoreCase))
+            Path.GetExtension(pckOrGameDir).Equals(".pck", StringComparison.OrdinalIgnoreCase))
         {
             var dir = Path.GetDirectoryName(pckOrGameDir)!;
             return new Sts2Install(dir, pckOrGameDir, ReadVersion(dir));
         }
         if (Directory.Exists(pckOrGameDir))
         {
-            var pck = Path.Combine(pckOrGameDir, PckFileName);
-            if (File.Exists(pck))
+            if (FindPck(pckOrGameDir) is string pck)
                 return new Sts2Install(pckOrGameDir, pck, ReadVersion(pckOrGameDir));
         }
         return null;
     }
 
-    /// <summary>ゲームフォルダの <c>release_info.json</c> から <c>version</c> を読む。読めなければ null。</summary>
+    /// <summary>ゲームフォルダの <c>release_info.json</c> から <c>version</c> を読む。読めなければ null。
+    /// macOS では pck と同じく .app バンドル内にあるため両方を探す。</summary>
     public static string? ReadVersion(string gameDir)
     {
-        try
+        foreach (var rel in new[]
         {
-            var path = Path.Combine(gameDir, "release_info.json");
-            if (!File.Exists(path)) return null;
-            using var doc = JsonDocument.Parse(File.ReadAllBytes(path));
-            return doc.RootElement.TryGetProperty("version", out var v) ? v.GetString() : null;
+            "release_info.json",
+            Path.Combine("SlayTheSpire2.app", "Contents", "Resources", "release_info.json"),
+        })
+        {
+            try
+            {
+                var path = Path.Combine(gameDir, rel);
+                if (!File.Exists(path)) continue;
+                using var doc = JsonDocument.Parse(File.ReadAllBytes(path));
+                return doc.RootElement.TryGetProperty("version", out var v) ? v.GetString() : null;
+            }
+            catch { /* 読めなければ次候補へ */ }
         }
-        catch { return null; }
+        return null;
     }
 
     static List<string> EnumerateSteamRoots()
@@ -86,10 +105,16 @@ public static class SteamLocator
         }
 
         if (OperatingSystem.IsWindows())
+        {
             Add(ReadSteamPathFromRegistry());
+            Add(Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Steam"));
+        }
 
-        Add(Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Steam"));
+        if (OperatingSystem.IsMacOS())
+            Add(Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "Library", "Application Support", "Steam"));
 
         return roots;
     }

@@ -202,6 +202,18 @@ public static class CardDatabaseService
     static readonly HashSet<string> _regentStarSpend  = ComputeRegentStarSpend();
     static readonly HashSet<string> _defectZeroEnergy = BuildDefectZeroEnergy();
     static readonly HashSet<string> _allEnemiesAttack = ComputeByPlainText("damage to ALL enemies", "hit ALL enemies");
+    // Fool（v0.113.0 追加）。Shoot/Arrow/Aim は templated な複数形（{Repeat:plural:Arrow|Arrows} 等）があるため gold タグ内包含で拾う。
+    static readonly HashSet<string> _foolShoot = Union(
+        ComputeByGoldTagContaining("Shoot"), ComputeByGoldTagContaining("Arrow"),
+        ComputeByGoldTagContaining("Shot"), ComputeByTag("[gold]Aim[/gold]"));
+    static readonly HashSet<string> _foolImpale = ComputeByTag(
+        "[gold]Impale[/gold]", "[gold]Impaled[/gold]", "[gold]Dislodge[/gold]", "[gold]Dislodges[/gold]");
+    // 旋律は「Wah / Cho / Ki」を名前に持つカードのプレイで得る。"Echo" 等の部分一致を避けるため単語一致で判定する。
+    static readonly HashSet<string> _foolMelody = Union(
+        ComputeByGoldTagContaining("Melody"), ComputeByNameWord("Wah", "Cho", "Ki"));
+    static readonly HashSet<string> _foolSadness = Union(
+        ComputeByGoldTagContaining("Sadness"), ComputeByGoldTagContaining("Joy"));
+    static readonly HashSet<string> _foolStretch = ComputeByTag("[gold]Stretch[/gold]");
 
     static HashSet<string> ComputeBlockGivers()
     {
@@ -366,6 +378,27 @@ public static class CardDatabaseService
         return result;
     }
 
+    // カード名（En）に words のいずれかを単語として含むカードを収集する（大文字小文字は無視）。
+    static HashSet<string> ComputeByNameWord(params string[] words)
+    {
+        var pattern = new Regex(@"\b(" + string.Join("|", words.Select(Regex.Escape)) + @")\b", RegexOptions.IgnoreCase);
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (id, entry) in _db)
+        {
+            if (!id.StartsWith("CARD.", StringComparison.OrdinalIgnoreCase)) continue;
+            if (pattern.IsMatch(entry.En))
+                result.Add(ToRawId(id));
+        }
+        return result;
+    }
+
+    static HashSet<string> Union(params HashSet<string>[] sets)
+    {
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var s in sets) result.UnionWith(s);
+        return result;
+    }
+
     // Star の増減に「反応」するだけのカード（プレイヤー自身が Star を増減させない）。
     // 例: ブラックホール "Whenever you spend or gain {singleStarIcon}, ..."。
     // 「Starを得る」「Starを使用する」どちらのグループに出しても直観に反するため両方から除外する。
@@ -508,6 +541,11 @@ public static class CardDatabaseService
                                                     || _regentTransform.Contains(ToRawId(id))
                                                     || _regentCreateExtra.Contains(ToRawId(id));
 
+    public static bool IsFoolShoot(string id)   => _foolShoot.Contains(ToRawId(id));
+    public static bool IsFoolImpale(string id)  => _foolImpale.Contains(ToRawId(id));
+    public static bool IsFoolMelody(string id)  => _foolMelody.Contains(ToRawId(id));
+    public static bool IsFoolSadness(string id) => _foolSadness.Contains(ToRawId(id));
+    public static bool IsFoolStretch(string id) => _foolStretch.Contains(ToRawId(id));
     public static bool IsBlockGiver(string id) => _blockGivers.Contains(ToRawId(id));
     public static bool IsRelicBlockGiver(string id) => _blockRelicGivers.Contains(ToRawId(id));
     public static bool IsDrawRelated(string id) => _drawRelated.Contains(ToRawId(id));

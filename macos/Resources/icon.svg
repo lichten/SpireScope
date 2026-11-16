@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SpireScope アプリアイコン（オリジナルデザイン）
+     モチーフ: 尖塔（Spire）＋スコープ（照準リング）。
+     1024×1024、macOS 標準の角丸タイル（マージン100 / 角丸185）。
+     変更したら Scripts/make-icon.sh で .icns を再生成すること。 -->
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#332055"/>
+      <stop offset="0.55" stop-color="#1d1640"/>
+      <stop offset="1" stop-color="#0e1029"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.46" r="0.5">
+      <stop offset="0" stop-color="#e9b94f" stop-opacity="0.22"/>
+      <stop offset="0.6" stop-color="#e9b94f" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#e9b94f" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="tile">
+      <rect x="100" y="100" width="824" height="824" rx="185" ry="185"/>
+    </clipPath>
+  </defs>
+
+  <!-- 角丸タイル背景 -->
+  <rect x="100" y="100" width="824" height="824" rx="185" ry="185" fill="url(#bg)"/>
+
+  <g clip-path="url(#tile)">
+    <!-- 星 -->
+    <circle cx="240" cy="250" r="6" fill="#ffffff" opacity="0.75"/>
+    <circle cx="330" cy="180" r="4" fill="#ffffff" opacity="0.5"/>
+    <circle cx="740" cy="210" r="5" fill="#ffffff" opacity="0.7"/>
+    <circle cx="820" cy="330" r="4" fill="#ffffff" opacity="0.45"/>
+    <circle cx="200" cy="430" r="4" fill="#ffffff" opacity="0.4"/>
+    <circle cx="850" cy="560" r="5" fill="#ffffff" opacity="0.5"/>
+    <circle cx="180" cy="680" r="4" fill="#ffffff" opacity="0.35"/>
+    <circle cx="690" cy="140" r="3" fill="#ffffff" opacity="0.4"/>
+
+    <!-- 尖塔の背後の光 -->
+    <circle cx="512" cy="470" r="360" fill="url(#glow)"/>
+
+    <!-- 尖塔シルエット（段付きの塔） -->
+    <g fill="#120c2c">
+      <path d="M512,170 L582,430 L442,430 Z"/>
+      <rect x="424" y="430" width="176" height="28"/>
+      <path d="M442,458 L582,458 L612,700 L412,700 Z"/>
+      <rect x="394" y="700" width="236" height="28"/>
+      <path d="M412,728 L612,728 L640,924 L384,924 Z"/>
+    </g>
+    <!-- 塔の窓（金） -->
+    <g fill="#e9b94f">
+      <rect x="502" y="320" width="20" height="40" rx="10" opacity="0.9"/>
+      <rect x="502" y="545" width="20" height="40" rx="10" opacity="0.85"/>
+      <rect x="458" y="836" width="20" height="44" rx="10" opacity="0.8"/>
+      <rect x="546" y="836" width="20" height="44" rx="10" opacity="0.8"/>
+    </g>
+
+    <!-- スコープ（照準リング＋レティクル） -->
+    <g stroke="#e9b94f" fill="none" stroke-linecap="round">
+      <circle cx="512" cy="500" r="232" stroke-width="30" fill="#e9b94f" fill-opacity="0.05"/>
+      <line x1="512" y1="216" x2="512" y2="296" stroke-width="22"/>
+      <line x1="512" y1="704" x2="512" y2="784" stroke-width="22"/>
+      <line x1="228" y1="500" x2="308" y2="500" stroke-width="22"/>
+      <line x1="716" y1="500" x2="796" y2="500" stroke-width="22"/>
+    </g>
+  </g>
+</svg>

@@ -17,7 +17,7 @@ public static class SiteLinkService
     public sealed record Link(string Label, string Url);
 
     static readonly HashSet<string> CardClasses =
-        new(StringComparer.OrdinalIgnoreCase) { "ironclad", "silent", "defect", "necrobinder", "regent" };
+        new(StringComparer.OrdinalIgnoreCase) { "ironclad", "silent", "defect", "necrobinder", "regent", "fool" };
 
     /// <summary>
     /// 指定エンティティに対し、種別が一致（または "any"）するテンプレートを展開したリンク一覧。

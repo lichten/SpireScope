@@ -10,7 +10,58 @@ dotnet run --project SpireScope               # セーブデータビューア
 dotnet run --project card-type-extractor      # カードメタデータ再生成（要ゲームDLL）
 ```
 
-テスト・lint コマンドは設定されていない。
+テスト・lint コマンドは設定されていない（Mac 版のみ `swift test` あり、下記）。
+
+### Mac 版（macos/ — SwiftUI アプリ）
+
+Windows 版とは別に、純 Swift の macOS ビューアが `macos/` にある（SwiftPM のみ、Xcode プロジェクトなし）。
+データ層（`SpireScopeCore`）は StS2Shared の C# サービス群を Swift へ移植したもので、
+リソース JSON は `macos/Scripts/sync-resources.sh` が `StS2Shared/Resources` の最新 `v*` を
+`Sources/SpireScopeCore/Resources/data/` へコピーして git 管理・アプリ同梱する。
+
+```bash
+cd macos
+swift build                 # ビルド
+swift test                  # テスト（C# 実装とのゴールデンテスト含む）
+swift run SpireScopeApp     # 起動（開発用）
+Scripts/make-app.sh         # out/SpireScope.app を生成（ad-hoc 署名）
+```
+
+- **初回アセット抽出**（画像・ローカライズ）: `dotnet run --project ctex-to-png -- setup`。
+  Steam の Mac 版 STS2（pck は `SlayTheSpire2.app/Contents/Resources/Slay the Spire 2.pck`、
+  ファイル名にスペースあり）を SteamLocator が自動検出し、
+  `~/Library/Application Support/SpireScope/assets/v{version}/` へ Windows 配布モードと同一レイアウトで抽出する
+  （`AssetLocator.DistributionAssetsRoot` の macOS 分岐）。アプリの `AssetStore` がここを読む。
+- **セーブ**: `~/Library/Application Support/SlayTheSpire2/steam/{steamId}/profile1/saves/current_run.save`
+  （Windows と同一構造の平文 JSON）。`SaveWatcher` が親ディレクトリを kqueue 監視して自動リロード。
+- **ゲーム更新時**: Windows 側で card-type-extractor を回して `Resources/v{new}/` をコミット後、
+  Mac で `Scripts/sync-resources.sh` を再実行してコミット。アセットは `-- setup` を再実行。
+- **ゴールデンテスト**: `Tests/SpireScopeCoreTests/Fixtures/golden.json` は C# 実装
+  （CardDatabaseService / DescriptionFormatter）の全 ID ダンプ。C# 側の判定ロジックや
+  リソースのバージョンを変えたら、StS2Shared を参照する一時コンソールで再生成して差し替えること。
+- **移植対応表**: `CardDatabase.swift` ← CardDatabaseService、`OverviewBuilder.swift` ←
+  Form1.RefreshCombinedOverview ＋ DeckOverviewForm.BuildKeywordGroups/IsDisposable、
+  `CharacterMechanics.swift` / `DescriptionFormatter.swift` / `PotionOddsService` ← 同名 C#。
+  `SpireScopeCapture`（下記）← StS2Capture.Core、`TierScores.swift`＋`TierScoreModel.swift` ← TierScoreService。
+  **C# 側の分類ロジックを変更したら Swift 側も追従させる**（二重メンテ）。
+- **ライブキャプチャ（`Sources/SpireScopeCapture/`）**: StS2Capture.Core の移植。WGC → ScreenCaptureKit
+  （`SCScreenshotManager`、macOS 14+）、Windows.Media.Ocr → Vision に置き換え、認識アルゴリズム
+  （固定スロット＋HSV ヒストグラム＋枠色分類＋エンシェント OCR）は同一。要点:
+  - **較正定数は `SlotLayout.swift` の `RecognitionConstants` に集約**（Windows 版 16:9 実測値と同値。
+    C# 側のスロット座標・しきい値を変えたらここも追従させる）。スロット矩形の切り捨て演算は
+    C# `(int)` と一致させてあり、`GeometryTests` が固定値で回帰検証する。
+  - **TCC（画面収録）は署名済み `.app` に付与される**。キャプチャの動作検証は `swift run` ではなく
+    `Scripts/make-app.sh` → `out/SpireScope.app` で行う（`swift run` だとターミナルに権限が付く）。
+    再許可が要るときは `tccutil reset ScreenCapture com.lichtenlab.spirescope`。
+    ad-hoc 署名はリビルドで要再許可になり得る（`CODESIGN_IDENTITY` で自己署名証明書を指定可）。
+  - **ヘッドレス較正 CLI**: `swift run capture-verify <frame.png> [--client x,y,w,h] [--crops dir]`。
+    アプリの「フレームを保存」か Windows 版 `STS2_DUMP_DIR` のダンプ PNG に対して TCC 権限なしで
+    認識を検証できる。ゴールデンテストは `Tests/SpireScopeCaptureTests/Fixtures/`（README 参照）。
+  - **ポーション画像**: `AssetExtractor.ExtractViewerAssets` が `images/potions_png/` を抽出する
+    （Mac のショップ・ポーション認識と表示が読む）。旧セットアップ済み環境は `-- setup` 再実行が必要
+    （未抽出だと UI に警告を出しレリックのみで動作する）。
+  - ティアスコアのキャッシュ（`~/Library/Application Support/SpireScope/tier_scores_cache.json`）と
+    埋め込みスナップショットは Windows 版と同一 JSON 形式（`sync-resources.sh` がスナップショットをコピー）。
 
 ## Tools Setup / ゲーム更新時のクリーン展開チェックリスト（git 管理外）
 
@@ -39,6 +90,27 @@ dotnet run --project card-type-extractor
 dotnet run --project ctex-to-png -- monsters
 ```
 
+### Mac で回す場合（Windows 不要）
+
+PCKExplorer の代わりに `ctex-to-png -- dump-pck`（`PckReader` で全エントリを `res://` 相対で書き出す）を使う。
+extractor は macOS では既定で `~/Library/Application Support/Steam/.../SlayTheSpire2.app/Contents/Resources/data_sts2_macos_arm64/sts2.dll`
+を読む（マネージド IL は Windows 版と同一。`release_info.json` は DLL の一つ上にある）。`dotnet` は `~/.dotnet` にある。
+
+```bash
+export PATH="$HOME/.dotnet:$PATH"
+dotnet run --project ctex-to-png -- dump-pck tools/extracted     # 1. 全展開（約 2 GB）
+dotnet run --project card-type-extractor                         # 2.
+dotnet run --project ctex-to-png                                 # 3.
+for m in relics events ancients potions; do dotnet run --project ctex-to-png -- $m; done
+dotnet run --project card-type-extractor                         # 4.
+dotnet run --project ctex-to-png -- monsters                     # 5.（Web サイト MemomemoSts2 用。任意）
+```
+
+続けて Mac 版へ反映する: `macos/Scripts/sync-resources.sh` → `golden.json` 再生成 → `swift test` →
+`dotnet run --project ctex-to-png -- setup`（下記「Mac 版」節を参照）。
+新キャラクターが追加されたときは、card-type-extractor の `characterPoolMap` / `potionPoolMap` / `charClasses`
+（キャラ名のハードコード 3 か所）に追記すること（v0.113.0 の Fool で実施）。
+
 展開後は `tools/extracted/` に以下が生成される：
 
 - `localization/{eng,jpn,deu,...}/*.json` — ゲーム全テキスト
@@ -52,13 +124,19 @@ dotnet run --project ctex-to-png -- monsters
   旧 StS2SiteBuilder の `GenerateMonsterGifs` を移設）。出力先が `tools/extracted/images/monsters/`
   ＝ 展開先の中なので、**クリーン展開で必ず消える**。展開後は必ず再実行すること。
 - `AssetLocator` は `tools/extracted` が見つからないと**配布用アセットキャッシュ
-  （`%LocalAppData%\SpireScope\assets\v*`）へ黙ってフォールバックする**（v0.109.0 で site3 の
+  （`%LocalAppData%\SpireScope\assets\v*`）へ黙ってフォールバックする**（v0.109.0 で Web サイトの
   モンスター画像が全欠落した事故の原因）。対策として `monsters` サブコマンドは
   `AssetLocator.HasDevExtracted()`（walk-up のみ）でガードし、リポジトリの `tools/extracted` が
   無ければ hard fail する。ログ末尾の `Generated monsters ... -> <パス>` が本リポジトリ配下かで検証できる。
-- 生成された PNG は **site3（`slaythespire2.lichtenlab.com`）が read-only マウントで直接参照**
-  している（`site3/docker-compose.yml` の `images/monsters:/var/www/html/img/monsters:ro`）。
-  site3 側の `scripts/import.php` が取り込み時に欠落を検出して警告する。
+- 生成された PNG は **Web サイト（別リポジトリ `MemomemoSts2`＝`slaythespire2.lichtenlab.com`。旧 site3）が
+  直接参照**している。Docker マウントは廃止済みで、普通のファイルアクセスで読む:
+  MemomemoSts2 の `scripts/link-images.sh` が `web/img/{cards,relics,events,ancients,potions,monsters}` を
+  本リポジトリの `tools/extracted/images/{card_portraits_png,relics_png,events_png,ancients_png,potions_png,monsters}`
+  へシンボリックリンクし、本番へは `deploy.sh --images` が同じ対応で rsync する。
+  JSON は `StS2Shared/Resources/<ver>/` を `php craft sts2/import` が直接読む（本番はサーバーが本リポジトリを sparse clone）。
+  本リポジトリの場所は MemomemoSts2 の `.env` の `SPIRESCOPE_DIR`（省略時は隣の `../SpireScope`）。
+  **これらのディレクトリ名・レイアウトを変えたら MemomemoSts2 側（`link-images.sh` / `deploy.sh` / `Importer`）も追従させる。**
+  取り込み時に `web/img/monsters` の欠落を検出して警告する。
 
 ## Architecture
 
@@ -76,7 +154,7 @@ dotnet run --project ctex-to-png -- monsters
 | `StS2Capture` | キャプチャ検証用の単体アプリ（試験用） |
 | `StS2SiteBuilder` | 成果物インベントリ CLI（ソリューション生成物を実スキャンして `out/artifacts.html` を出力） |
 | `card-type-extractor` | ゲーム DLL の IL を解析してカードメタデータ JSON を生成するCLIツール |
-| `ctex-to-png` | `.ctex`→PNG 変換 CLI（relics/events/ancients/potions/monsters ほか、extract-pck サブコマンドあり） |
+| `ctex-to-png` | `.ctex`→PNG 変換 CLI（relics/events/ancients/potions/monsters ほか、extract-pck / dump-pck / setup サブコマンドあり） |
 | `SpineRuntime` | spine-csharp の pure C# ランタイム（データ構造のみ、描画なし） |
 
 ### StS2Shared — 共有ライブラリ
@@ -96,6 +174,8 @@ dotnet run --project ctex-to-png -- monsters
 - `card_stats.json` — カードのキャノニカル変数（ダメージ・ブロック値など）
 - `card_images.json` — カード ID → 画像のソース相対パス（`card_portraits_png/` 基準、例 `silent/abrasive.png`）。
   extractor が実ファイルをスキャンして生成。`Services/CardImageService.cs` で参照し、画像解決を一元化。
+  `{char}/beta/` の絵は**同名の本画像が無いときだけ**フォールバックで採る（開発中キャラ＝v0.113.0 の Fool は
+  全カードの絵が `fool/beta/` にしか無い）。ctex-to-png（無引数）・`AssetExtractor`（配布セットアップ）も同規則で変換する
   注: スキャン元の `card_portraits_png/` は `ctex-to-png`（無引数）が生成するため、`tools/extracted` をクリーン展開した直後は
   まだ存在せず本ファイルがスキップされる。**クリーン展開時は extractor → `ctex-to-png`（無引数）→ extractor 再実行**の順で回す
 - `relic_images.json` — レリック ID（接頭辞なし大文字、例 `AKABEKO`）→ 画像のソース相対パス（`relics_png/` 基準、例 `akabeko.png`・`beta/belt_buckle.png`）。
