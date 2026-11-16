@@ -27,7 +27,7 @@ public struct CharGroup: Sendable {
 }
 
 public struct CharacterMechanics: Sendable {
-    public static let characterLabels = ["Necrobinder", "Ironclad", "Silent", "Defect", "Regent"]
+    public static let characterLabels = ["Necrobinder", "Ironclad", "Silent", "Defect", "Regent", "Fool"]
 
     public let all: [CharGroup]
 
@@ -58,6 +58,13 @@ public struct CharacterMechanics: Sendable {
                 MechanicDef("Card Creation", "カード作成", { db.isRegentCreate($0) }),
                 MechanicDef("Star Gain", "Starを得る", { db.isRegentStarGain($0) }),
                 MechanicDef("Star Spend", "Starを使用する", { db.isRegentStarSpend($0) }),
+            ]),
+            CharGroup("Fool", "フール", [
+                MechanicDef("Shoot / Arrow / Aim", "矢を放つ / 弓力", { db.isFoolShoot($0) }),
+                MechanicDef("Impale / Dislodge", "刺矢 / 引き抜き", { db.isFoolImpale($0) }),
+                MechanicDef("Melody", "旋律", { db.isFoolMelody($0) }),
+                MechanicDef("Sadness / Joy", "悲しみ / 喜び", { db.isFoolSadness($0) }),
+                MechanicDef("Stretch", "ストレッチ", { db.isFoolStretch($0) }),
             ]),
             CharGroup("Other", "その他", []),
             CharGroup("Common", "共通", [

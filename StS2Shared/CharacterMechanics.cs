@@ -38,6 +38,14 @@ public static class CharacterMechanics
             new("Star Gain",     "Starを得る",         CardDatabaseService.IsRegentStarGain),
             new("Star Spend",    "Starを使用する",     CardDatabaseService.IsRegentStarSpend),
         ]),
+        new("Fool", "フール",
+        [
+            new("Shoot / Arrow / Aim", "矢を放つ / 弓力", CardDatabaseService.IsFoolShoot),
+            new("Impale / Dislodge",   "刺矢 / 引き抜き", CardDatabaseService.IsFoolImpale),
+            new("Melody",              "旋律",            CardDatabaseService.IsFoolMelody),
+            new("Sadness / Joy",       "悲しみ / 喜び",   CardDatabaseService.IsFoolSadness),
+            new("Stretch",             "ストレッチ",      CardDatabaseService.IsFoolStretch),
+        ]),
         new("Other", "その他", []),
         new("Common", "共通",
         [

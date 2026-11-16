@@ -57,7 +57,7 @@ public struct SiteLinkService: Sendable {
         public let url: String
     }
 
-    static let cardClasses: Set<String> = ["ironclad", "silent", "defect", "necrobinder", "regent"]
+    static let cardClasses: Set<String> = ["ironclad", "silent", "defect", "necrobinder", "regent", "fool"]
 
     let db: CardDatabase
 

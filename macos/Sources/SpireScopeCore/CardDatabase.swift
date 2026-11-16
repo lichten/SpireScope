@@ -62,6 +62,11 @@ public final class CardDatabase: Sendable {
     let regentStarSpend: Set<String>
     let defectZeroEnergy: Set<String>
     let allEnemiesAttack: Set<String>
+    let foolShoot: Set<String>
+    let foolImpale: Set<String>
+    let foolMelody: Set<String>
+    let foolSadness: Set<String>
+    let foolStretch: Set<String>
     let regentCreateExtra: Set<String> = ["METAMORPHOSIS", "SPECTRUM_SHIFT"]
     let exhaustGainingEnchantments: Set<String>
 
@@ -128,6 +133,18 @@ public final class CardDatabase: Sendable {
             "Whenever you create", "created this combat")
         regentStatusGen = Self.computeStatusGenerators(types: types, engCardDesc: engDesc)
         regentTransform = Self.computeByTag(cardsAndRelics, "[gold]Transform[/gold]")
+        // Fool（v0.113.0 追加）。CardDatabaseService の _fool* と同一規則。
+        foolShoot = Self.computeByGoldTagContaining(cardsAndRelics, "Shoot")
+            .union(Self.computeByGoldTagContaining(cardsAndRelics, "Arrow"))
+            .union(Self.computeByGoldTagContaining(cardsAndRelics, "Shot"))
+            .union(Self.computeByTag(cardsAndRelics, "[gold]Aim[/gold]"))
+        foolImpale = Self.computeByTag(cardsAndRelics,
+            "[gold]Impale[/gold]", "[gold]Impaled[/gold]", "[gold]Dislodge[/gold]", "[gold]Dislodges[/gold]")
+        foolMelody = Self.computeByGoldTagContaining(cardsAndRelics, "Melody")
+            .union(Self.computeByNameWord(db, "Wah", "Cho", "Ki"))
+        foolSadness = Self.computeByGoldTagContaining(cardsAndRelics, "Sadness")
+            .union(Self.computeByGoldTagContaining(cardsAndRelics, "Joy"))
+        foolStretch = Self.computeByTag(cardsAndRelics, "[gold]Stretch[/gold]")
 
         // Star の増減に「反応」するだけのカードは gain/spend 両グループから除外する。
         let starReactive = Self.computeByPlainText(cardsAndRelics, "spend or gain {singleStarIcon}")
@@ -355,6 +372,22 @@ public final class CardDatabase: Sendable {
         return result
     }
 
+    /// カード名（En）に words のいずれかを単語として含むカード（"Echo" 等の部分一致は拾わない）。
+    static func computeByNameWord(
+        _ db: [String: (en: String, ja: String)], _ words: String...
+    ) -> Set<String> {
+        let pattern = try! NSRegularExpression(
+            pattern: "\\b(" + words.map(NSRegularExpression.escapedPattern(for:)).joined(separator: "|") + ")\\b",
+            options: .caseInsensitive)
+        var result: Set<String> = []
+        for (id, entry) in db where id.hasPrefix("CARD.") {
+            if pattern.firstMatch(in: entry.en, range: NSRange(entry.en.startIndex..., in: entry.en)) != nil {
+                result.insert(rawId(id))
+            }
+        }
+        return result
+    }
+
     static func buildDefectZeroEnergy(costs: [String: Int], characters: [String: String]) -> Set<String> {
         // コスト0ではないがシナジーカード
         var set: Set<String> = ["SCRAPE", "ALL_FOR_ONE", "FERAL", "ADAPTIVE_STRIKE", "MOMENTUM_STRIKE"]
@@ -474,6 +507,12 @@ public final class CardDatabase: Sendable {
         return regentCreate.contains(raw) || regentStatusGen.contains(raw)
             || regentTransform.contains(raw) || regentCreateExtra.contains(raw)
     }
+
+    public func isFoolShoot(_ id: String) -> Bool { foolShoot.contains(Self.rawId(id)) }
+    public func isFoolImpale(_ id: String) -> Bool { foolImpale.contains(Self.rawId(id)) }
+    public func isFoolMelody(_ id: String) -> Bool { foolMelody.contains(Self.rawId(id)) }
+    public func isFoolSadness(_ id: String) -> Bool { foolSadness.contains(Self.rawId(id)) }
+    public func isFoolStretch(_ id: String) -> Bool { foolStretch.contains(Self.rawId(id)) }
 
     public func isBlockGiver(_ id: String) -> Bool { blockGivers.contains(Self.rawId(id)) }
     public func isRelicBlockGiver(_ id: String) -> Bool { blockRelicGivers.contains(Self.rawId(id)) }

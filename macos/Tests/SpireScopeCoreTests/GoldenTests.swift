@@ -73,6 +73,11 @@ import Testing
             check(id, "etherealKeywordUpgraded", db.isEtherealKeyword(id, upgraded: true),
                   g["etherealKeywordUpgraded"])
             check(id, "exhaustAction", db.isExhaustAction(id), g["exhaustAction"])
+            check(id, "foolShoot", db.isFoolShoot(id), g["foolShoot"])
+            check(id, "foolImpale", db.isFoolImpale(id), g["foolImpale"])
+            check(id, "foolMelody", db.isFoolMelody(id), g["foolMelody"])
+            check(id, "foolSadness", db.isFoolSadness(id), g["foolSadness"])
+            check(id, "foolStretch", db.isFoolStretch(id), g["foolStretch"])
 
             let desc = db.description(id)
             let stats = db.cardStats(id)
@@ -118,6 +123,11 @@ import Testing
             checkBool(raw, "relicDrawRelated", db.isRelicDrawRelated(id), g["relicDrawRelated"])
             checkBool(raw, "weak", db.isWeak(id), g["weak"])
             checkBool(raw, "vulnerable", db.isVulnerable(id), g["vulnerable"])
+            checkBool(raw, "foolShoot", db.isFoolShoot(id), g["foolShoot"])
+            checkBool(raw, "foolImpale", db.isFoolImpale(id), g["foolImpale"])
+            checkBool(raw, "foolMelody", db.isFoolMelody(id), g["foolMelody"])
+            checkBool(raw, "foolSadness", db.isFoolSadness(id), g["foolSadness"])
+            checkBool(raw, "foolStretch", db.isFoolStretch(id), g["foolStretch"])
 
             let desc = db.description(id)
             let stats = db.relicStats(raw)

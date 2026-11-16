@@ -10,7 +10,7 @@ public record TalkCharGroup(string Char, IReadOnlyList<TalkLine> Lines);
 public static class AncientDatabaseService
 {
     static readonly string[] _charOrder =
-        ["firstVisitEver", "ANY", "DEFECT", "IRONCLAD", "NECROBINDER", "REGENT", "SILENT"];
+        ["firstVisitEver", "ANY", "DEFECT", "FOOL", "IRONCLAD", "NECROBINDER", "REGENT", "SILENT"];
 
     static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> _eng;
     static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> _jpn;
